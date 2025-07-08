@@ -9,8 +9,8 @@ import cors from "cors"
 const app = express();
 
 app.use(cors({
-    origin: "http://localhost:3000", // allow Vite frontend
-    credentials: true,              // allow cookies/auth headers if needed
+    origin: "http://localhost:3000", 
+    credentials: true,              
 }));
 
 app.use(express.json())
