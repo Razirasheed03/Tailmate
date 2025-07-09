@@ -4,19 +4,19 @@ import { IAuthService } from "../../services/interfaces/IAuthService";
 export class AuthController {
 
   constructor(
-    private readonly _authService:IAuthService
-  ){}
+    private readonly _authService: IAuthService
+  ) { }
 
 
-  signup = async (req: Request, res: Response,next:NextFunction) => {
-  
-   try {
-     const user = await this._authService.signup(req.body);
-     res.status(201).json({ success: true, user });
-   } catch (err) {
-    console.log(err)
-     next(err)
-   }
+  signup = async (req: Request, res: Response, next: NextFunction) => {
+
+    try {
+      const user = await this._authService.signup(req.body);
+      res.status(201).json({ success: true, user });
+    } catch (err) {
+      console.log(err)
+      next(err)
+    }
   };
 
 }
