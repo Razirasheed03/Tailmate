@@ -1,8 +1,24 @@
 
 import { useEffect, useState } from "react";
 import LoginImage from "/loginp.png";
+import { useLocation, useNavigate } from "react-router-dom";
+
+import axios from "axios";
 
 const OtpVerify = () => {
+      const handleVerify = async () => {
+    try {
+      const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
+        email,
+        otp,
+      });
+
+      alert("✅ OTP verified and user registered!");
+      navigate("/landingpage");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "OTP verification failed");
+    }
+  };
 
 const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(120); // 2 minutes
@@ -72,15 +88,7 @@ const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     // Add your resend logic here
   };
 
-  // Verify OTP
-  const handleVerify = () => {
-    const otpString = otp.join('');
-    if (otpString.length === 6) {
-      // Add your verification logic here
-      console.log('Verifying OTP:', otpString);
-    }
-  };
-
+ 
   const isOtpComplete = otp.every(digit => digit !== '');
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
@@ -188,3 +196,39 @@ const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 };
 
 export default OtpVerify;
+
+// import { useLocation, useNavigate } from "react-router-dom";
+// import { useState } from "react";
+// import axios from "axios";
+
+// const VerifyOtp = () => {
+//   const navigate = useNavigate();
+//   const { state } = useLocation();
+//   const email = state?.email;
+
+//   const [otp, setOtp] = useState("");
+
+//   const handleVerify = async () => {
+//     try {
+//       const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
+//         email,
+//         otp,
+//       });
+
+//       alert("✅ OTP verified and user registered!");
+//       navigate("/landing"); // ✅ Or your main page
+//     } catch (err: any) {
+//       alert(err?.response?.data?.message || "OTP verification failed");
+//     }
+//   };
+
+//   return (
+//     <div>
+//       <h2>Verify OTP</h2>
+//       <input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter OTP" />
+//       <button onClick={handleVerify}>Verify</button>
+//     </div>
+//   );
+// };
+
+// export default VerifyOtp;

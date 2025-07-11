@@ -2,9 +2,13 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import LoginImage from "/loginp.png";
 import axios from "axios";
+import { useNavigate } from "react-router-dom"; // add this at the top
 
 const Auth = () => {
-  const handleSignup = async () => {
+
+const navigate = useNavigate(); // inside component
+
+const handleSignup = async () => {
   if (password !== confirmPassword) {
     alert("Passwords do not match");
     return;
@@ -17,8 +21,9 @@ const Auth = () => {
       password,
     });
 
-    alert("Signup successful aan!");
-    setIsSignUp(false); // Go to login screen
+    alert("OTP sent to email!");
+    // ✅ Redirect to OTP page with email as query or state
+    navigate("/verify-otp", { state: { email } });
   } catch (error: any) {
     console.error(error);
     alert(error?.response?.data?.message || "Signup failed");

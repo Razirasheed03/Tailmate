@@ -18,6 +18,17 @@ export class AuthController {
       next(err)
     }
   };
+  verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, otp } = req.body;
+    const result = await this._authService.verifyOtp(email, otp);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+};
+
 
 }
 

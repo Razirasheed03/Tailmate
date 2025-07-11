@@ -2,36 +2,62 @@ import { IAuthService } from "../interfaces/IAuthService";
 import { IUserRepository } from "../../repositories/interfaces/IUserRepository";
 import { IUser } from "../../models/interfaces/IUser";
 import bcrypt from "bcryptjs";
+import redisClient from "../../config/redisClient"; // ✅ import Redis
+import { randomInt } from "crypto";
+import { sendOtpEmail } from "../../utils/sendEmail";
 
 export class AuthService implements IAuthService {
-  constructor(private _userRepo: IUserRepository) { }
+  constructor(private _userRepo: IUserRepository) {}
 
-  signup = async (user: IUser): Promise<IUser> => {
+  signup = async (user: IUser): Promise<{ message: string }> => {
     console.log('🔍 AuthService.signup called with:', { ...user, password: '[HIDDEN]' });
 
-    try {
-      // Check if user already exists
-      const existing = await this._userRepo.findByEmail(user.email);
-      if (existing) {
-        console.log('❌ User already exists with email:', user.email);
-        throw new Error("User already exists");
-      }
+    const existing = await this._userRepo.findByEmail(user.email);
+    if (existing) throw new Error("User already exists");
 
-      // Hash password
-      console.log('🔍 Hashing password...');
-      const hashedPassword = await bcrypt.hash(user.password, 10);
-      console.log('✅ Password hashed successfully');
+    // Generate OTP
+    const otp = randomInt(100000, 999999).toString();
 
-      const userToCreate = { ...user, password: hashedPassword };
-      console.log('🔍 Creating user with hashed password...');
+    // Store user + otp in Redis temporarily
+    const key = `signup:${user.email}`;
+    await redisClient.setEx(key, 300, JSON.stringify({ ...user, otp })); // ⏳ 5 min expiry
 
-      const createdUser = await this._userRepo.createUser(userToCreate);
-      console.log('✅ User created successfully:', { ...createdUser, password: '[HIDDEN]' });
+     await sendOtpEmail(user.email, otp); // ✅ Send OTP email
 
-      return createdUser;
-    } catch (error) {
-      console.error('❌ Error in AuthService.signup:', error);
-      throw error;
+  return { message: "OTP sent to email. Please verify." };
+  };
+  verifyOtp = async (email: string, otp: string): Promise<{ token: string; user: IUser }> => {
+    const key = `signup:${email}`;
+    const redisData = await redisClient.get(key);
+
+    if (!redisData) {
+      throw new Error("OTP expired or not found");
     }
-  }
+
+    const parsed = JSON.parse(redisData);
+    if (parsed.otp !== otp) {
+      throw new Error("Invalid OTP");
+    }
+
+    // ✅ Hash the password again (safety)
+    const hashedPassword = await bcrypt.hash(parsed.password, 10);
+
+    // ✅ Save user to MongoDB
+    const createdUser = await this._userRepo.createUser({
+      ...parsed,
+      password: hashedPassword,
+    });
+
+    // ✅ Create JWT
+    const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, {
+      expiresIn: "1d",
+    });
+
+    // ✅ Remove OTP from Redis
+    await redisClient.del(key);
+
+    return { token, user: createdUser };
+  };
+
+  // you'll add verifyOtp here next...
 }
