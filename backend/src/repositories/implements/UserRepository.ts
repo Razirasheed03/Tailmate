@@ -5,17 +5,16 @@ import { UserModel, IUserDoc } from "../../models/implements/UserModel";
 
 export class UserRepository
   extends BaseRepository<IUserDoc>
-  implements IUserRepository
-{
+  implements IUserRepository {
   constructor() {
     super(UserModel);
   }
 
   async createUser(user: IUser): Promise<IUser> {
-    return await this.create(user as IUserDoc); // ✅ type cast
+    return await this.create(user as IUserDoc);
   }
-async findByEmail(email: string): Promise<IUserDoc | null> {
-  return await super.findByEmail(email);
-}
+  async findByEmail(email: string): Promise<IUserDoc | null> {
+    return await super.findByEmail(email);
+  }
 
 }

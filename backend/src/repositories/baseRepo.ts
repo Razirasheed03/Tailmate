@@ -1,7 +1,7 @@
 import { Model, Document } from "mongoose";
 
 export abstract class BaseRepository<T extends Document> {
-  constructor(protected readonly model: Model<T>) {}
+  constructor(protected readonly model: Model<T>) { }
 
   async create(entity: T): Promise<T> {
     return await this.model.create(entity);
@@ -11,5 +11,4 @@ export abstract class BaseRepository<T extends Document> {
     return await this.model.findOne({ email });
   }
 
-  // Add any common methods
 }
