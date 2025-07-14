@@ -2,7 +2,7 @@ import { IAuthService } from "../interfaces/IAuthService";
 import { IUserRepository } from "../../repositories/interfaces/IUserRepository";
 import { IUser } from "../../models/interfaces/IUser";
 import bcrypt from "bcryptjs";
-import redisClient from "../../config/redisClient"; // ✅ import Redis
+import redisClient from "../../config/redisClient";
 import { randomInt } from "crypto";
 import { sendOtpEmail } from "../../utils/sendEmail";
 
@@ -18,11 +18,11 @@ export class AuthService implements IAuthService {
     // Generate OTP
     const otp = randomInt(100000, 999999).toString();
 
-    // Store user + otp in Redis temporarily
+   
     const key = `signup:${user.email}`;
-    await redisClient.setEx(key, 300, JSON.stringify({ ...user, otp })); // ⏳ 5 min expiry
+    await redisClient.setEx(key, 300, JSON.stringify({ ...user, otp })); 
 
-     await sendOtpEmail(user.email, otp); // ✅ Send OTP email
+     await sendOtpEmail(user.email, otp); 
 
   return { message: "OTP sent to email. Please verify." };
   };
@@ -39,25 +39,22 @@ export class AuthService implements IAuthService {
       throw new Error("Invalid OTP");
     }
 
-    // ✅ Hash the password again (safety)
     const hashedPassword = await bcrypt.hash(parsed.password, 10);
 
-    // ✅ Save user to MongoDB
     const createdUser = await this._userRepo.createUser({
       ...parsed,
       password: hashedPassword,
     });
 
-    // ✅ Create JWT
+
     const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, {
       expiresIn: "1d",
     });
 
-    // ✅ Remove OTP from Redis
     await redisClient.del(key);
 
     return { token, user: createdUser };
   };
 
-  // you'll add verifyOtp here next...
+
 }
