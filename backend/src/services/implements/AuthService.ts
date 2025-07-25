@@ -7,7 +7,7 @@ import { randomInt } from "crypto";
 import { sendOtpEmail } from "../../utils/sendEmail";
 
 export class AuthService implements IAuthService {
-  constructor(private _userRepo: IUserRepository) {}
+  constructor(private _userRepo: IUserRepository) { }
 
   signup = async (user: IUser): Promise<{ message: string }> => {
     console.log('🔍 AuthService.signup called with:', { ...user, password: '[HIDDEN]' });
@@ -18,13 +18,13 @@ export class AuthService implements IAuthService {
     // Generate OTP
     const otp = randomInt(100000, 999999).toString();
 
-   
+
     const key = `signup:${user.email}`;
-    await redisClient.setEx(key, 300, JSON.stringify({ ...user, otp })); 
+    await redisClient.setEx(key, 300, JSON.stringify({ ...user, otp }));
 
-     await sendOtpEmail(user.email, otp); 
+    await sendOtpEmail(user.email, otp);
 
-  return { message: "OTP sent to email. Please verify." };
+    return { message: "OTP sent to email. Please verify." };
   };
   verifyOtp = async (email: string, otp: string): Promise<{ token: string; user: IUser }> => {
     const key = `signup:${email}`;
