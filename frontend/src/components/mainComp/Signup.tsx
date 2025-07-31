@@ -49,7 +49,7 @@ const Signup = () => {
                 Username
               </label>
               <div className="relative">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -74,7 +74,7 @@ const Signup = () => {
                 Email
               </label>
               <div className="relative">
-                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -113,7 +113,7 @@ const Signup = () => {
                   placeholder="Create a password"
                   className={`w-full pl-12 pr-12 py-3 border ${errors.password ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
                 />
-                 <button
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -125,7 +125,7 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
             </div>
-       
+
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">
                 Confirm Password
@@ -146,7 +146,7 @@ const Signup = () => {
                   placeholder="Confirm your password"
                   className={`w-full pl-12 pr-12 py-3 border ${errors.confirmPassword ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
                 />
-                    <button
+                <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
