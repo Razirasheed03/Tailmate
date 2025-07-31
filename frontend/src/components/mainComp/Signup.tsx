@@ -1,0 +1,202 @@
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import LoginImage from "/loginp.png";
+import { Eye, EyeOff } from "lucide-react";
+interface SignupFormInputs {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const Signup = () => {
+  const navigate = useNavigate();
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormInputs>();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // So we can compare password with confirmPassword
+  const passwordValue = watch("password");
+
+  const onSubmit = async (data: SignupFormInputs) => {
+    try {
+      await axios.post("http://localhost:4000/api/auth/signup", {
+        name: data.username,
+        email: data.email,
+        password: data.password,
+      });
+      alert("OTP sent to email!");
+      navigate("/verify-otp", { state: { email: data.email } });
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "Signup failed");
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
+      {/* Left Form Section - SIGNUP */}
+      <div className="md:w-1/2 w-full flex items-center justify-center px-6 py-12 order-2 md:order-1">
+        <div className="w-full max-w-md">
+          <h1 className="text-4xl font-bold mb-4 text-gray-900">
+            Create Account!
+          </h1>
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                Username
+              </label>
+              <div className="relative">
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  {...register("username", {
+                    required: "Username is required",
+                    minLength: { value: 3, message: "Username too short" }
+                  })}
+                  placeholder="John Doe"
+                  className={`w-full pl-12 pr-4 py-3 border ${errors.username ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
+                />
+              </div>
+              {errors.username && (
+                <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
+              )}
+            </div>
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <input
+                  type="email"
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: { value: /^\S+@\S+$/i, message: "Invalid email" }
+                  })}
+                  placeholder="email@gmail.com"
+                  className={`w-full pl-12 pr-4 py-3 border ${errors.email ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
+                />
+              </div>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+              )}
+            </div>
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: { value: 6, message: "Password must be at least 6 characters" }
+                  })}
+                  placeholder="Create a password"
+                  className={`w-full pl-12 pr-12 py-3 border ${errors.password ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
+                />
+                 <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
+              )}
+            </div>
+       
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  {...register("confirmPassword", {
+                    required: "Please confirm password",
+                    validate: value =>
+                      value === passwordValue || "Passwords do not match",
+                  })}
+                  placeholder="Confirm your password"
+                  className={`w-full pl-12 pr-12 py-3 border ${errors.confirmPassword ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
+                />
+                    <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+            {/* Sign Up Button */}
+            <button
+              type="submit"
+              className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Sign Up"}
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center justify-center my-1">
+              <span className="text-gray-400 text-sm">— or —</span>
+            </div>
+            {/* Social Buttons (as before, not related to validation) */}
+
+            {/* Login Link */}
+            <p className="text-sm text-gray-600 text-center mt-5">
+              Already have an account?{" "}
+              <Link to="/login" className="text-[#e4a574] hover:underline font-medium">
+                Login
+              </Link>
+            </p>
+          </form>
+        </div>
+      </div>
+      {/* Right Image Section with arch - SIGNUP */}
+      <div className="md:w-1/2 w-full flex items-center justify-center relative order-1 md:order-2">
+        <div className="relative w-full h-full flex items-end justify-center py-12">
+          {/* Arch Background */}
+          <div className="absolute bottom-0 w-[360px] h-[600px] md:w-[500px] md:h-[780px] bg-[#f3e8d3] rounded-t-[250px]"></div>
+          <img
+            src={LoginImage}
+            alt="Signup Character"
+            className="relative z-10 w-[85%] max-w-[400px] md:max-w-[560px] object-contain pb-50"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Signup;
