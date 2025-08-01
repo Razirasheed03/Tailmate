@@ -5,11 +5,12 @@ import bcrypt from "bcryptjs";
 import redisClient from "../../config/redisClient";
 import { randomInt } from "crypto";
 import { sendOtpEmail } from "../../utils/sendEmail";
+import type { SignupInput } from "../../validation/userSchemas";
 
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
 
-  signup = async (user: IUser): Promise<{ message: string }> => {
+signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ message: string }> => {
     console.log('🔍 AuthService.signup called with:', { ...user, password: '[HIDDEN]' });
 
     const existing = await this._userRepo.findByEmail(user.email);
