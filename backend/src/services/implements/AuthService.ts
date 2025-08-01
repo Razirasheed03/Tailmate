@@ -41,11 +41,12 @@ export class AuthService implements IAuthService {
       throw new Error("Invalid OTP");
     }
 
+
     const hashedPassword = await bcrypt.hash(parsed.password, 10);
 
     const createdUser = await this._userRepo.createUser({
       ...parsed,
-      password: hashedPassword,
+      // password: hashedPassword,
     });
 
 
