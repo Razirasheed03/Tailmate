@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../../services/interfaces/IAuthService";
-import { signupSchema,SignupInput } from "../../validation/userSchemas";
+import { signupSchema, SignupInput } from "../../validation/userSchemas";
 
 export class AuthController {
 
@@ -8,7 +8,7 @@ export class AuthController {
     private readonly _authService: IAuthService
   ) { }
 
-signup = async (req: Request, res: Response, next: NextFunction) => {
+  signup = async (req: Request, res: Response, next: NextFunction) => {
     // 1. Zod validation FIRST
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
