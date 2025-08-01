@@ -10,7 +10,7 @@ import type { SignupInput } from "../../validation/userSchemas";
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
 
-signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ message: string }> => {
+  signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ message: string }> => {
     console.log('🔍 AuthService.signup called with:', { ...user, password: '[HIDDEN]' });
 
     const existing = await this._userRepo.findByEmail(user.email);
@@ -19,10 +19,10 @@ signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ message: 
     // Generate OTP
     const otp = randomInt(100000, 999999).toString();
 
-const hashedPassword = await bcrypt.hash(user.password, 10);
+    const hashedPassword = await bcrypt.hash(user.password, 10);
 
     const key = `signup:${user.email}`;
-    await redisClient.setEx(key, 300, JSON.stringify({ ...user, password: hashedPassword,otp }));
+    await redisClient.setEx(key, 300, JSON.stringify({ ...user, password: hashedPassword, otp }));
 
     await sendOtpEmail(user.email, otp);
 
