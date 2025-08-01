@@ -2,7 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 
 import LandingPage from "../pages/user/LandingPage";
 import Signup from "../components/mainComp/Signup";
-import Login from "../components/mainComp/login";
+import Login from "../components/mainComp/Login";
+import OtpVerify from "@/components/mainComp/VerifyOtp";
 
 export const router = createBrowserRouter([
   {
@@ -17,8 +18,8 @@ export const router = createBrowserRouter([
     path: "/",
     element: <LandingPage />
   },
-  // {
-  //   path: "/verify-otp",
-  //   element: <VerifyOtp />,
-  // },
+  {
+    path: "/verify-otp",
+    element: <OtpVerify />,
+  },
 ]);

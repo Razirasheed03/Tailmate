@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import LoginImage from "/loginp.png";
 import { Eye, EyeOff } from "lucide-react";
+
 interface SignupFormInputs {
   username: string;
   email: string;
@@ -17,7 +18,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // So we can compare password with confirmPassword
+  // Watch password value so confirmPassword can validate against it
   const passwordValue = watch("password");
 
   const onSubmit = async (data: SignupFormInputs) => {
@@ -30,6 +31,7 @@ const Signup = () => {
       alert("OTP sent to email!");
       navigate("/verify-otp", { state: { email: data.email } });
     } catch (error: any) {
+       console.log(error?.response);
       alert(error?.response?.data?.message || "Signup failed");
     }
   };
@@ -39,15 +41,11 @@ const Signup = () => {
       {/* Left Form Section - SIGNUP */}
       <div className="md:w-1/2 w-full flex items-center justify-center px-6 py-12 order-2 md:order-1">
         <div className="w-full max-w-md">
-          <h1 className="text-4xl font-bold mb-4 text-gray-900">
-            Create Account!
-          </h1>
+          <h1 className="text-4xl font-bold mb-4 text-gray-900">Create Account!</h1>
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                Username
-              </label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Username</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,9 +68,7 @@ const Signup = () => {
             </div>
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,9 +91,7 @@ const Signup = () => {
             </div>
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Password</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,11 +119,9 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
             </div>
-
+            {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                Confirm Password
-              </label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Confirm Password</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,8 +132,7 @@ const Signup = () => {
                   type={showConfirmPassword ? "text" : "password"}
                   {...register("confirmPassword", {
                     required: "Please confirm password",
-                    validate: value =>
-                      value === passwordValue || "Passwords do not match",
+                    validate: value => value === passwordValue || "Passwords do not match",
                   })}
                   placeholder="Confirm your password"
                   className={`w-full pl-12 pr-12 py-3 border ${errors.confirmPassword ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
@@ -171,8 +162,7 @@ const Signup = () => {
             <div className="flex items-center justify-center my-1">
               <span className="text-gray-400 text-sm">— or —</span>
             </div>
-            {/* Social Buttons (as before, not related to validation) */}
-
+            {/* (Social buttons can go here if you want) */}
             {/* Login Link */}
             <p className="text-sm text-gray-600 text-center mt-5">
               Already have an account?{" "}
