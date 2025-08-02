@@ -7,8 +7,6 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  // Implement your actual login logic here
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     alert(`Login attempted for ${email}`);
@@ -17,10 +15,8 @@ const Login = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
-      {/* Left Image Section */}
       <div className="md:w-1/2 w-full flex items-center justify-center relative order-1 md:order-1">
         <div className="relative w-full h-full flex items-end justify-center py-12">
-          {/* Arch Background */}
           <div className="absolute bottom-0 w-[360px] h-[600px] md:w-[500px] md:h-[780px] bg-[#f3e8d3] rounded-t-[250px]"></div>
           <img
             src={LoginImage}
@@ -30,7 +26,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Right Form Section */}
       <div className="md:w-1/2 w-full flex items-center justify-center px-6 py-12 order-2 md:order-2">
         <div className="w-full max-w-md">
           <h1 className="text-4xl font-bold mb-8 text-gray-900">
@@ -38,12 +33,12 @@ const Login = () => {
           </h1>
 
           <form className="space-y-6" onSubmit={handleLogin}>
-            {/* Email Input */}
+       
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  {/* Email Icon */}
+        
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -59,12 +54,11 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password Input */}
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Password</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  {/* Password Icon */}
+
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
