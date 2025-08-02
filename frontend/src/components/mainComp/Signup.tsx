@@ -24,9 +24,10 @@ const Signup = () => {
   const onSubmit = async (data: SignupFormInputs) => {
     try {
       await axios.post("http://localhost:4000/api/auth/signup", {
-        name: data.username,
+        username: data.username,
         email: data.email,
         password: data.password,
+        confirmPassword:data.confirmPassword
       });
       alert("OTP sent to email!");
       navigate("/verify-otp", { state: { email: data.email } });

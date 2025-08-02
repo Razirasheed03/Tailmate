@@ -1,23 +1,23 @@
 
 import { useEffect, useState } from "react";
 import LoginImage from "/loginp.png";
-// import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
-// import axios from "axios";
+import axios from "axios";
 
 const OtpVerify = () => {
   const handleVerify = async () => {
-    // try {
-    //   const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
-    //     email,
-    //     otp,
-    //   });
+    try {
+      const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
+        email,
+        otp,
+      });
 
-    //   alert("✅ OTP verified and user registered!");
-    //   navigate("/landingpage");
-    // } catch (err: any) {
-    //   alert(err?.response?.data?.message || "OTP verification failed");
-    // }
+      alert("✅ OTP verified and user registered!");
+      navigate("/landingpage");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "OTP verification failed");
+    }
   };
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);

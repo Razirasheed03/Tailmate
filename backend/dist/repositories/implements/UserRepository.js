@@ -18,7 +18,7 @@ class UserRepository extends baseRepo_1.BaseRepository {
     }
     createUser(user) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.create(user); // ✅ force cast
+            return yield this.create(user);
         });
     }
     findByEmail(email) {

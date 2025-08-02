@@ -1,7 +1,7 @@
 //////router layer
 
 import { Router } from "express";
-import { authController } from "../../dependencies/auth.di";
+import { authController } from "../../dependencies/auth.di"
 
 const router = Router();
 

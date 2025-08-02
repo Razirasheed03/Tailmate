@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-
 export const sendOtpEmail = async (to: string, otp: string) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -16,5 +15,12 @@ export const sendOtpEmail = async (to: string, otp: string) => {
     text: `Your OTP for verification is: ${otp}. It is valid for 5 minutes.`,
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.response); // <-- show status in logs
+  } catch (err) {
+    console.error('Failed to send OTP mail:', err); // <-- log error
+    // Optional: throw or handle error
+    throw err;
+  }
 };

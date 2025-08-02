@@ -9,20 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BaseRepository = void 0;
-class BaseRepository {
-    constructor(model) {
-        this.model = model;
-    }
-    create(entity) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.model.create(entity);
-        });
-    }
-    findByEmail(email) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.model.findOne({ email });
-        });
-    }
-}
-exports.BaseRepository = BaseRepository;
+// src/config/redisClient.ts
+const redis_1 = require("redis");
+const redisClient = (0, redis_1.createClient)();
+redisClient.on("error", (err) => console.error("❌ Redis Client Error", err));
+(() => __awaiter(void 0, void 0, void 0, function* () {
+    yield redisClient.connect();
+    console.log("✅ Redis connected");
+}))();
+exports.default = redisClient;
