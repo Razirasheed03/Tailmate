@@ -12,7 +12,7 @@ export const sendOtpEmail = async (to: string, otp: string) => {
     from: `"TailMate" <${process.env.EMAIL_USER}>`,
     to,
     subject: "Your TailMate OTP Code",
-    text: `Your OTP for verification is: ${otp}. It is valid for 5 minutes.`,
+    text: `Your OTP for verification is: ${otp}. It is valid for 2 minutes.`,
   };
 
   try {
