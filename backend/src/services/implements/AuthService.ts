@@ -46,7 +46,6 @@ export class AuthService implements IAuthService {
 
     const createdUser = await this._userRepo.createUser({
       ...parsed,
-      // password: hashedPassword,
     });
 
 
