@@ -12,8 +12,6 @@ const OtpVerify = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(120); // 2 minutes
   const [isResendEnabled, setIsResendEnabled] = useState(false);
-
-  // Timer countdown effect
   useEffect(() => {
     if (timer > 0) {
       const interval = setInterval(() => {
@@ -25,14 +23,13 @@ const OtpVerify = () => {
     }
   }, [timer]);
 
-  // Format timer display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Handle OTP input change
+
   const handleOtpChange = (index: number, value: any) => {
     if (value.length > 1) return; // Only allow single digit
     if (!/^\d?$/.test(value)) return; // Only digits

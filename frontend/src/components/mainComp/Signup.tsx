@@ -116,7 +116,7 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
             </div>
-        
+
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Confirm Password</label>
               <div className="relative">
