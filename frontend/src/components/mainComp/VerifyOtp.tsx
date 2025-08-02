@@ -4,6 +4,8 @@ import LoginImage from "/loginp.png";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import axios from "axios";
+ const navigate = useNavigate();
+  const location = useLocation();
 
 const OtpVerify = () => {
   const handleVerify = async () => {
