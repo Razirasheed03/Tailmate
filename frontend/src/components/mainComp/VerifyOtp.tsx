@@ -99,7 +99,6 @@ const OtpVerify = () => {
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
       {(
         <>
-          {/* Left Image Section */}
           <div className="md:w-1/2 w-full flex items-center justify-center relative order-1 md:order-1">
             <div className="relative w-full h-full flex items-end justify-center py-12">
               <div className="absolute bottom-0 w-[360px] h-[600px] md:w-[500px] md:h-[780px] bg-[#f3e8d3] rounded-t-[250px]"></div>
@@ -120,7 +119,6 @@ const OtpVerify = () => {
                 Please enter it below to verify your account.
               </p>
               <div className="space-y-8">
-                {/* OTP Input Section */}
                 <div className="space-y-4">
                   <label className="block text-sm font-medium text-gray-600 text-center">
                     Enter Verification Code
@@ -142,7 +140,6 @@ const OtpVerify = () => {
                     ))}
                   </div>
                 </div>
-                {/* Timer Section */}
                 <div className="text-center">
                   {!isResendEnabled ? (
                     <p className="text-gray-500 text-sm">
@@ -157,7 +154,6 @@ const OtpVerify = () => {
                     </button>
                   )}
                 </div>
-                {/* Verify Button */}
                 <button
                   onClick={handleVerify}
                   disabled={!isOtpComplete}
@@ -168,7 +164,6 @@ const OtpVerify = () => {
                 >
                   Verify Account
                 </button>
-                {/* Back to Login */}
                 <p className="text-sm text-gray-600 text-center mt-6">
                   Didn't receive the code?{" "}
                   <button className="text-[#e4a574] hover:underline font-medium">
