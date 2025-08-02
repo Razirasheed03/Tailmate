@@ -39,12 +39,10 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
-      {/* Left Form Section - SIGNUP */}
       <div className="md:w-1/2 w-full flex items-center justify-center px-6 py-12 order-2 md:order-1">
         <div className="w-full max-w-md">
           <h1 className="text-4xl font-bold mb-4 text-gray-900">Create Account!</h1>
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-            {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Username</label>
               <div className="relative">
@@ -67,7 +65,6 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
               )}
             </div>
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
               <div className="relative">
@@ -90,7 +87,6 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
               )}
             </div>
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Password</label>
               <div className="relative">
@@ -120,7 +116,7 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
             </div>
-            {/* Confirm Password */}
+        
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Confirm Password</label>
               <div className="relative">
