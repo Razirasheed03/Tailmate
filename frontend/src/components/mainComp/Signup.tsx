@@ -27,12 +27,12 @@ const Signup = () => {
         username: data.username,
         email: data.email,
         password: data.password,
-        confirmPassword:data.confirmPassword
+        confirmPassword: data.confirmPassword
       });
       alert("OTP sent to email!");
       navigate("/verify-otp", { state: { email: data.email } });
     } catch (error: any) {
-       console.log(error?.response);
+      console.log(error?.response);
       alert(error?.response?.data?.message || "Signup failed");
     }
   };
