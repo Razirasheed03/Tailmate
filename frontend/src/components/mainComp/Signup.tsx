@@ -146,7 +146,6 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
-            {/* Sign Up Button */}
             <button
               type="submit"
               className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200"
@@ -154,13 +153,9 @@ const Signup = () => {
             >
               {isSubmitting ? "Submitting..." : "Sign Up"}
             </button>
-
-            {/* Divider */}
             <div className="flex items-center justify-center my-1">
               <span className="text-gray-400 text-sm">— or —</span>
             </div>
-            {/* (Social buttons can go here if you want) */}
-            {/* Login Link */}
             <p className="text-sm text-gray-600 text-center mt-5">
               Already have an account?{" "}
               <Link to="/login" className="text-[#e4a574] hover:underline font-medium">
@@ -170,10 +165,8 @@ const Signup = () => {
           </form>
         </div>
       </div>
-      {/* Right Image Section with arch - SIGNUP */}
       <div className="md:w-1/2 w-full flex items-center justify-center relative order-1 md:order-2">
         <div className="relative w-full h-full flex items-end justify-center py-12">
-          {/* Arch Background */}
           <div className="absolute bottom-0 w-[360px] h-[600px] md:w-[500px] md:h-[780px] bg-[#f3e8d3] rounded-t-[250px]"></div>
           <img
             src={LoginImage}
