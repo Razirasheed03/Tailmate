@@ -9,7 +9,7 @@ import type { SignupInput } from "../../validation/userSchemas";
 import jwt from "jsonwebtoken";
 
 export class AuthService implements IAuthService {
-  constructor(private _userRepo: IUserRepository) {}
+  constructor(private _userRepo: IUserRepository) { }
 
   signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ message: string }> => {
     const existing = await this._userRepo.findByEmail(user.email);
@@ -43,4 +43,3 @@ export class AuthService implements IAuthService {
     return { token, user: createdUser };
   };
 }
-  
