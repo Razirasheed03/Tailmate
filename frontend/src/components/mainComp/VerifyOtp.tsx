@@ -4,10 +4,10 @@ import LoginImage from "/loginp.png";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import axios from "axios";
- const navigate = useNavigate();
-  const location = useLocation();
 
 const OtpVerify = () => {
+  const navigate = useNavigate();
+   const location = useLocation();
   const handleVerify = async () => {
     try {
       const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
