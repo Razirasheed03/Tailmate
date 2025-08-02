@@ -18,15 +18,13 @@ class UserRepository extends baseRepo_1.BaseRepository {
     }
     createUser(user) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.create(user);
+            // user: IUser (no _id) → Model.create returns IUserDoc (with _id)
+            return yield UserModel_1.UserModel.create(user);
         });
     }
     findByEmail(email) {
-        const _super = Object.create(null, {
-            findByEmail: { get: () => super.findByEmail }
-        });
         return __awaiter(this, void 0, void 0, function* () {
-            return yield _super.findByEmail.call(this, email);
+            return yield UserModel_1.UserModel.findOne({ email });
         });
     }
 }

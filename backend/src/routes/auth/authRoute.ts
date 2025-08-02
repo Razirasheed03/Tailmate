@@ -1,11 +1,11 @@
-//////router layer
-
 import { Router } from "express";
-import { authController } from "../../dependencies/auth.di"
+import { asyncHandler } from "../../utils/asyncHandler"; // path as appropriate
+import { authController } from "../../dependencies/auth.di";
 
+// router setup...
 const router = Router();
 
-router.post("/signup", authController.signup);
-router.post("/verify-otp", authController.verifyOtp);
+router.post("/signup", asyncHandler(authController.signup));
+router.post("/verify-otp", asyncHandler(authController.verifyOtp));
 
 export default router;

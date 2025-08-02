@@ -1,15 +1,18 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 
-export interface IUserDoc extends IUser, Document { } // ✅ extend Document correctly
+// Mongoose Document: _id is built-in from Document
+export interface IUserDoc extends IUser, Document {
+  _id: Types.ObjectId;
+}
 
 const UserSchema = new Schema<IUserDoc>(
   {
     username: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email:    { type: String, required: true, unique: true },
     password: { type: String, required: true },
   },
   { timestamps: true }
 );
 
-export const UserModel = model<IUserDoc>("User", UserSchema); // ✅ matches IUserDoc
+export const UserModel = model<IUserDoc>("User", UserSchema);

@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,15 +28,14 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const redisClient_1 = __importDefault(require("../../config/redisClient"));
 const crypto_1 = require("crypto");
 const sendEmail_1 = require("../../utils/sendEmail");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 class AuthService {
     constructor(_userRepo) {
         this._userRepo = _userRepo;
         this.signup = (user) => __awaiter(this, void 0, void 0, function* () {
-            console.log('🔍 AuthService.signup called with:', Object.assign(Object.assign({}, user), { password: '[HIDDEN]' }));
             const existing = yield this._userRepo.findByEmail(user.email);
             if (existing)
                 throw new Error("User already exists");
-            // Generate OTP
             const otp = (0, crypto_1.randomInt)(100000, 999999).toString();
             const hashedPassword = yield bcryptjs_1.default.hash(user.password, 10);
             const key = `signup:${user.email}`;
@@ -36,18 +46,14 @@ class AuthService {
         this.verifyOtp = (email, otp) => __awaiter(this, void 0, void 0, function* () {
             const key = `signup:${email}`;
             const redisData = yield redisClient_1.default.get(key);
-            if (!redisData) {
+            if (!redisData)
                 throw new Error("OTP expired or not found");
-            }
             const parsed = JSON.parse(redisData);
-            if (parsed.otp !== otp) {
+            if (parsed.otp !== otp)
                 throw new Error("Invalid OTP");
-            }
-            const hashedPassword = yield bcryptjs_1.default.hash(parsed.password, 10);
-            const createdUser = yield this._userRepo.createUser(Object.assign({}, parsed));
-            const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET, {
-                expiresIn: "1d",
-            });
+            const { otp: _ } = parsed, userData = __rest(parsed, ["otp"]); // Remove OTP property
+            const createdUser = yield this._userRepo.createUser(userData);
+            const token = jsonwebtoken_1.default.sign({ id: createdUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
             yield redisClient_1.default.del(key);
             return { token, user: createdUser };
         });

@@ -1,5 +1,9 @@
 {
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^6.4.17"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
   }
 }

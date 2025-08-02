@@ -92,7 +92,7 @@ const OtpVerify = () => {
       });
 
       alert("✅ OTP verified and user registered!");
-      navigate("/landingpage");
+      navigate("/");
     } catch (err: any) {
       alert(err?.response?.data?.message || "OTP verification failed");
     }
