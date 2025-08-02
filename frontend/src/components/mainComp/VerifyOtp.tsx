@@ -165,8 +165,8 @@ const OtpVerify = () => {
                   onClick={handleVerify}
                   disabled={!isOtpComplete}
                   className={`w-full font-medium py-3 rounded-full transition-all duration-200 ${isOtpComplete
-                      ? 'bg-[#e4a574] hover:bg-[#d4956a] text-white'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-[#e4a574] hover:bg-[#d4956a] text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                 >
                   Verify Account
