@@ -1,7 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 
-// Mongoose Document: _id is built-in from Document
 export interface IUserDoc extends IUser, Document {
   _id: Types.ObjectId;
 }

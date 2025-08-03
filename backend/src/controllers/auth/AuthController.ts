@@ -9,7 +9,6 @@ export class AuthController {
   ) { }
 
   signup = async (req: Request, res: Response, next: NextFunction) => {
-    // 1. Zod validation FIRST
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({

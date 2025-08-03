@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
-import { env } from "./env"; // ✅ use from env.ts
+import { env } from "./env";
 
 export const connectDB = async () => {
   try {
-    await mongoose.connect(env.MONGO_URI); // ✅ now it's safe
+    await mongoose.connect(env.MONGO_URI)
     console.log("✅ MongoDB Connected");
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error);
