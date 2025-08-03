@@ -34,7 +34,7 @@ export class AuthService implements IAuthService {
 
     if (parsed.otp !== otp) throw new Error("Invalid OTP");
 
-    const { otp: _, ...userData } = parsed; // Remove OTP property
+    const { otp: _, ...userData } = parsed; 
     const createdUser = await this._userRepo.createUser(userData);
 
     const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });

@@ -9,7 +9,6 @@ export class UserRepository extends BaseRepository<IUserDoc> implements IUserRep
   }
 
   async createUser(user: IUser): Promise<IUserDoc> {
-    // user: IUser (no _id) → Model.create returns IUserDoc (with _id)
     return await UserModel.create(user);
   }
 
