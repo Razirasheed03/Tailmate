@@ -5,6 +5,7 @@ import axios from "axios";
 import LoginImage from "/loginp.png";
 import { Eye, EyeOff } from "lucide-react";
 
+
 interface SignupFormInputs {
   username: string;
   email: string;
@@ -17,6 +18,7 @@ const Signup = () => {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormInputs>();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
 
   // Watch password value so confirmPassword can validate against it
   const passwordValue = watch("password");
