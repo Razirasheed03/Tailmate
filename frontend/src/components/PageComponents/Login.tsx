@@ -7,7 +7,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-    useEffect(() => {
+  useEffect(() => {
     const token = localStorage.getItem("auth_token");
     if (token) {
       navigate("/");
@@ -39,12 +39,12 @@ const Login = () => {
           </h1>
 
           <form className="space-y-6" onSubmit={handleLogin}>
-       
+
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-        
+
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -98,7 +98,7 @@ const Login = () => {
               Login
             </button>
 
- 
+
             <div className="flex items-center justify-center my-6">
               <span className="text-gray-400 text-sm">— or —</span>
             </div>
@@ -112,7 +112,7 @@ const Login = () => {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               </button>
-      
+
               <button className="w-12 h-12 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
                 <svg className="w-5 h-5 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -120,7 +120,7 @@ const Login = () => {
               </button>
             </div>
 
-     
+
             <p className="text-sm text-gray-600 text-center mt-6">
               Don't have an account?{" "}
               <Link to="/signup" className="text-[#e4a574] hover:underline font-medium">
