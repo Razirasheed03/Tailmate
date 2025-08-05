@@ -18,7 +18,12 @@ const Signup = () => {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormInputs>();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+    useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      navigate("/");
+    }
+  }, []);
 
   // Watch password value so confirmPassword can validate against it
   const passwordValue = watch("password");
