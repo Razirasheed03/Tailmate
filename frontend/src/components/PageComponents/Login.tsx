@@ -7,6 +7,12 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+    useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      navigate("/");
+    }
+  }, []);
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     alert(`Login attempted for ${email}`);
