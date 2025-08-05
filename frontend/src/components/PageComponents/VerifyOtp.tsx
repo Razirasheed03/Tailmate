@@ -12,7 +12,6 @@ const OtpVerify = () => {
       navigate("/");
     }
   }, []);
-  // Extract email from navigation state (from signup page)
   const email = (location.state as any)?.email || "";
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
