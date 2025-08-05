@@ -7,11 +7,11 @@ const OtpVerify = () => {
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
-  const token = localStorage.getItem("auth_token");
-  if (token) {
-    navigate("/");
-  }
-}, []);
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      navigate("/");
+    }
+  }, []);
   // Extract email from navigation state (from signup page)
   const email = (location.state as any)?.email || "";
 
@@ -89,12 +89,12 @@ const OtpVerify = () => {
   const handleVerify = async () => {
     try {
       const otpString = otp.join(""); // Convert array to string (e.g. "123456")
-     const res= await axios.post("http://localhost:4000/api/auth/verify-otp", {
+      const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
         email,
         otp: otpString,
       });
       console.log("JWT from backend:", res.data.token);
-        localStorage.setItem("auth_token", res.data.token);
+      localStorage.setItem("auth_token", res.data.token);
 
       alert("✅ OTP verified and user registered!");
       navigate("/");
