@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import LoginImage from "/loginp.png";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-// import { toast } from 'rea ';
+
 
 const OtpVerify = () => {
   const navigate = useNavigate();
