@@ -15,21 +15,16 @@ class AuthController {
     constructor(_authService) {
         this._authService = _authService;
         this.signup = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
-            // 1. Zod validation FIRST
             const parsed = userSchemas_1.signupSchema.safeParse(req.body);
             if (!parsed.success) {
-                // Send the first error to frontend (or list all errors as an array)
                 return res.status(400).json({
                     success: false,
                     message: parsed.error.issues[0].message,
-                    errors: parsed.error.issues, // Optionally: send all errors
+                    errors: parsed.error.issues,
                 });
             }
-            // 2. Data is guaranteed valid and typed!
             const { username, email, password } = parsed.data;
-            // If you want to keep confirmPassword out of your DB/user object, drop it here
             try {
-                // Pass only the needed fields (without confirmPassword) to the service
                 const user = yield this._authService.signup({ username, email, password });
                 res.status(201).json({ success: true, user });
             }
@@ -45,6 +40,16 @@ class AuthController {
             }
             catch (err) {
                 console.error(err);
+                next(err);
+            }
+        });
+        this.resendOtp = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { email } = req.body;
+                yield this._authService.resendOtp(email);
+                res.status(200).json({ success: true, message: "OTP resent!" });
+            }
+            catch (err) {
                 next(err);
             }
         });

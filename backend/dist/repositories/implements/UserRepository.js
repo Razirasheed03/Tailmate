@@ -18,7 +18,6 @@ class UserRepository extends baseRepo_1.BaseRepository {
     }
     createUser(user) {
         return __awaiter(this, void 0, void 0, function* () {
-            // user: IUser (no _id) → Model.create returns IUserDoc (with _id)
             return yield UserModel_1.UserModel.create(user);
         });
     }

@@ -42,4 +42,18 @@ export class AuthService implements IAuthService {
 
     return { token, user: createdUser };
   };
+  resendOtp = async (email: string) => {
+  // Get user info from Redis or DB as you wish
+  const key = `signup:${email}`;
+  const redisData = await redisClient.get(key);
+  if (!redisData) throw new Error("OTP expired or not found, signup again.");
+
+  const parsed = JSON.parse(redisData);
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  parsed.otp = otp;
+  await redisClient.setEx(key, 300, JSON.stringify(parsed)); // 5min expiry or as you want
+
+  await sendOtpEmail(email, otp);
+};
+
 }

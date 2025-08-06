@@ -51,11 +51,23 @@ class AuthService {
             const parsed = JSON.parse(redisData);
             if (parsed.otp !== otp)
                 throw new Error("Invalid OTP");
-            const { otp: _ } = parsed, userData = __rest(parsed, ["otp"]); // Remove OTP property
+            const { otp: _ } = parsed, userData = __rest(parsed, ["otp"]);
             const createdUser = yield this._userRepo.createUser(userData);
             const token = jsonwebtoken_1.default.sign({ id: createdUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
             yield redisClient_1.default.del(key);
             return { token, user: createdUser };
+        });
+        this.resendOtp = (email) => __awaiter(this, void 0, void 0, function* () {
+            // Get user info from Redis or DB as you wish
+            const key = `signup:${email}`;
+            const redisData = yield redisClient_1.default.get(key);
+            if (!redisData)
+                throw new Error("OTP expired or not found, signup again.");
+            const parsed = JSON.parse(redisData);
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            parsed.otp = otp;
+            yield redisClient_1.default.setEx(key, 300, JSON.stringify(parsed)); // 5min expiry or as you want
+            yield (0, sendEmail_1.sendOtpEmail)(email, otp);
         });
     }
 }

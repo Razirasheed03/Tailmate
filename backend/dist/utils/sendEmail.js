@@ -26,15 +26,14 @@ const sendOtpEmail = (to, otp) => __awaiter(void 0, void 0, void 0, function* ()
         from: `"TailMate" <${process.env.EMAIL_USER}>`,
         to,
         subject: "Your TailMate OTP Code",
-        text: `Your OTP for verification is: ${otp}. It is valid for 5 minutes.`,
+        text: `Your OTP for verification is: ${otp}. It is valid for 2 minutes.`,
     };
     try {
         const info = yield transporter.sendMail(mailOptions);
-        console.log('Email sent:', info.response); // <-- show status in logs
+        console.log('Email sent:', info.response);
     }
     catch (err) {
-        console.error('Failed to send OTP mail:', err); // <-- log error
-        // Optional: throw or handle error
+        console.error('Failed to send OTP mail:', err);
         throw err;
     }
 });
