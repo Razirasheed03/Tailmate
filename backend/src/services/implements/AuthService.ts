@@ -50,7 +50,6 @@ await redisClient.setEx(
     return { token, user: createdUser };
   };
   resendOtp = async (email: string) => {
-  // Get user info from Redis or DB as you wish
   const key = `signup:${email}`;
   const redisData = await redisClient.get(key);
   if (!redisData) throw new Error("OTP expired or not found, signup again.");
