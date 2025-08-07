@@ -39,7 +39,8 @@ class AuthService {
             const otp = (0, crypto_1.randomInt)(100000, 999999).toString();
             const hashedPassword = yield bcryptjs_1.default.hash(user.password, 10);
             const key = `signup:${user.email}`;
-            yield redisClient_1.default.setEx(key, 300, JSON.stringify(Object.assign(Object.assign({}, user), { password: hashedPassword, otp })));
+            const createdAt = Date.now();
+            yield redisClient_1.default.setEx(key, 300, JSON.stringify(Object.assign(Object.assign({}, user), { password: hashedPassword, otp, createdAt })));
             yield (0, sendEmail_1.sendOtpEmail)(user.email, otp);
             return { message: "OTP sent to email. Please verify." };
         });
@@ -49,6 +50,9 @@ class AuthService {
             if (!redisData)
                 throw new Error("OTP expired or not found");
             const parsed = JSON.parse(redisData);
+            if (!parsed.createdAt || Date.now() - parsed.createdAt > 30 * 1000) {
+                throw new Error("OTP expired");
+            }
             if (parsed.otp !== otp)
                 throw new Error("Invalid OTP");
             const { otp: _ } = parsed, userData = __rest(parsed, ["otp"]);
@@ -66,7 +70,7 @@ class AuthService {
             const parsed = JSON.parse(redisData);
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             parsed.otp = otp;
-            yield redisClient_1.default.setEx(key, 300, JSON.stringify(parsed)); // 5min expiry or as you want
+            yield redisClient_1.default.setEx(key, 30, JSON.stringify(parsed)); //30 s expire aavum
             yield (0, sendEmail_1.sendOtpEmail)(email, otp);
         });
     }

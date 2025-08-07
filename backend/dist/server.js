@@ -18,6 +18,12 @@ app.use((0, cors_1.default)({
 app.use(express_1.default.json());
 (0, mongodb_1.connectDB)();
 app.use("/api/auth", authRoute_1.default);
+app.use((err, req, res, next) => {
+    res.status(err.status || 400).json({
+        success: false,
+        message: err.message || "Something went wrong."
+    });
+});
 app.listen(env_1.env.PORT, () => {
     console.log(`Server running on ${env_1.env.PORT}`);
 });

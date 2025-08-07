@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import LoginImage from "/loginp.png";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 
 const Login = () => {
@@ -18,7 +19,7 @@ const Login = () => {
   }, []);
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Login attempted for ${email}`);
+    toast.error(`Login attempted for ${email}`);
     // TODO: Implement API call for login
   };
 

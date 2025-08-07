@@ -19,7 +19,12 @@ export class AuthService implements IAuthService {
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
     const key = `signup:${user.email}`;
-    await redisClient.setEx(key, 300, JSON.stringify({ ...user, password: hashedPassword, otp }));
+    const createdAt = Date.now();
+await redisClient.setEx(
+  key,
+  300,
+  JSON.stringify({ ...user, password: hashedPassword, otp, createdAt })
+);
     await sendOtpEmail(user.email, otp);
 
     return { message: "OTP sent to email. Please verify." };
@@ -31,7 +36,9 @@ export class AuthService implements IAuthService {
 
     if (!redisData) throw new Error("OTP expired or not found");
     const parsed = JSON.parse(redisData);
-
+    if (!parsed.createdAt || Date.now() - parsed.createdAt > 30 * 1000) {
+  throw new Error("OTP expired");
+}
     if (parsed.otp !== otp) throw new Error("Invalid OTP");
 
     const { otp: _, ...userData } = parsed; 
@@ -51,7 +58,7 @@ export class AuthService implements IAuthService {
   const parsed = JSON.parse(redisData);
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   parsed.otp = otp;
-  await redisClient.setEx(key, 300, JSON.stringify(parsed)); // 5min expiry or as you want
+  await redisClient.setEx(key, 30, JSON.stringify(parsed)); //30 s expire aavum
 
   await sendOtpEmail(email, otp);
 };

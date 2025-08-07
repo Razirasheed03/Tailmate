@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import LoginImage from "/loginp.png";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 
 interface SignupFormInputs {
@@ -36,11 +37,11 @@ const Signup = () => {
         password: data.password,
         confirmPassword: data.confirmPassword
       });
-      alert("OTP sent to email!");
+      toast.success("OTP sent to email!");
       navigate("/verify-otp", { state: { email: data.email } });
     } catch (error: any) {
       console.log(error?.response);
-      alert(error?.response?.data?.message || "Signup failed");
+      toast.error(error?.response?.data?.message || "Signup failed");
     }
   };
 

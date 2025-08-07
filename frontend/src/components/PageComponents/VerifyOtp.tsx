@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import LoginImage from "/loginp.png";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "sonner";
 
 
 const OtpVerify = () => {
@@ -15,7 +16,7 @@ const OtpVerify = () => {
     }
   }, []);
 
-  
+
   const email = (location.state as any)?.email || "";
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -79,9 +80,9 @@ const OtpVerify = () => {
       // Call your backend to actually send a new OTP.
       // Adjust the endpoint as needed:
       await axios.post("http://localhost:4000/api/auth/resend-otp", { email });
-      alert("A new OTP has been sent to your email.");
+      toast.success("A new OTP has been sent to your email.");
     } catch (err: any) {
-      alert(err?.response?.data?.message || "Could not resend OTP right now.");
+      toast.error(err?.response?.data?.message || "Could not resend OTP right now.");
     }
   };
 
@@ -99,9 +100,11 @@ const OtpVerify = () => {
 
       toast.success('Otp Verified and User Created Successfully')
       navigate("/");
-    } catch (err: any) {
-      alert(err?.response?.data?.message || "OTP verification failed");
-    }
+    }catch (err:any) {
+  console.log('Full error:', err);
+  toast.error(err?.response?.data?.message || "OTP verification failed");
+}
+
   };
 
   return (
