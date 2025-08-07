@@ -6,7 +6,8 @@ import redisClient from "../../config/redisClient";
 import { randomInt } from "crypto";
 import { sendOtpEmail } from "../../utils/sendEmail";
 import type { SignupInput } from "../../validation/userSchemas";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
 
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
@@ -30,10 +31,10 @@ export class AuthService implements IAuthService {
     return { message: "OTP sent to email. Please verify." };
   };
 
-  verifyOtp = async (email: string, otp: string): Promise<{ token: string; user: IUser }> => {
+  verifyOtp = async (email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: IUser }> => {
     const key = `signup:${email}`;
     const redisData = await redisClient.get(key);
-
+    console.log("redis key in verifyOtp", redisData)
     if (!redisData) throw new Error("OTP expired or not found");
     const parsed = JSON.parse(redisData);
     if (!parsed.createdAt || Date.now() - parsed.createdAt > 30 * 1000) {
@@ -41,25 +42,74 @@ export class AuthService implements IAuthService {
     }
     if (parsed.otp !== otp) throw new Error("Invalid OTP");
 
+
     const { otp: _, ...userData } = parsed;
     const createdUser = await this._userRepo.createUser(userData);
+    console.log("VALUES for verification:",
+      "Submitted OTP:", otp,
+      "Redis object:", parsed,
+      "CreatedAt diff (ms):", Date.now() - parsed.createdAt
+    );
 
-    const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+
+    // const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+    // await redisClient.del(key);
+
+    // return { token, user: createdUser };
+    const accessToken = generateAccessToken(createdUser._id.toString());
+    const refreshToken = generateRefreshToken(createdUser._id.toString());
+
+    // Store refreshToken in Redis for validation/revocation
+    await redisClient.setEx(
+      `refresh:${createdUser._id}`,
+      7 * 24 * 60 * 60, // 7 days in seconds
+      refreshToken
+    );
     await redisClient.del(key);
-
-    return { token, user: createdUser };
+    // Return both tokens
+    return { accessToken, refreshToken, user: createdUser };
   };
   resendOtp = async (email: string) => {
     const key = `signup:${email}`;
     const redisData = await redisClient.get(key);
+    console.log('Redis after resend: ', redisData);
     if (!redisData) throw new Error("OTP expired or not found, signup again.");
 
     const parsed = JSON.parse(redisData);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     parsed.otp = otp;
-    await redisClient.setEx(key, 30, JSON.stringify(parsed)); //30 s expire aavum
+    parsed.createdAt = Date.now();
+    await redisClient.setEx(key, 300, JSON.stringify(parsed)); //5 min for resended otp set aavan.
+    console.log("parsed.createdAT", parsed.createdAt)
 
     await sendOtpEmail(email, otp);
   };
+  refreshToken = async (refreshToken: string): Promise<{ accessToken: string }> => {
+    if (!refreshToken) throw new Error("No refresh token provided");
+
+    let payload: string | JwtPayload;
+    try {
+      payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET!);
+    } catch {
+      throw new Error("Refresh token invalid or expired");
+    }
+
+    // Type check and extract user id from payload
+    let userId: string;
+    if (typeof payload === "object" && payload && "id" in payload) {
+      userId = (payload as JwtPayload & { id: string }).id;
+    } else {
+      throw new Error("Invalid refresh token payload - user id missing.");
+    }
+
+    // Check against Redis
+    const storedToken = await redisClient.get(`refresh:${userId}`);
+    if (storedToken !== refreshToken) throw new Error("Refresh token is revoked or does not match");
+
+    // Generate new access token
+    const accessToken = generateAccessToken(userId);
+    return { accessToken };
+  };
+
 
 }

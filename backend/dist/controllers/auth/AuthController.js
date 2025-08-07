@@ -35,8 +35,16 @@ class AuthController {
         this.verifyOtp = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const { email, otp } = req.body;
-                const result = yield this._authService.verifyOtp(email, otp);
-                res.status(200).json(Object.assign({ success: true }, result));
+                const { accessToken, refreshToken, user } = yield this._authService.verifyOtp(email, otp);
+                res
+                    .cookie("refreshToken", refreshToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: "strict",
+                    maxAge: 7 * 24 * 60 * 60 * 1000
+                })
+                    .status(200)
+                    .json({ success: true, accessToken, user });
             }
             catch (err) {
                 console.error(err);
@@ -48,6 +56,17 @@ class AuthController {
                 const { email } = req.body;
                 yield this._authService.resendOtp(email);
                 res.status(200).json({ success: true, message: "OTP resent!" });
+            }
+            catch (err) {
+                next(err);
+            }
+        });
+        this.refreshToken = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Get from HTTP-only cookie or body
+                const token = req.cookies.refreshToken || req.body.refreshToken;
+                const { accessToken } = yield this._authService.refreshToken(token);
+                res.json({ success: true, accessToken });
             }
             catch (err) {
                 next(err);

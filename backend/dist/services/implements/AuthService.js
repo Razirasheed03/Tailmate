@@ -29,6 +29,7 @@ const redisClient_1 = __importDefault(require("../../config/redisClient"));
 const crypto_1 = require("crypto");
 const sendEmail_1 = require("../../utils/sendEmail");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const jwt_1 = require("../../utils/jwt");
 class AuthService {
     constructor(_userRepo) {
         this._userRepo = _userRepo;
@@ -47,6 +48,7 @@ class AuthService {
         this.verifyOtp = (email, otp) => __awaiter(this, void 0, void 0, function* () {
             const key = `signup:${email}`;
             const redisData = yield redisClient_1.default.get(key);
+            console.log("redis key in verifyOtp", redisData);
             if (!redisData)
                 throw new Error("OTP expired or not found");
             const parsed = JSON.parse(redisData);
@@ -57,21 +59,57 @@ class AuthService {
                 throw new Error("Invalid OTP");
             const { otp: _ } = parsed, userData = __rest(parsed, ["otp"]);
             const createdUser = yield this._userRepo.createUser(userData);
-            const token = jsonwebtoken_1.default.sign({ id: createdUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+            // const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+            // await redisClient.del(key);
+            // return { token, user: createdUser };
+            const accessToken = (0, jwt_1.generateAccessToken)(createdUser._id.toString());
+            const refreshToken = (0, jwt_1.generateRefreshToken)(createdUser._id.toString());
+            // Store refreshToken in Redis for validation/revocation
+            yield redisClient_1.default.setEx(`refresh:${createdUser._id}`, 7 * 24 * 60 * 60, // 7 days in seconds
+            refreshToken);
             yield redisClient_1.default.del(key);
-            return { token, user: createdUser };
+            // Return both tokens
+            return { accessToken, refreshToken, user: createdUser };
         });
         this.resendOtp = (email) => __awaiter(this, void 0, void 0, function* () {
-            // Get user info from Redis or DB as you wish
             const key = `signup:${email}`;
             const redisData = yield redisClient_1.default.get(key);
+            console.log('Redis after resend: ', redisData);
             if (!redisData)
                 throw new Error("OTP expired or not found, signup again.");
             const parsed = JSON.parse(redisData);
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             parsed.otp = otp;
-            yield redisClient_1.default.setEx(key, 30, JSON.stringify(parsed)); //30 s expire aavum
+            parsed.createdAt = Date.now();
+            console.log("parsed.createdAT", parsed.createdAT);
+            yield redisClient_1.default.setEx(key, 300, JSON.stringify(parsed)); //5 min for resended otp set aavan.
             yield (0, sendEmail_1.sendOtpEmail)(email, otp);
+        });
+        this.refreshToken = (refreshToken) => __awaiter(this, void 0, void 0, function* () {
+            if (!refreshToken)
+                throw new Error("No refresh token provided");
+            let payload;
+            try {
+                payload = jsonwebtoken_1.default.verify(refreshToken, process.env.REFRESH_SECRET);
+            }
+            catch (_a) {
+                throw new Error("Refresh token invalid or expired");
+            }
+            // Type check and extract user id from payload
+            let userId;
+            if (typeof payload === "object" && payload && "id" in payload) {
+                userId = payload.id;
+            }
+            else {
+                throw new Error("Invalid refresh token payload - user id missing.");
+            }
+            // Check against Redis
+            const storedToken = yield redisClient_1.default.get(`refresh:${userId}`);
+            if (storedToken !== refreshToken)
+                throw new Error("Refresh token is revoked or does not match");
+            // Generate new access token
+            const accessToken = (0, jwt_1.generateAccessToken)(userId);
+            return { accessToken };
         });
     }
 }

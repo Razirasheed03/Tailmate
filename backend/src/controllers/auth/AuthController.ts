@@ -30,22 +30,41 @@ export class AuthController {
   verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, otp } = req.body;
-      const result = await this._authService.verifyOtp(email, otp);
-      res.status(200).json({ success: true, ...result });
+      const { accessToken, refreshToken, user } = await this._authService.verifyOtp(email, otp);
+      res
+        .cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        })
+        .status(200)
+        .json({ success: true, accessToken, user });
     } catch (err) {
       console.error(err);
       next(err);
     }
   };
   resendOtp = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email } = req.body;
-    await this._authService.resendOtp(email);
-    res.status(200).json({ success: true, message: "OTP resent!" });
-  } catch (err) {
-    next(err);
-  }
-};
+    try {
+      const { email } = req.body;
+      await this._authService.resendOtp(email);
+      res.status(200).json({ success: true, message: "OTP resent!" });
+    } catch (err) {
+      next(err);
+    }
+  };
+  refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get from HTTP-only cookie or body
+      const token = req.cookies.refreshToken || req.body.refreshToken;
+      const { accessToken } = await this._authService.refreshToken(token);
+      res.json({ success: true, accessToken });
+    } catch (err) {
+      next(err);
+    }
+  };
+
 
 
 
