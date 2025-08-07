@@ -20,11 +20,11 @@ export class AuthService implements IAuthService {
 
     const key = `signup:${user.email}`;
     const createdAt = Date.now();
-await redisClient.setEx(
-  key,
-  300,
-  JSON.stringify({ ...user, password: hashedPassword, otp, createdAt })
-);
+    await redisClient.setEx(
+      key,
+      300,
+      JSON.stringify({ ...user, password: hashedPassword, otp, createdAt })
+    );
     await sendOtpEmail(user.email, otp);
 
     return { message: "OTP sent to email. Please verify." };
@@ -37,11 +37,11 @@ await redisClient.setEx(
     if (!redisData) throw new Error("OTP expired or not found");
     const parsed = JSON.parse(redisData);
     if (!parsed.createdAt || Date.now() - parsed.createdAt > 30 * 1000) {
-  throw new Error("OTP expired");
-}
+      throw new Error("OTP expired");
+    }
     if (parsed.otp !== otp) throw new Error("Invalid OTP");
 
-    const { otp: _, ...userData } = parsed; 
+    const { otp: _, ...userData } = parsed;
     const createdUser = await this._userRepo.createUser(userData);
 
     const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
@@ -50,16 +50,16 @@ await redisClient.setEx(
     return { token, user: createdUser };
   };
   resendOtp = async (email: string) => {
-  const key = `signup:${email}`;
-  const redisData = await redisClient.get(key);
-  if (!redisData) throw new Error("OTP expired or not found, signup again.");
+    const key = `signup:${email}`;
+    const redisData = await redisClient.get(key);
+    if (!redisData) throw new Error("OTP expired or not found, signup again.");
 
-  const parsed = JSON.parse(redisData);
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  parsed.otp = otp;
-  await redisClient.setEx(key, 30, JSON.stringify(parsed)); //30 s expire aavum
+    const parsed = JSON.parse(redisData);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    parsed.otp = otp;
+    await redisClient.setEx(key, 30, JSON.stringify(parsed)); //30 s expire aavum
 
-  await sendOtpEmail(email, otp);
-};
+    await sendOtpEmail(email, otp);
+  };
 
 }
