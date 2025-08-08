@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
 
 
 const Login = () => {
@@ -12,6 +13,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
     if (token) {
@@ -19,14 +21,14 @@ const Login = () => {
     }
   }, []);
 const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault(); // Prevent default form reload
+  e.preventDefault(); 
   try {
     const { data } = await axios.post(
       "http://localhost:4000/api/auth/login",
       { email, password },
       { withCredentials: true }
     );
-    localStorage.setItem('auth_token', data.accessToken); 
+   login(data.accessToken);
     toast.success('Login successful!');
     navigate("/");
   } catch (error: any) {

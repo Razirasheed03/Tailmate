@@ -1,18 +1,19 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem("auth_token");
+  const { isAuthenticated, logout } = useAuth();
 
-  const logout = () => {
-    localStorage.removeItem("auth_token");
+  const handleLogout = () => {
+    logout();
     navigate("/login");
   };
 
   return (
     <div className="flex flex-col gap-6 items-center justify-center min-h-screen bg-gray-50">
       <h1 className="text-3xl font-bold mb-6">Temp LandingPage</h1>
-      {!token ? (
+      {!isAuthenticated ? (
         <div className="flex gap-4">
           <button
             className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-700"
@@ -32,7 +33,7 @@ const LandingPage = () => {
           <span className="mb-3 text-gray-700">You are logged in.</span>
           <button
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700"
-            onClick={logout}
+            onClick={handleLogout}
           >
             Logout
           </button>
