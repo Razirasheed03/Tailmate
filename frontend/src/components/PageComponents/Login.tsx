@@ -4,6 +4,7 @@ import LoginImage from "/loginp.png";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import axios from "axios";
 
 
 const Login = () => {
@@ -17,11 +18,27 @@ const Login = () => {
       navigate("/");
     }
   }, []);
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.error(`Login attempted for ${email}`);
-    // TODO: Implement API call for login
-  };
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault(); // Prevent default form reload
+  try {
+    const { data } = await axios.post(
+      "http://localhost:4000/api/auth/login",
+      { email, password },
+      { withCredentials: true }
+    );
+    localStorage.setItem('auth_token', data.accessToken); 
+    toast.success('Login successful!');
+    navigate("/");
+  } catch (error: any) {
+    // Show backend error if present, else fallback text
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      "Login failed. Please check your credentials.";
+    toast.error(msg);
+  }
+};
+
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
