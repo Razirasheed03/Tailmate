@@ -110,6 +110,23 @@ export class AuthService implements IAuthService {
     const accessToken = generateAccessToken(userId);
     return { accessToken };
   };
+login = async (email: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: IUser }> => {
+  const user = await this._userRepo.findByEmail(email);
+  if (!user) throw new Error("Invalid email or password");
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw new Error("Invalid email or password");
+
+  const userId = user._id.toString();
+  const accessToken = generateAccessToken(userId);
+  const refreshToken = generateRefreshToken(userId);
+
+  await redisClient.setEx(`refresh:${userId}`, 7 * 24 * 60 * 60, refreshToken);
+
+  return { accessToken, refreshToken, user };
+};
+
+
   
 
 

@@ -59,6 +59,7 @@ class AuthService {
                 throw new Error("Invalid OTP");
             const { otp: _ } = parsed, userData = __rest(parsed, ["otp"]);
             const createdUser = yield this._userRepo.createUser(userData);
+            console.log("VALUES for verification:", "Submitted OTP:", otp, "Redis object:", parsed, "CreatedAt diff (ms):", Date.now() - parsed.createdAt);
             // const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
             // await redisClient.del(key);
             // return { token, user: createdUser };
@@ -81,8 +82,8 @@ class AuthService {
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             parsed.otp = otp;
             parsed.createdAt = Date.now();
-            console.log("parsed.createdAT", parsed.createdAT);
             yield redisClient_1.default.setEx(key, 300, JSON.stringify(parsed)); //5 min for resended otp set aavan.
+            console.log("parsed.createdAT", parsed.createdAt);
             yield (0, sendEmail_1.sendOtpEmail)(email, otp);
         });
         this.refreshToken = (refreshToken) => __awaiter(this, void 0, void 0, function* () {
@@ -110,6 +111,19 @@ class AuthService {
             // Generate new access token
             const accessToken = (0, jwt_1.generateAccessToken)(userId);
             return { accessToken };
+        });
+        this.login = (email, password) => __awaiter(this, void 0, void 0, function* () {
+            const user = yield this._userRepo.findByEmail(email);
+            if (!user)
+                throw new Error("Invalid email or password");
+            const isMatch = yield bcryptjs_1.default.compare(password, user.password);
+            if (!isMatch)
+                throw new Error("Invalid email or password");
+            const userId = user._id.toString();
+            const accessToken = (0, jwt_1.generateAccessToken)(userId);
+            const refreshToken = (0, jwt_1.generateRefreshToken)(userId);
+            yield redisClient_1.default.setEx(`refresh:${userId}`, 7 * 24 * 60 * 60, refreshToken);
+            return { accessToken, refreshToken, user };
         });
     }
 }

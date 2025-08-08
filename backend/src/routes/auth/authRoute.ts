@@ -8,6 +8,7 @@ const router = Router();
 router.post("/signup", asyncHandler(authController.signup));
 router.post("/verify-otp", asyncHandler(authController.verifyOtp));
 router.post("/resend-otp", asyncHandler(authController.resendOtp));
+router.post("/login", asyncHandler(authController.login));
 
 
 export default router;

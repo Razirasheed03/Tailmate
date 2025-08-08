@@ -64,6 +64,23 @@ export class AuthController {
       next(err);
     }
   };
+  login = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+    const { accessToken, refreshToken, user } = await this._authService.login(email, password);
+    res
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      })
+      .status(200)
+      .json({ success: true, accessToken, user });
+  } catch (err) {
+    next(err);
+  }
+};
 
 
 
