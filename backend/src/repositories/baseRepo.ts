@@ -1,7 +1,7 @@
 import { Model, Document } from "mongoose";
 
 export abstract class BaseRepository<T extends Document> {
-  constructor(protected readonly model: Model<T>) {}
+  constructor(protected readonly model: Model<T>) { }
 
   async create(entity: Partial<T>): Promise<T> {
     return await this.model.create(entity);
