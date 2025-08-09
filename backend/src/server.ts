@@ -9,8 +9,8 @@ import cors from "cors"
 const app = express();
 
 app.use(cors({
-    origin: "http://localhost:3000",
-    credentials: true,
+  origin: "http://localhost:3000",
+  credentials: true,
 }));
 
 app.use(express.json())
@@ -24,5 +24,5 @@ app.use((err: any, req: any, res: any, next: any) => {
   });
 });
 app.listen(env.PORT, () => {
-    console.log(`Server running on ${env.PORT}`)
+  console.log(`Server running on ${env.PORT}`)
 })
