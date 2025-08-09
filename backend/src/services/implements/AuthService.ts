@@ -24,7 +24,7 @@ export class AuthService implements IAuthService {
     await redisClient.setEx(
       key,
       300,
-      JSON.stringify({ ...user, password: hashedPassword, otp, createdAt })
+      JSON.stringify({ ...user, password: hashedPassword,isAdmin: false, otp, createdAt })
     );
     await sendOtpEmail(user.email, otp);
 

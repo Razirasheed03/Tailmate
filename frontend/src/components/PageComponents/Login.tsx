@@ -21,16 +21,22 @@ const Login = () => {
     }
   }, []);
 const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault(); 
+   e.preventDefault();
   try {
     const { data } = await axios.post(
       "http://localhost:4000/api/auth/login",
       { email, password },
       { withCredentials: true }
     );
-   login(data.accessToken);
+    // data.user: { username, email, isAdmin }
+    login(data.accessToken, data.user); // <<< Pass user info too!
     toast.success('Login successful!');
-    navigate("/");
+    // Redirect based on role:
+    if (data.user.isAdmin) {
+      navigate("/admin");
+    } else {
+      navigate("/");
+    }
   } catch (error: any) {
     // Show backend error if present, else fallback text
     const msg =

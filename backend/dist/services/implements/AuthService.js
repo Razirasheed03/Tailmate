@@ -41,7 +41,7 @@ class AuthService {
             const hashedPassword = yield bcryptjs_1.default.hash(user.password, 10);
             const key = `signup:${user.email}`;
             const createdAt = Date.now();
-            yield redisClient_1.default.setEx(key, 300, JSON.stringify(Object.assign(Object.assign({}, user), { password: hashedPassword, otp, createdAt })));
+            yield redisClient_1.default.setEx(key, 300, JSON.stringify(Object.assign(Object.assign({}, user), { password: hashedPassword, isAdmin: false, otp, createdAt })));
             yield (0, sendEmail_1.sendOtpEmail)(user.email, otp);
             return { message: "OTP sent to email. Please verify." };
         });
