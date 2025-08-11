@@ -32,11 +32,17 @@ const handleLogin = async (e: React.FormEvent) => {
     login(data.accessToken, data.user); // <<< Pass user info too!
     toast.success('Login successful!');
     // Redirect based on role:
-    if (data.user.isAdmin) {
-      navigate("/admin");
-    } else {
-      navigate("/");
-    }
+if (data.user.isBlocked) {
+  toast.error("You are banned and cannot login.");
+  return;
+}
+if (data.user.isAdmin) {
+  navigate("/admin");
+} else if (data.user.isDoctor) {
+  navigate("/doctor");
+} else {
+  navigate("/");
+}
   } catch (error: any) {
     // Show backend error if present, else fallback text
     const msg =

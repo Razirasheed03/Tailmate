@@ -12,6 +12,7 @@ interface SignupFormInputs {
   email: string;
   password: string;
   confirmPassword: string;
+  isDoctor?:boolean;
 }
 
 const Signup = () => {
@@ -35,7 +36,8 @@ const Signup = () => {
         username: data.username,
         email: data.email,
         password: data.password,
-        confirmPassword: data.confirmPassword
+        confirmPassword: data.confirmPassword,
+        isDoctor:data.isDoctor
       });
       toast.success("OTP sent to email!");
       navigate("/verify-otp", { state: { email: data.email } });
@@ -154,6 +156,17 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
+            <div className="flex items-center gap-2 pt-2">
+          <input
+            id="isDoctor"
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300 text-[#e4a574] focus:ring-[#e4a574]"
+            {...register("isDoctor")}
+          />
+          <label htmlFor="isDoctor" className="text-sm text-gray-700">
+            I want to work with Tailmate as a doctor
+          </label>
+        </div>
             <button
               type="submit"
               className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200"

@@ -23,9 +23,9 @@ class AuthController {
                     errors: parsed.error.issues,
                 });
             }
-            const { username, email, password } = parsed.data;
+            const { username, email, password, isDoctor } = parsed.data;
             try {
-                const user = yield this._authService.signup({ username, email, password });
+                const user = yield this._authService.signup({ username, email, password, isDoctor });
                 res.status(201).json({ success: true, user });
             }
             catch (err) {

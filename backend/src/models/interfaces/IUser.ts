@@ -3,4 +3,6 @@ export interface IUser {
   email: string;
   password: string;
   isAdmin?: boolean;
+  isBlocked?:boolean;
+  isDoctor?:boolean;
 }

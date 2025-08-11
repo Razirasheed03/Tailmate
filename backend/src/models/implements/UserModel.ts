@@ -11,6 +11,8 @@ const UserSchema = new Schema<IUserDoc>(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     isAdmin: { type: Boolean, default: false },
+    isBlocked:{type:Boolean,default:false},
+    isDoctor:{type:Boolean,default:false}
   },
   { timestamps: true }
 );
