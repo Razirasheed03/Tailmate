@@ -19,11 +19,10 @@ export class AuthController {
     }
     
     const { username, email, password,isDoctor } = parsed.data;
-    console.log(req.body)
 
     try {
-      const user = await this._authService.signup({ username, email, password ,isDoctor});
-      res.status(201).json({ success: true, user });
+      const result = await this._authService.signup({ username, email, password ,isDoctor});
+      res.status(201).json(result);
     } catch (err) {
       next(err);
     }
