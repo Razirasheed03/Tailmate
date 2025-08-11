@@ -11,7 +11,8 @@ import ProtectedAdminRoute from "@/components/LogicalComponents/AdminProtectedRo
 import AdminLandingPage from "@/pages/admin/AdminLandingPage";
 import DoctorLandingPage from "@/pages/doctor/LandingPage";
 // import { User } from "lucide-react";
-
+import ResetPassword from "@/components/Modals/ResetPassword";
+import ForgotPassword from "@/components/Modals/ForgotPassword";
 export const router = createBrowserRouter([
   {
     path: "/signup",
@@ -53,6 +54,14 @@ export const router = createBrowserRouter([
       ]
     }
   ]
+},
+{
+  path: "/forgot-password",
+  element: <ForgotPassword />,
+},
+{
+  path: "/reset-password",
+  element: <ResetPassword />,
 },
 
   {

@@ -122,12 +122,13 @@ if (data.user.isAdmin) {
               </div>
             </div>
 
-            <div className="text-right">
-              <button type="button" className="text-sm text-gray-500 hover:text-gray-700">
-                Forgot Password?
-              </button>
-            </div>
-
+       <button
+  type="button"
+  onClick={() => navigate("/forgot-password")}
+  className="text-sm text-gray-500 hover:text-gray-700"
+>
+  Forgot Password?
+</button>
 
             <button type="submit" className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200">
               Login

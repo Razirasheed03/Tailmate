@@ -9,10 +9,14 @@ export class UserRepository extends BaseRepository<IUserDoc> implements IUserRep
   }
 
   async createUser(user: IUser): Promise<IUserDoc> {
-    return await UserModel.create(user);
+    return await super.create(user);
   }
 
   async findByEmail(email: string): Promise<IUserDoc | null> {
-    return await UserModel.findOne({ email });
+    return await this.model.findOne({ email });
   }
+  async findById(id: string): Promise<IUserDoc|null> {
+  return await this.model.findById(id);
+}
+
 }

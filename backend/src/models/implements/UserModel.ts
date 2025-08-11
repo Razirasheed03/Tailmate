@@ -12,7 +12,9 @@ const UserSchema = new Schema<IUserDoc>(
     password: { type: String, required: true },
     isAdmin: { type: Boolean, default: false },
     isBlocked:{type:Boolean,default:false},
-    isDoctor:{type:Boolean,default:false}
+    isDoctor:{type:Boolean,default:false},
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },  
   },
   { timestamps: true }
 );

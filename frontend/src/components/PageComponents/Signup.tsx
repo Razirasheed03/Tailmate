@@ -32,15 +32,18 @@ const Signup = () => {
 
   const onSubmit = async (data: SignupFormInputs) => {
     try {
-      await axios.post("http://localhost:4000/api/auth/signup", {
+     const response= await axios.post("http://localhost:4000/api/auth/signup", {
         username: data.username,
         email: data.email,
         password: data.password,
         confirmPassword: data.confirmPassword,
         isDoctor:data.isDoctor
       });
-      toast.success("OTP sent to email!");
-      navigate("/verify-otp", { state: { email: data.email } });
+    
+      toast.success(response.data.message);
+      if(response.data.success){
+       navigate("/verify-otp", { state: { email: data.email } });
+      }
     } catch (error: any) {
       console.log(error?.response);
       toast.error(error?.response?.data?.message || "Signup failed");
