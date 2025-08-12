@@ -4,9 +4,12 @@ import React, { createContext, useState, useEffect, useContext } from "react";
 interface AuthContextType {
   isAuthenticated: boolean;
   token: string | null;
-  user: { username?: string; email?: string; isAdmin?: boolean; isDoctor?: boolean;
-  isBlocked?: boolean; } | null;
-  login: (token: string, user: { username?: string; email?: string; isAdmin?: boolean }) => void;
+  user: {
+    username?: string; email?: string; isAdmin?: boolean; isDoctor?: boolean;
+    isBlocked?: boolean;
+  } | null;
+  login: (token: string, user: { username?: string; email?: string; isAdmin?: boolean;isDoctor?: boolean;
+    isBlocked?: boolean;}) => void;
   logout: () => void;
 }
 

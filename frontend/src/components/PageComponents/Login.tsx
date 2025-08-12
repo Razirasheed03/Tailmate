@@ -20,6 +20,8 @@ const Login = () => {
       navigate("/");
     }
   }, []);
+
+
 const handleLogin = async (e: React.FormEvent) => {
    e.preventDefault();
   try {
@@ -28,14 +30,9 @@ const handleLogin = async (e: React.FormEvent) => {
       { email, password },
       { withCredentials: true }
     );
-    // data.user: { username, email, isAdmin }
     login(data.accessToken, data.user); // <<< Pass user info too!
     toast.success('Login successful!');
-    // Redirect based on role:
-if (data.user.isBlocked) {
-  toast.error("You are banned and cannot login.");
-  return;
-}
+
 if (data.user.isAdmin) {
   navigate("/admin");
 } else if (data.user.isDoctor) {

@@ -13,6 +13,7 @@ import DoctorLandingPage from "@/pages/doctor/LandingPage";
 // import { User } from "lucide-react";
 import ResetPassword from "@/components/Modals/ResetPassword";
 import ForgotPassword from "@/components/Modals/ForgotPassword";
+import GuestProtectedRoute from "@/components/LogicalComponents/GuestProtectedRoute";
 export const router = createBrowserRouter([
   {
     path: "/signup",
@@ -57,11 +58,23 @@ export const router = createBrowserRouter([
 },
 {
   path: "/forgot-password",
-  element: <ForgotPassword />,
+  element:<GuestProtectedRoute/>,
+  children:[
+    {
+      index:true,
+      element:<ForgotPassword/>
+    }
+  ]
 },
 {
   path: "/reset-password",
-  element: <ResetPassword />,
+  element: <GuestProtectedRoute />,
+  children:[
+    {
+      index:true,
+      element:<ResetPassword/>
+    }
+  ]
 },
 
   {

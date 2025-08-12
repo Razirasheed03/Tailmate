@@ -1,10 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useEffect } from "react";
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout,user } = useAuth();
+useEffect(() => {
+if (isAuthenticated && user?.isBlocked) {
 
+logout();
+navigate("/login", { replace: true });
+}
+}, [isAuthenticated, user, logout, navigate]);
   const handleLogout = () => {
     logout();
     navigate("/login");

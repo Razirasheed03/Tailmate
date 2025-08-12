@@ -113,7 +113,9 @@ export class AuthService implements IAuthService {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error("Invalid email or password");
-
+      if (user.isBlocked) {
+    throw new Error("You are banned and cannot login.");
+  }
     const userId = user._id.toString();
     const accessToken = generateAccessToken(userId);
     const refreshToken = generateRefreshToken(userId);
