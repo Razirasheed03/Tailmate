@@ -5,4 +5,7 @@ export interface IUser {
   isAdmin?: boolean;
   isBlocked?:boolean;
   isDoctor?:boolean;
+  resetPasswordToken?:string,
+  resetPasswordExpires?:Date,
+
 }

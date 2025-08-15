@@ -8,11 +8,12 @@ import { sendOtpEmail } from "../../utils/sendEmail";
 import type { SignupInput } from "../../validation/userSchemas";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
-
+  import crypto from "crypto";
+  import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
 
-  signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ message: string }> => {
+  signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{success:boolean, message: string }> => {
     const existing = await this._userRepo.findByEmail(user.email);
     if (existing) throw new Error("User already exists");
 
@@ -21,21 +22,21 @@ export class AuthService implements IAuthService {
 
     const key = `signup:${user.email}`;
     const createdAt = Date.now();
-    await redisClient.setEx(
+   const result= await redisClient.setEx(
       key,
       300,
       JSON.stringify({ ...user, password: hashedPassword, isAdmin: false,isDoctor: !!user.isDoctor,
     isBlocked: false, otp, createdAt })
     );
+    console.log(result,otp)
     await sendOtpEmail(user.email, otp);
 
-    return { message: "OTP sent to email. Please verify." };
+    return { success:true,message: "OTP sent to email"};
   };
 
   verifyOtp = async (email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: IUser }> => {
     const key = `signup:${email}`;
     const redisData = await redisClient.get(key);
-    console.log("redis key in verifyOtp", redisData)
     if (!redisData) throw new Error("OTP expired or not found");
     const parsed = JSON.parse(redisData);
     if (!parsed.createdAt || Date.now() - parsed.createdAt > 30 * 1000) {
@@ -52,11 +53,6 @@ export class AuthService implements IAuthService {
       "CreatedAt diff (ms):", Date.now() - parsed.createdAt
     );
 
-
-    // const token = jwt.sign({ id: createdUser._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
-    // await redisClient.del(key);
-
-    // return { token, user: createdUser };
     const accessToken = generateAccessToken(createdUser._id.toString());
     const refreshToken = generateRefreshToken(createdUser._id.toString());
 
@@ -73,7 +69,6 @@ export class AuthService implements IAuthService {
   resendOtp = async (email: string) => {
     const key = `signup:${email}`;
     const redisData = await redisClient.get(key);
-    console.log('Redis after resend: ', redisData);
     if (!redisData) throw new Error("OTP expired or not found, signup again.");
 
     const parsed = JSON.parse(redisData);
@@ -82,6 +77,7 @@ export class AuthService implements IAuthService {
     parsed.createdAt = Date.now();
     await redisClient.setEx(key, 300, JSON.stringify(parsed)); //5 min for resended otp set aavan.
     console.log("parsed.createdAT", parsed.createdAt)
+    console.log(otp)
 
     await sendOtpEmail(email, otp);
   };
@@ -126,6 +122,54 @@ export class AuthService implements IAuthService {
 
     return { accessToken, refreshToken, user };
   };
+
+
+forgotPassword = async (email: string): Promise<void> => {
+  const user = await this._userRepo.findByEmail(email);
+  if (!user) return; // Always return success (don't leak info)
+
+  // Generate token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+  const expires = new Date(Date.now() + 3600000); // 1 hour
+
+  // Save to user
+  (user as any).resetPasswordToken = tokenHash;
+  (user as any).resetPasswordExpires = expires;
+  await (user as any).save();
+
+  // Frontend URL, adjust as needed
+  const resetUrl = `${process.env.FRONTEND_BASE_URL}/reset-password?token=${resetToken}&id=${user._id}`;
+await sendResetPasswordLink(
+  user.email,
+  "Password Reset",
+  `Click here to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore.`
+);
+  // NOTE: sendOtpEmail could be renamed for generic mail
+};
+
+resetPassword = async (userId: string, token: string, newPassword: string): Promise<void> => {
+  const user = await this._userRepo.findById(userId);
+  if (
+    !user ||
+    !user.resetPasswordToken ||
+    !user.resetPasswordExpires
+  )
+    throw new Error("Invalid or expired reset link");
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  if (
+    user.resetPasswordToken !== tokenHash ||
+    user.resetPasswordExpires < new Date()
+  )
+    throw new Error("Invalid or expired reset link");
+
+  // Hash new password
+  user.password = await bcrypt.hash(newPassword, 10);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await (user as any).save();
+};
 
 
 

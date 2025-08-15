@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useState ,useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import LoginImage from "/loginp.png";
@@ -12,7 +12,7 @@ interface SignupFormInputs {
   email: string;
   password: string;
   confirmPassword: string;
-  isDoctor?:boolean;
+  isDoctor?: boolean;
 }
 
 const Signup = () => {
@@ -20,7 +20,7 @@ const Signup = () => {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormInputs>();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    useEffect(() => {
+  useEffect(() => {
     const token = localStorage.getItem("auth_token");
     if (token) {
       navigate("/");
@@ -32,15 +32,18 @@ const Signup = () => {
 
   const onSubmit = async (data: SignupFormInputs) => {
     try {
-      await axios.post("http://localhost:4000/api/auth/signup", {
+      const response = await axios.post("http://localhost:4000/api/auth/signup", {
         username: data.username,
         email: data.email,
         password: data.password,
         confirmPassword: data.confirmPassword,
-        isDoctor:data.isDoctor
+        isDoctor: data.isDoctor
       });
-      toast.success("OTP sent to email!");
-      navigate("/verify-otp", { state: { email: data.email } });
+
+      toast.success(response.data.message)
+      if (response.data.success) {
+        navigate("/verify-otp", { state: { email: data.email } });
+      }
     } catch (error: any) {
       console.log(error?.response);
       toast.error(error?.response?.data?.message || "Signup failed");
@@ -109,11 +112,16 @@ const Signup = () => {
                   type={showPassword ? "text" : "password"}
                   {...register("password", {
                     required: "Password is required",
-                    minLength: { value: 6, message: "Password must be at least 6 characters" }
+                    minLength: { value: 8, message: "Password must be at least 8 characters" },
+                    pattern: {
+                      value: /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*\-]).{8,}$/,
+                      message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+                    }
                   })}
-                  placeholder="Create a password"
+                  placeholder="Create a Stronger password"
                   className={`w-full pl-12 pr-12 py-3 border ${errors.password ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
                 />
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -125,6 +133,30 @@ const Signup = () => {
               {errors.password && (
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
+              {/* Add this after the password input field */}
+              {/* {watch("password") && (
+  <div className="mt-2 space-y-1">
+    <div className="text-xs text-gray-600">Password requirements:</div>
+    <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className={`${/^.{8,}$/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
+        • At least 8 characters
+      </div>
+      <div className={`${/[A-Z]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
+        • One uppercase letter
+      </div>
+      <div className={`${/[a-z]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
+        • One lowercase letter
+      </div>
+      <div className={`${/[0-9]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
+        • One number
+      </div>
+      <div className={`${/[#?!@$%^&*\-]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
+        • One special character
+      </div>
+    </div>
+  </div>
+)} */}
+
             </div>
 
             <div>
@@ -157,16 +189,16 @@ const Signup = () => {
               )}
             </div>
             <div className="flex items-center gap-2 pt-2">
-          <input
-            id="isDoctor"
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-[#e4a574] focus:ring-[#e4a574]"
-            {...register("isDoctor")}
-          />
-          <label htmlFor="isDoctor" className="text-sm text-gray-700">
-            I want to work with Tailmate as a doctor
-          </label>
-        </div>
+              <input
+                id="isDoctor"
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-[#e4a574] focus:ring-[#e4a574]"
+                {...register("isDoctor")}
+              />
+              <label htmlFor="isDoctor" className="text-sm text-gray-700">
+                I want to work with Tailmate as a doctor
+              </label>
+            </div>
             <button
               type="submit"
               className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200"

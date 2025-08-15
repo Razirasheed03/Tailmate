@@ -17,12 +17,12 @@ export class AuthController {
         errors: parsed.error.issues,
       });
     }
-
+    
     const { username, email, password,isDoctor } = parsed.data;
 
     try {
-      const user = await this._authService.signup({ username, email, password ,isDoctor});
-      res.status(201).json({ success: true, user });
+      const result = await this._authService.signup({ username, email, password ,isDoctor});
+      res.status(201).json(result);
     } catch (err) {
       next(err);
     }
@@ -81,6 +81,22 @@ export class AuthController {
     next(err);
   }
 };
+forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    await this._authService.forgotPassword(email);
+    res.status(200).json({ success: true, message: "If this email is registered, a reset link has been sent." });
+  } catch (err) { next(err); }
+};
+
+resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id, token, newPassword } = req.body;
+    await this._authService.resetPassword(id, token, newPassword);
+    res.status(200).json({ success: true, message: "Password reset successful." });
+  } catch (err) { next(err); }
+};
+
 
 
 
