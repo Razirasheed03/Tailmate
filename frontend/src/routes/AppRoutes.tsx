@@ -46,7 +46,7 @@ export const router = createBrowserRouter([
   children: [
     {
       path: "",
-      element: <AdminLandingPage />, // This renders Navbar, greeting, and <Outlet />
+      element: <AdminLandingPage />, 
       children: [
         { path: "users", element: <UserListing /> },
         { path: "doctors", element: <DoctorListings /> },
