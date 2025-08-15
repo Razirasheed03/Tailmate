@@ -1,7 +1,7 @@
+// src/routes/authRoutes.ts
 import { Router } from "express";
-import { asyncHandler } from "../../utils/asyncHandler"; // path as appropriate
-import { authController } from "../../dependencies/auth.di";
-
+import { asyncHandler } from "../utils/asyncHandler";
+import { authController } from "../dependencies/auth.di";
 
 const router = Router();
 
@@ -11,6 +11,5 @@ router.post("/resend-otp", asyncHandler(authController.resendOtp));
 router.post("/login", asyncHandler(authController.login));
 router.post("/forgot-password", asyncHandler(authController.forgotPassword));
 router.post("/reset-password", asyncHandler(authController.resetPassword));
-
 
 export default router;
