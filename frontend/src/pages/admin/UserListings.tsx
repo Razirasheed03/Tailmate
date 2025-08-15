@@ -15,7 +15,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { adminService } from '@/services/adminApi';
+import { adminService } from '@/services/adminApiServices';
 import type { User, UserStats } from '@/types/user';
 
 const UserListing = () => {
@@ -127,8 +127,8 @@ const UserListing = () => {
   };
 
   const getUserRole = (user: User) => {
-    if (user.isAdmin) return { text: 'Admin', color: 'bg-purple-100 text-purple-800' };
-    if (user.isDoctor) return { text: 'Doctor', color: 'bg-blue-100 text-blue-800' };
+    if (user.role==="admin") return { text: 'Admin', color: 'bg-purple-100 text-purple-800' };
+    if (user.role==="doctor") return { text: 'Doctor', color: 'bg-blue-100 text-blue-800' };
     return { text: 'User', color: 'bg-green-100 text-green-800' };
   };
 
@@ -289,7 +289,7 @@ const UserListing = () => {
                           ) : (
                             <button
                               onClick={() => handleBlockUser(user._id)}
-                              disabled={actionLoading === user._id || user.isAdmin}
+                              disabled={actionLoading === user._id || user.role==="admin"}
                               className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
                             >
                               <Ban className="w-3 h-3 mr-1" />
@@ -297,7 +297,7 @@ const UserListing = () => {
                             </button>
                           )}
                           
-                          {!user.isAdmin && (
+                          {!(user.role==="admin" )&& (
                             <button
                               onClick={() => {
                                 setSelectedUser(user);

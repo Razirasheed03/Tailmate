@@ -152,7 +152,7 @@ const Navbar: React.FC<NavbarProps> = ({
               <div className="hidden lg:block text-left">
                 <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
                 <p className="text-xs text-gray-500">
-                  {user?.isAdmin ? 'Admin' : user?.isDoctor ? 'Doctor' : 'Patient'}
+                  {user?.role==="admin" ? 'Admin' : user?.role==="doctor" ? 'Doctor' : 'Patient'}
                 </p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-500" />

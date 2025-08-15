@@ -1,44 +1,46 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 
-// Extend the context type
+type Role = "admin" | "doctor" | "user";
+
+interface AuthUser {
+  _id?: string;
+  username?: string;
+  email?: string;
+  role?: Role;
+  isBlocked?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   token: string | null;
-  user: {
-    username?: string; email?: string; isAdmin?: boolean; isDoctor?: boolean;
-    isBlocked?: boolean;
-  } | null;
-  login: (token: string, user: { username?: string; email?: string; isAdmin?: boolean;isDoctor?: boolean;
-    isBlocked?: boolean;}) => void;
+  user: AuthUser | null;
+  login: (token: string, user: AuthUser) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Get token (string) and user info from localStorage to persist across reloads
   const [token, setToken] = useState<string | null>(localStorage.getItem("auth_token"));
-  const [user, setUser] = useState<{ username?: string; email?: string; isAdmin?: boolean } | null>(
-    localStorage.getItem("auth_user") ? JSON.parse(localStorage.getItem("auth_user") || '{}') : null
+  const [user, setUser] = useState<AuthUser | null>(
+    localStorage.getItem("auth_user") ? JSON.parse(localStorage.getItem("auth_user") || "{}") : null
   );
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("auth_token", token);
-    } else {
-      localStorage.removeItem("auth_token");
-    }
-    if (user) {
-      localStorage.setItem("auth_user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("auth_user");
-    }
+    if (token) localStorage.setItem("auth_token", token);
+    else localStorage.removeItem("auth_token");
+
+    if (user) localStorage.setItem("auth_user", JSON.stringify(user));
+    else localStorage.removeItem("auth_user");
   }, [token, user]);
 
-  const login = (newToken: string, userObj: { username?: string; email?: string; isAdmin?: boolean }) => {
+  const login = (newToken: string, userObj: AuthUser) => {
     setToken(newToken);
-    setUser(userObj); // <-- set user info from backend response
+    setUser(userObj);
   };
+
   const logout = () => {
     setToken(null);
     setUser(null);

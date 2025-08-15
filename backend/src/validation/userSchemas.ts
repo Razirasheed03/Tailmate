@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UserRole } from "../constants/roles";
 
 
 export const signupSchema = z.object({
@@ -9,7 +10,7 @@ export const signupSchema = z.object({
       message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (#?!@$%^&*-)"
     }),
   confirmPassword: z.string(),
-   isDoctor: z.boolean().optional(),
+  role: z.nativeEnum(UserRole).default(UserRole.USER)
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],

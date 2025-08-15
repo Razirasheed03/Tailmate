@@ -6,7 +6,7 @@ const API_BASE_URL = 'http://localhost:4000/api';
 const adminApi = axios.create({
   baseURL: API_BASE_URL,
 });
-////setting token to admin routes
+
 adminApi.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   if (token) {
@@ -24,7 +24,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  
+
   blockUser: async (userId: string): Promise<{ message: string }> => {
     const response = await adminApi.post(`/admin/users/${userId}/block`);
     return response.data;

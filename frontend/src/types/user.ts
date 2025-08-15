@@ -1,9 +1,10 @@
+export type Role = "admin" | "doctor" | "user";
+
 export interface User {
   _id: string;
   username: string;
   email: string;
-  isAdmin?: boolean;
-  isDoctor?: boolean;
+  role: Role;
   isBlocked?: boolean;
   createdAt: string;
   updatedAt: string;

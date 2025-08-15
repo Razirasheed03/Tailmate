@@ -2,83 +2,69 @@ import { createBrowserRouter } from "react-router-dom";
 import UserListing from "@/pages/admin/UserListings";
 import DoctorListings from "@/pages/admin/DoctorListings";
 import LandingPage from "../pages/user/LandingPage";
-import Signup from "../components/PageComponents/Signup";
-import Login from "../components/PageComponents/Login";
-import OtpVerify from "@/components/PageComponents/VerifyOtp";
+import Signup from "../pages/user/Signup";
+import Login from "../pages/user/Login";
+import OtpVerify from "@/pages/user/VerifyOtp";
 import ProfilePage from "@/pages/user/ProfilePage";
 import ProtectedRoute from "@/components/LogicalComponents/ProtectedRoute";
 import ProtectedAdminRoute from "@/components/LogicalComponents/AdminProtectedRoute";
 import AdminLandingPage from "@/pages/admin/AdminLandingPage";
 import DoctorLandingPage from "@/pages/doctor/LandingPage";
-// import { User } from "lucide-react";
 import ResetPassword from "@/components/Modals/ResetPassword";
 import ForgotPassword from "@/components/Modals/ForgotPassword";
 import GuestProtectedRoute from "@/components/LogicalComponents/GuestProtectedRoute";
+import HomePage from "@/pages/user/HomePage";
+import DoctorProtectedRoute from "@/components/LogicalComponents/DoctorProtectedRoute";
+
 export const router = createBrowserRouter([
+  // Public
+  { path: "/", element: <LandingPage /> },
+  { path: "/signup", element: <Signup /> },
+  { path: "/login", element: <Login /> },
+  { path: "/verify-otp", element: <OtpVerify /> },
+
+  // Guest-only
   {
-    path: "/signup",
-    element: <Signup />
+    path: "/forgot-password",
+    element: <GuestProtectedRoute />,
+    children: [{ index: true, element: <ForgotPassword /> }]
   },
   {
-    path: "/login",
-    element: <Login />
+    path: "/reset-password",
+    element: <GuestProtectedRoute />,
+    children: [{ index: true, element: <ResetPassword /> }]
   },
+
+{
+path: "/home",
+element: <ProtectedRoute allowedRoles={["user"]} />,
+children: [{ index: true, element: <HomePage /> }]
+},
+{
+path: "/profile",
+element: <ProtectedRoute allowedRoles={["user"]} />,
+children: [{ index: true, element: <ProfilePage /> }]
+},
+
+  // Protected Admin Routes
   {
-    path: "/",
-    element: <LandingPage />
-  },
-  {
-    path: "/profile",
-    element: <ProtectedRoute />,
+    path: "/admin",
+    element: <ProtectedAdminRoute />,
     children: [
       {
-        index: true,
-        element: <ProfilePage />
+        path: "",
+        element: <AdminLandingPage />,
+        children: [
+          { path: "users", element: <UserListing /> },
+          { path: "doctors", element: <DoctorListings /> },
+          { index: true, element: <div>Please select an option from above.</div> }
+        ]
       }
     ]
   },
-  {
-    path: "/verify-otp",
-    element: <OtpVerify />,
-  },
-{
-  path: "/admin",
-  element: <ProtectedAdminRoute />, // This renders <Outlet />
-  children: [
-    {
-      path: "",
-      element: <AdminLandingPage />, // This renders Navbar, greeting, and <Outlet />
-      children: [
-        { path: "users", element: <UserListing /> },
-        { path: "doctors", element: <DoctorListings /> },
-        { index: true, element: <div>Please select an option from above.</div> }
-      ]
-    }
-  ]
-},
-{
-  path: "/forgot-password",
-  element:<GuestProtectedRoute/>,
-  children:[
-    {
-      index:true,
-      element:<ForgotPassword/>
-    }
-  ]
-},
-{
-  path: "/reset-password",
-  element: <GuestProtectedRoute />,
-  children:[
-    {
-      index:true,
-      element:<ResetPassword/>
-    }
-  ]
-},
 
-  {
-    path:"/doctor",
-    element:<DoctorLandingPage/>
-  }
+  { path: "/doctor",
+     element: <DoctorProtectedRoute /> ,
+ children: [{ index: true, element: <DoctorLandingPage /> }]
+    }
 ]);

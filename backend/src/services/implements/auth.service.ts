@@ -1,6 +1,4 @@
-import { IAuthService } from "../interfaces/IAuthService";
-import { IUserRepository } from "../../repositories/interfaces/IUserRepository";
-import { IUser } from "../../models/interfaces/IUser";
+import { IAuthService } from "../interfaces/auth.service.interface";
 import bcrypt from "bcryptjs";
 import redisClient from "../../config/redisClient";
 import { randomInt } from "crypto";
@@ -10,6 +8,8 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
   import crypto from "crypto";
   import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
+import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
+import { IUserModel } from "../../models/interfaces/user.model.interface";
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
 
@@ -25,7 +25,7 @@ export class AuthService implements IAuthService {
    const result= await redisClient.setEx(
       key,
       300,
-      JSON.stringify({ ...user, password: hashedPassword, isAdmin: false,isDoctor: !!user.isDoctor,
+      JSON.stringify({ ...user, password: hashedPassword,
     isBlocked: false, otp, createdAt })
     );
     console.log(result,otp)
@@ -34,7 +34,7 @@ export class AuthService implements IAuthService {
     return { success:true,message: "OTP sent to email"};
   };
 
-  verifyOtp = async (email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: IUser }> => {
+  verifyOtp = async (email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
     const key = `signup:${email}`;
     const redisData = await redisClient.get(key);
     if (!redisData) throw new Error("OTP expired or not found");
@@ -53,12 +53,12 @@ export class AuthService implements IAuthService {
       "CreatedAt diff (ms):", Date.now() - parsed.createdAt
     );
 
-    const accessToken = generateAccessToken(createdUser._id.toString());
-    const refreshToken = generateRefreshToken(createdUser._id.toString());
+    const accessToken = generateAccessToken(createdUser.id.toString());
+    const refreshToken = generateRefreshToken(createdUser.id.toString());
 
     // Store refreshToken in Redis for validation/revocation
     await redisClient.setEx(
-      `refresh:${createdUser._id}`,
+      `refresh:${createdUser.id}`,
       7 * 24 * 60 * 60, // 7 days in seconds
       refreshToken
     );
@@ -107,7 +107,7 @@ export class AuthService implements IAuthService {
     const accessToken = generateAccessToken(userId);
     return { accessToken };
   };
-  login = async (email: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: IUser }> => {
+  login = async (email: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
     const user = await this._userRepo.findByEmail(email);
     if (!user) throw new Error("Invalid email or password");
 
@@ -116,7 +116,7 @@ export class AuthService implements IAuthService {
       if (user.isBlocked) {
     throw new Error("You are banned and cannot login.");
   }
-    const userId = user._id.toString();
+    const userId = user.id.toString();
     const accessToken = generateAccessToken(userId);
     const refreshToken = generateRefreshToken(userId);
 

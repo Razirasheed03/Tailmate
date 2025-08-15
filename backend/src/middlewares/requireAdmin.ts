@@ -1,25 +1,32 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { UserModel } from '../models/implements/UserModel';
+import type { RequestHandler } from "express";
+import jwt from "jsonwebtoken";
+import { UserModel } from "../models/implements/user.model";
+import { UserRole } from "../constants/roles";
 
-export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+export const requireAdmin: RequestHandler = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ success: false, message: "Access denied. No token provided." });
+      return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+
     const user = await UserModel.findById(decoded.id);
-
-    if (!user || !user.isAdmin) {
-      return res.status(403).json({ success: false, message: 'Access denied. Admin only.' });
+    if (!user || user.role !== UserRole.ADMIN) {
+      res.status(403).json({ success: false, message: "Access denied. Admin only." });
+      return;
     }
 
-    req.user = user;
+    (req as any).user = user;
     next();
-  } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid token.' });
+  } catch (error: any) {
+    if (error?.name === "TokenExpiredError") {
+      res.status(401).json({ success: false, message: "Token expired." });
+      return;
+    }
+    res.status(401).json({ success: false, message: "Invalid token." });
   }
 };

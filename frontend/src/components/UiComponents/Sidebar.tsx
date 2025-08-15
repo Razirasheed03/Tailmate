@@ -31,7 +31,7 @@ const Sidebar: React.FC = () => {
 
   // Define menu items based on user role
   const getMenuItems = (): SidebarItem[] => {
-    if (user?.isAdmin) {
+    if (user?.role==="admin") {
       return [
         { icon: Home, label: 'Dashboard', path: '/admin' },
         { icon: Users, label: 'Users', path: '/admin/users' },
@@ -40,7 +40,7 @@ const Sidebar: React.FC = () => {
         { icon: FileText, label: 'Reports', path: '/admin/reports' },
         { icon: Settings, label: 'Settings', path: '/admin/settings' }
       ];
-    } else if (user?.isDoctor) {
+    } else if (user?.role==="doctor") {
       return [
         { icon: Home, label: 'Dashboard', path: '/doctor' },
         { icon: Calendar, label: 'Appointments', path: '/doctor/appointments', badge: '3' },
@@ -112,7 +112,7 @@ const Sidebar: React.FC = () => {
                 {user?.username || 'User'}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {user?.isAdmin ? 'Administrator' : user?.isDoctor ? 'Doctor' : 'Patient'}
+                {user?.role ? 'Administrator' : user?.role ? 'Doctor' : 'Patient'}
               </p>
             </div>
           </div>

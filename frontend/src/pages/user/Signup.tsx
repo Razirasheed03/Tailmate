@@ -6,28 +6,29 @@ import LoginImage from "/loginp.png";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
+type Role = "admin" | "doctor" | "user";
 
 interface SignupFormInputs {
   username: string;
   email: string;
   password: string;
   confirmPassword: string;
-  isDoctor?: boolean;
+  role: Role; // use role instead of isDoctor
 }
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormInputs>();
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormInputs>({
+    defaultValues: { role: "user" }
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (token) {
-      navigate("/");
-    }
-  }, []);
+    if (token) navigate("/");
+  }, [navigate]);
 
-  // Watch password value so confirmPassword can validate against it
   const passwordValue = watch("password");
 
   const onSubmit = async (data: SignupFormInputs) => {
@@ -37,10 +38,10 @@ const Signup = () => {
         email: data.email,
         password: data.password,
         confirmPassword: data.confirmPassword,
-        isDoctor: data.isDoctor
+        role: data.role
       });
 
-      toast.success(response.data.message)
+      toast.success(response.data.message);
       if (response.data.success) {
         navigate("/verify-otp", { state: { email: data.email } });
       }
@@ -78,6 +79,7 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
               )}
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
               <div className="relative">
@@ -100,6 +102,7 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
               )}
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Password</label>
               <div className="relative">
@@ -114,14 +117,13 @@ const Signup = () => {
                     required: "Password is required",
                     minLength: { value: 8, message: "Password must be at least 8 characters" },
                     pattern: {
-                      value: /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*\-]).{8,}$/,
+                      value: /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&\*\-]).{8,}$/,
                       message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
                     }
                   })}
                   placeholder="Create a Stronger password"
                   className={`w-full pl-12 pr-12 py-3 border ${errors.password ? 'border-red-400' : 'border-gray-300'} rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent`}
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -133,30 +135,6 @@ const Signup = () => {
               {errors.password && (
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
-              {/* Add this after the password input field */}
-              {/* {watch("password") && (
-  <div className="mt-2 space-y-1">
-    <div className="text-xs text-gray-600">Password requirements:</div>
-    <div className="grid grid-cols-2 gap-2 text-xs">
-      <div className={`${/^.{8,}$/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
-        • At least 8 characters
-      </div>
-      <div className={`${/[A-Z]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
-        • One uppercase letter
-      </div>
-      <div className={`${/[a-z]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
-        • One lowercase letter
-      </div>
-      <div className={`${/[0-9]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
-        • One number
-      </div>
-      <div className={`${/[#?!@$%^&*\-]/.test(watch("password")) ? 'text-green-600' : 'text-red-500'}`}>
-        • One special character
-      </div>
-    </div>
-  </div>
-)} */}
-
             </div>
 
             <div>
@@ -188,17 +166,30 @@ const Signup = () => {
                 <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
+
+            {/* Role selection (checkbox -> role) */}
             <div className="flex items-center gap-2 pt-2">
               <input
-                id="isDoctor"
+                id="asDoctor"
                 type="checkbox"
                 className="h-4 w-4 rounded border-gray-300 text-[#e4a574] focus:ring-[#e4a574]"
-                {...register("isDoctor")}
+                {...register("role")}
+                onChange={(e) => {
+                  // Manually set role based on checkbox
+                  // react-hook-form: controlled workaround
+                  const checked = e.target.checked;
+                  const roleField = (document.getElementById("role-hidden") as HTMLInputElement);
+                  roleField.value = checked ? "doctor" : "user";
+                  roleField.dispatchEvent(new Event("input", { bubbles: true }));
+                }}
               />
-              <label htmlFor="isDoctor" className="text-sm text-gray-700">
+              <label htmlFor="asDoctor" className="text-sm text-gray-700">
                 I want to work with Tailmate as a doctor
               </label>
+              {/* Hidden input to hold "role" controlled by checkbox */}
+              <input id="role-hidden" type="hidden" {...register("role")} />
             </div>
+
             <button
               type="submit"
               className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200"
@@ -206,9 +197,11 @@ const Signup = () => {
             >
               {isSubmitting ? "Submitting..." : "Sign Up"}
             </button>
+
             <div className="flex items-center justify-center my-1">
               <span className="text-gray-400 text-sm">— or —</span>
             </div>
+
             <p className="text-sm text-gray-600 text-center mt-5">
               Already have an account?{" "}
               <Link to="/login" className="text-[#e4a574] hover:underline font-medium">
@@ -218,6 +211,7 @@ const Signup = () => {
           </form>
         </div>
       </div>
+
       <div className="md:w-1/2 w-full flex items-center justify-center relative order-1 md:order-2">
         <div className="relative w-full h-full flex items-end justify-center py-12">
           <div className="absolute bottom-0 w-[360px] h-[600px] md:w-[500px] md:h-[780px] bg-[#f3e8d3] rounded-t-[250px]"></div>

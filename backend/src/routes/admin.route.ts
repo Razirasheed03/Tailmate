@@ -1,8 +1,14 @@
+// src/routes/admin/adminRoutes.ts
 import { Router } from "express";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { adminController } from "../../dependencies/admin.di"; // You'll need to create this DI
+import { asyncHandler } from "../utils/asyncHandler";
+import { adminController } from "../dependencies/admin.di";
+import { requireRole } from "../middlewares/requireRoles";
+import { UserRole } from "../constants/roles";
 
 const router = Router();
+
+// Protect entire admin router
+router.use(requireRole([UserRole.ADMIN]));
 
 // User management routes
 router.get("/users", asyncHandler(adminController.getAllUsers));

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { IAdminService } from "../../services/interfaces/IAdminService";
+import { IAdminService } from "../../services/interfaces/admin.service.interface";
 
 export class AdminController {
   constructor(private readonly _adminService: IAdminService) {}
@@ -8,14 +8,9 @@ export class AdminController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const search = req.query.search as string || "";
-
+      const search = (req.query.search as string) || "";
       const result = await this._adminService.getAllUsers(page, limit, search);
-      
-      res.status(200).json({
-        success: true,
-        data: result
-      });
+      res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -25,11 +20,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
       const result = await this._adminService.blockUser(userId);
-      
-      res.status(200).json({
-        success: true,
-        message: result.message
-      });
+      res.status(200).json({ success: true, message: result.message });
     } catch (err) {
       next(err);
     }
@@ -39,11 +30,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
       const result = await this._adminService.unblockUser(userId);
-      
-      res.status(200).json({
-        success: true,
-        message: result.message
-      });
+      res.status(200).json({ success: true, message: result.message });
     } catch (err) {
       next(err);
     }
@@ -53,11 +40,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
       const result = await this._adminService.deleteUser(userId);
-      
-      res.status(200).json({
-        success: true,
-        message: result.message
-      });
+      res.status(200).json({ success: true, message: result.message });
     } catch (err) {
       next(err);
     }
@@ -66,11 +49,7 @@ export class AdminController {
   getUserStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const stats = await this._adminService.getUserStats();
-      
-      res.status(200).json({
-        success: true,
-        data: stats
-      });
+      res.status(200).json({ success: true, data: stats });
     } catch (err) {
       next(err);
     }
