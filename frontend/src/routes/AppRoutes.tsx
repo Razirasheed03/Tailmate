@@ -1,9 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import UserListing from "@/pages/admin/UserListings";
 import DoctorListings from "@/pages/admin/DoctorListings";
-import LandingPage from "../pages/user/LandingPage";
-import Signup from "../pages/user/Signup";
-import Login from "../pages/user/Login";
+import LandingPage from "@/pages/user/LandingPage";
+import Signup from "@/pages/user/Signup";
+import Login from "@/pages/user/Login";
 import OtpVerify from "@/pages/user/VerifyOtp";
 import ProfilePage from "@/pages/user/ProfilePage";
 import ProtectedRoute from "@/components/LogicalComponents/ProtectedRoute";
@@ -17,24 +17,25 @@ import HomePage from "@/pages/user/HomePage";
 import DoctorProtectedRoute from "@/components/LogicalComponents/DoctorProtectedRoute";
 
 export const router = createBrowserRouter([
-  // Public
-  { path: "/", element: <LandingPage /> },
-  { path: "/signup", element: <Signup /> },
-  { path: "/login", element: <Login /> },
-  { path: "/verify-otp", element: <OtpVerify /> },
+// Public
+{ path: "/", element: <LandingPage /> },
+{ path: "/signup", element: <Signup /> },
+{ path: "/login", element: <Login /> },
+{ path: "/verify-otp", element: <OtpVerify /> },
 
-  // Guest-only
-  {
-    path: "/forgot-password",
-    element: <GuestProtectedRoute />,
-    children: [{ index: true, element: <ForgotPassword /> }]
-  },
-  {
-    path: "/reset-password",
-    element: <GuestProtectedRoute />,
-    children: [{ index: true, element: <ResetPassword /> }]
-  },
+// Guest-only
+{
+path: "/forgot-password",
+element: <GuestProtectedRoute />,
+children: [{ index: true, element: <ForgotPassword /> }]
+},
+{
+path: "/reset-password",
+element: <GuestProtectedRoute />,
+children: [{ index: true, element: <ResetPassword /> }]
+},
 
+// Protected User Routes (only role "user")
 {
 path: "/home",
 element: <ProtectedRoute allowedRoles={["user"]} />,
@@ -46,25 +47,27 @@ element: <ProtectedRoute allowedRoles={["user"]} />,
 children: [{ index: true, element: <ProfilePage /> }]
 },
 
-  // Protected Admin Routes
-  {
-    path: "/admin",
-    element: <ProtectedAdminRoute />,
-    children: [
-      {
-        path: "",
-        element: <AdminLandingPage />,
-        children: [
-          { path: "users", element: <UserListing /> },
-          { path: "doctors", element: <DoctorListings /> },
-          { index: true, element: <div>Please select an option from above.</div> }
-        ]
-      }
-    ]
-  },
+// Protected Admin Routes
+{
+path: "/admin",
+element: <ProtectedAdminRoute />,
+children: [
+{
+path: "",
+element: <AdminLandingPage />,
+children: [
+{ path: "users", element: <UserListing /> },
+{ path: "doctors", element: <DoctorListings /> },
+{ index: true, element: <div>Please select an option from above.</div> }
+]
+}
+]
+},
 
-  { path: "/doctor",
-     element: <DoctorProtectedRoute /> ,
- children: [{ index: true, element: <DoctorLandingPage /> }]
-    }
+// Protected Doctor Routes
+{
+path: "/doctor",
+element: <DoctorProtectedRoute />,
+children: [{ index: true, element: <DoctorLandingPage /> }]
+}
 ]);
