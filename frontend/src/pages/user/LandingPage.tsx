@@ -1,10 +1,10 @@
-import { Button } from "@/components/UiComponents/Button";
+import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
 import { PawPrint, Stethoscope, Users, ShoppingBag, Heart, Star } from "lucide-react";
 import heroPets from "@/assets/images/hero-pets.jpg";
 import petsCircle from "@/assets/images/pets-circle.jpg";
 import { useNavigate } from "react-router-dom";
-import { APP_ROUTES } from "@/constants/Routes";
+import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
 
 const LandingPage = () => {
