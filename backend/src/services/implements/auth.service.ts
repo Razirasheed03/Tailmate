@@ -10,8 +10,14 @@ import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
   import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client({
+  clientId: process.env.GOOGLE_CLIENT_ID!,
+});
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
+
 
   signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{success:boolean, message: string }> => {
     const existing = await this._userRepo.findByEmail(user.email);
@@ -124,6 +130,51 @@ export class AuthService implements IAuthService {
 
     return { accessToken, refreshToken, user };
   };
+googleLogin = async (idToken: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
+    if (!idToken) throw new Error("Missing Google ID token");
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID!,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new Error("Unable to verify Google token");
+    }
+
+    const email = payload.email;
+    const username = payload.name || email.split("@")[0];
+
+    // Find or create user
+    let user = await this._userRepo.findByEmail(email);
+    if (!user) {
+      // Create a random password for Google users (not used for login)
+      const randomPassword = await bcrypt.hash(
+        jwt.sign({ email }, process.env.JWT_SECRET!, { expiresIn: "5m" }),
+        10
+      );
+      user = await this._userRepo.createUser({
+        username,
+        email,
+        password: randomPassword,
+        role: "user" as any,
+        isBlocked: false,
+      } as any);
+    }
+
+    if (user.isBlocked) {
+      throw new Error("You are banned and cannot login.");
+    }
+
+    const userId = user.id.toString();
+    const accessToken = generateAccessToken(userId);
+    const refreshToken = generateRefreshToken(userId);
+
+    await redisClient.setEx(`refresh:${userId}`, 7 * 24 * 60 * 60, refreshToken);
+
+    return { accessToken, refreshToken, user };
+  };
 
 
 forgotPassword = async (email: string): Promise<void> => {
@@ -172,9 +223,6 @@ resetPassword = async (userId: string, token: string, newPassword: string): Prom
   user.resetPasswordExpires = undefined;
   await (user as any).save();
 };
-
-
-
 
 
 }

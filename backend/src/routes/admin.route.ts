@@ -4,10 +4,12 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { adminController } from "../dependencies/admin.di";
 import { requireRole } from "../middlewares/requireRoles";
 import { UserRole } from "../constants/roles";
+import { authJwt } from "../middlewares/authJwt";
 
 const router = Router();
 
 // Protect entire admin router
+router.use(authJwt);
 router.use(requireRole([UserRole.ADMIN]));
 
 // User management routes

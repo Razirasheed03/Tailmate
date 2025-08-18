@@ -72,17 +72,30 @@ const LandingPage = () => {
                   </Button>
                 </div>
               )}
+{isAuthenticated && (
+  <div className="flex items-center gap-3 text-sm text-[#6B7280]">
+    <span>
+      {user?.role === "admin"
+        ? "You are logged in as Admin."
+        : user?.role === "doctor"
+        ? "You are logged in as Doctor."
+        : "You are logged in."}
+    </span>
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        if (user?.role === "admin") return navigate(APP_ROUTES.ADMIN_DASHBOARD);
+        if (user?.role === "doctor") return navigate(APP_ROUTES.DOCTOR_DASHBOARD);
+        return navigate(APP_ROUTES.USER_HOME);
+      }}
+      className="border-[#E5E7EB] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
+    >
+      Go to Home
+    </Button>
+  </div>
+)}
 
-              {/* Optional: If authenticated, show a small hint or a quick navigation chip */}
-              {isAuthenticated && (
-                <div className="text-sm text-[#6B7280]">
-                  {user?.role === "admin"
-                    ? "You are logged in as Admin."
-                    : user?.role === "doctor"
-                    ? "You are logged in as Doctor."
-                    : "You are logged in."}
-                </div>
-              )}
 
               <div className="flex items-center gap-6 text-sm text-[#6B7280]">
                 <div className="flex items-center gap-1">

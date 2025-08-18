@@ -15,6 +15,11 @@ import ForgotPassword from "@/components/Modals/ForgotPassword";
 import GuestProtectedRoute from "@/components/LogicalComponents/GuestProtectedRoute";
 import HomePage from "@/pages/user/HomePage";
 import DoctorProtectedRoute from "@/components/LogicalComponents/DoctorProtectedRoute";
+import Personal from "@/pages/user/Profile/Personal";
+import Security from "@/pages/user/Profile/Security";
+import PetProfiles from "@/pages/user/Profile/PetProfile";
+import EditUsername from "@/pages/user/Profile/EditUsername";
+import ProfileLayout from "@/components/Layouts/ProfileLayout";
 
 export const router = createBrowserRouter([
 // Public
@@ -69,5 +74,20 @@ children: [
 path: "/doctor",
 element: <DoctorProtectedRoute />,
 children: [{ index: true, element: <DoctorLandingPage /> }]
+},
+
+{
+  path: "/profile",
+  element: <ProtectedRoute allowedRoles={["user"]} />, // no children here
+  children: [
+    { element: <ProfileLayout />, children: [
+        { index: true, element: <div className="text-sm text-gray-600">Select a section from the sidebar.</div> },
+        { path: "personal", element: <Personal /> },
+        { path: "security", element: <Security /> },
+        { path: "pets", element: <PetProfiles /> },
+    ]},
+  ],
 }
+
+
 ]);

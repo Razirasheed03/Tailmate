@@ -280,7 +280,7 @@ const UserListing = () => {
                           {user.isBlocked ? (
                             <button
                               onClick={() => handleUnblockUser(user._id)}
-                              disabled={actionLoading === user._id}
+                             disabled={actionLoading === user._id || user.role === "admin"}
                               className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
                             >
                               <CheckCircle className="w-3 h-3 mr-1" />

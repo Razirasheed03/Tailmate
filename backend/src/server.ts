@@ -5,7 +5,8 @@ import express from "express";
 import { connectDB } from "./config/mongodb";
 import authRoutes from "./routes/auth.route";
 import adminRoutes from './routes/admin.route'
-import cors from "cors"
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -15,6 +16,8 @@ app.use(cors({
 }));
 
 app.use(express.json())
+app.use(cookieParser());
+
 connectDB()
 app.use("/api/auth", authRoutes)
 app.use("/api/admin", adminRoutes);

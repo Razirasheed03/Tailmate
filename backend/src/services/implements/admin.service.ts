@@ -1,4 +1,3 @@
-// src/services/implements/AdminService.ts
 import { IAdminService } from "../interfaces/admin.service.interface";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
