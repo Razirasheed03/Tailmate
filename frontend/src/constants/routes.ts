@@ -3,12 +3,12 @@ export const APP_ROUTES = {
   LOGIN: "/login",
   SIGNUP: "/signup",
   LANDING: "/",
-  PROFILE:"/profile",
-  BOOK_SESSION:"/book-session",
+  PROFILE:"/profile/personal",
+  Vets:"/vets",
   COMMUNITY:"/community",
   ABOUT:"/about",
-  
-  
+  MARKETPLACE:"/marketplace",
+  MATCHMAKING:"/matchmaking",
   ADMIN_DASHBOARD: "/admin",
   DOCTOR_DASHBOARD: "/doctor",
 };

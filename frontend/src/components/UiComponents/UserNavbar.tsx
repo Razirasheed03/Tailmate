@@ -1,7 +1,7 @@
 // src/components/layout/Navbar.tsx
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { PawPrint, ChevronDown, LogOut, User, Calendar, Users, Info, Home } from "lucide-react";
+import { PawPrint, ChevronDown, LogOut, User, Calendar, Home } from "lucide-react";
 import { Button } from "@/components/UiComponents/button";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
@@ -49,8 +49,6 @@ export default function Navbar() {
     if (user?.role === "doctor") return navigate(APP_ROUTES.DOCTOR_DASHBOARD);
     return navigate(APP_ROUTES.USER_HOME);
   };
-
-  const gotoBookSession = () => navigate(APP_ROUTES.BOOK_SESSION);
   const gotoProfile = () => navigate(APP_ROUTES.PROFILE);
 
   return (
@@ -73,24 +71,29 @@ export default function Navbar() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-2">
             <NavLink
-              to={APP_ROUTES.LANDING}
+              to={APP_ROUTES.USER_HOME}
               label="Home"
-              isActive={location.pathname === APP_ROUTES.LANDING}
+              isActive={location.pathname === APP_ROUTES.USER_HOME}
             />
             <NavLink
-              to={APP_ROUTES.COMMUNITY}
-              label="Community"
-              isActive={location.pathname.startsWith(APP_ROUTES.COMMUNITY)}
+              to={APP_ROUTES.Vets}
+              label="Vets"
+              isActive={location.pathname.startsWith(APP_ROUTES.Vets)}
             />
+            <NavLink
+              to={APP_ROUTES.MARKETPLACE}
+              label="Marketplace"
+              isActive={location.pathname.startsWith(APP_ROUTES.MARKETPLACE)}
+            />
+              <NavLink
+                to={APP_ROUTES.MATCHMAKING}
+                label="Matchmaking"
+                isActive={location.pathname === APP_ROUTES.MATCHMAKING}
+              />
             <NavLink
               to={APP_ROUTES.ABOUT}
               label="About Us"
               isActive={location.pathname === APP_ROUTES.ABOUT}
-            />
-            <NavLink
-              to={APP_ROUTES.BOOK_SESSION}
-              label="Book Session"
-              isActive={location.pathname === APP_ROUTES.BOOK_SESSION}
             />
           </div>
 
@@ -98,15 +101,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={gotoBookSession}
-                  className="border-[#E5E7EB] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
-                >
-                  <Calendar className="w-4 h-4 mr-1" />
-                  Book Session
-                </Button>
+              
                 <div className="relative">
                   <Button
                     size="sm"
@@ -126,13 +121,6 @@ export default function Navbar() {
                       >
                         <User className="w-4 h-4" />
                         View Profile
-                      </button>
-                      <button
-                        onClick={gotoDashboard}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-[#F9FAFB] flex items-center gap-2"
-                      >
-                        <Home className="w-4 h-4" />
-                        Dashboard
                       </button>
                       <button
                         onClick={handleLogout}
@@ -185,31 +173,31 @@ export default function Navbar() {
         {open && (
           <div className="md:hidden border-t border-[#EEF2F7] bg-white/90 backdrop-blur">
             <div className="px-6 py-3 flex flex-col gap-1">
+            <NavLink
+              to={APP_ROUTES.USER_HOME}
+              label="Home"
+              isActive={location.pathname === APP_ROUTES.USER_HOME}
+            />
+            <NavLink
+              to={APP_ROUTES.Vets}
+              label="Vets"
+              isActive={location.pathname.startsWith(APP_ROUTES.Vets)}
+            />
+            <NavLink
+              to={APP_ROUTES.MARKETPLACE}
+              label="Marketplace"
+              isActive={location.pathname.startsWith(APP_ROUTES.MARKETPLACE)}
+            />
               <NavLink
-                to={APP_ROUTES.LANDING}
-                label="Home"
-                isActive={location.pathname === APP_ROUTES.LANDING}
-                onClick={() => setOpen(false)}
+                to={APP_ROUTES.MATCHMAKING}
+                label="Matchmaking"
+                isActive={location.pathname === APP_ROUTES.MATCHMAKING}
               />
-              <NavLink
-                to={APP_ROUTES.COMMUNITY}
-                label="Community"
-                isActive={location.pathname.startsWith(APP_ROUTES.COMMUNITY)}
-                onClick={() => setOpen(false)}
-              />
-              <NavLink
-                to={APP_ROUTES.ABOUT}
-                label="About Us"
-                isActive={location.pathname === APP_ROUTES.ABOUT}
-                onClick={() => setOpen(false)}
-              />
-              <NavLink
-                to={APP_ROUTES.BOOK_SESSION}
-                label="Book Session"
-                isActive={location.pathname === APP_ROUTES.BOOK_SESSION}
-                onClick={() => setOpen(false)}
-              />
-
+            <NavLink
+              to={APP_ROUTES.ABOUT}
+              label="About Us"
+              isActive={location.pathname === APP_ROUTES.ABOUT}
+            />
               <div className="h-px bg-[#EEF2F7] my-2" />
 
               {isAuthenticated ? (

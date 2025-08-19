@@ -6,6 +6,7 @@ import petsCircle from "@/assets/images/pets-circle.jpg";
 import { useNavigate } from "react-router-dom";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
+import Navbar from "@/components/UiComponents/UserNavbar";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -20,7 +21,9 @@ const LandingPage = () => {
   };
 
   return (
+    
     <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
+      <Navbar/>
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Soft pattern/gradient glow */}
