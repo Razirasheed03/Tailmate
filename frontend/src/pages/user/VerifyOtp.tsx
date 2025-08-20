@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { APP_ROUTES } from "@/constants/Routes";
+import { APP_ROUTES } from "@/constants/routes";
 
 const OtpVerify = () => {
   const navigate = useNavigate();

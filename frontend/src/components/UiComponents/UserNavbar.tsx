@@ -1,7 +1,7 @@
 // src/components/layout/Navbar.tsx
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { PawPrint, ChevronDown, LogOut, User, Calendar, Home } from "lucide-react";
+import { PawPrint, ChevronDown, LogOut, User } from "lucide-react";
 import { Button } from "@/components/UiComponents/button";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";

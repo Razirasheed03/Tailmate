@@ -1,8 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../../services/interfaces/auth.service.interface";
 import { signupSchema } from "../../validation/userSchemas";
-
-// OPTIONAL (only if you want server-redirect OAuth):
 import { OAuth2Client } from "google-auth-library";
 
 export class AuthController {

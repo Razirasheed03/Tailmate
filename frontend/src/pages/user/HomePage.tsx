@@ -18,7 +18,7 @@ import { APP_ROUTES } from "@/constants/routes";
 import { useState } from "react";
 
 export default function HomePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Local UI state (replace with real data later)

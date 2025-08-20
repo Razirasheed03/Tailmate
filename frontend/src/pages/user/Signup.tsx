@@ -13,7 +13,7 @@ interface SignupFormInputs {
   email: string;
   password: string;
   confirmPassword: string;
-  role: Role; // use role instead of isDoctor
+  role: Role; // used role instead of isDoctor/admin
 }
 
 const Signup = () => {

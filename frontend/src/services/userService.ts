@@ -1,5 +1,14 @@
 import axios from "axios";
 import { AUTH_ROUTES, USER_ROUTES } from "../constants/apiRoutes";
+import type { Role } from "@/types/user";
+
+export interface SignupPayload {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: Role;
+}
 
 const userService = {
   login: (email: string, password: string) => {
@@ -9,11 +18,10 @@ const userService = {
       { withCredentials: true }
     );
   },
-
-  register: (userData: { email: string; password: string; name: string }) => {
+  signup: (payload: SignupPayload) => {
     return axios.post(
       AUTH_ROUTES.SIGNUP,
-      userData,
+      payload,
       { withCredentials: true }
     );
   },

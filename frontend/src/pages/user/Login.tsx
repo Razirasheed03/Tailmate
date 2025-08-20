@@ -104,7 +104,6 @@ const Login = () => {
       toast.error(msg);
     }
   };
-  // Inside your Login page component
 const handleGoogleLogin = () => {
   window.location.href = "http://localhost:4000/api/auth/google";
 };
