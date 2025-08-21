@@ -4,10 +4,6 @@ import {
   ChevronDown,
   LogOut,
   Menu,
-  // Bell, 
-  // MessageCircle,
-  // Settings,
-  // User,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -33,13 +29,6 @@ const Navbar: React.FC<NavbarProps> = ({
     toast.success('Logged out successfully');
     navigate('/login');
   };
-
-  // const notifications = [
-  //   { id: 1, title: 'New appointment request', time: '2 min ago', type: 'appointment' },
-  //   { id: 2, title: 'Message from Dr. Smith', time: '5 min ago', type: 'message' },
-  //   { id: 3, title: 'Lab results available', time: '1 hour ago', type: 'report' },
-  // ];
-
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
       <div className="flex items-center justify-between px-4 py-3 lg:px-6">
@@ -152,7 +141,7 @@ const Navbar: React.FC<NavbarProps> = ({
               <div className="hidden lg:block text-left">
                 <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
                 <p className="text-xs text-gray-500">
-                  {user?.role==="admin" ? 'Admin' : user?.role==="doctor" ? 'Doctor' : 'Patient'}
+                  {user?.role === "admin" ? 'Admin' : user?.role === "doctor" ? 'Doctor' : 'Patient'}
                 </p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-500" />

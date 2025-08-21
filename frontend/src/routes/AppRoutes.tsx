@@ -107,6 +107,6 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorElement />,
     children: [{ index: true, element: <DoctorLandingPage /> }],
   },
-  // Catch-all 404 (must be last)
+  // 404 (must be last)
   { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
 ]);

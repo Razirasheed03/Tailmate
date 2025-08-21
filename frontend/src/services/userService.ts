@@ -9,6 +9,9 @@ export interface SignupPayload {
   confirmPassword: string;
   role: Role;
 }
+export interface HandleResendPayload {
+  email: string;
+}
 
 const userService = {
   login: (email: string, password: string) => {
@@ -41,6 +44,8 @@ const userService = {
   updateProfile: (profileData: any) => {
     return axios.put(USER_ROUTES.UPDATE_PROFILE, profileData, { withCredentials: true });
   },
+  resendOtp: (email: string) =>
+    axios.post(AUTH_ROUTES.RESEND_OTP, { email }, { withCredentials: true }),
 };
 
 export default userService;

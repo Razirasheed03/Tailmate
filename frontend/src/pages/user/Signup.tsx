@@ -1,10 +1,10 @@
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
 import LoginImage from "/loginp.png";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import userService, { type SignupPayload } from "@/services/userService";
 
 type Role = "admin" | "doctor" | "user";
 
@@ -31,16 +31,16 @@ const Signup = () => {
 
   const passwordValue = watch("password");
 
-  const onSubmit = async (data: SignupFormInputs) => {
-    try {
-      const response = await axios.post("http://localhost:4000/api/auth/signup", {
-        username: data.username,
-        email: data.email,
-        password: data.password,
-        confirmPassword: data.confirmPassword,
-        role: data.role
-      });
-
+const onSubmit = async (data: SignupFormInputs) => {
+try {
+const payload: SignupPayload = {
+username: data.username,
+email: data.email,
+password: data.password,
+confirmPassword: data.confirmPassword,
+role: data.role,
+};
+      const response = await userService.signup(payload);
       toast.success(response.data.message);
       if (response.data.success) {
         navigate("/verify-otp", { state: { email: data.email } });

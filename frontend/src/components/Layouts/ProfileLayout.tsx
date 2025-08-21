@@ -1,6 +1,6 @@
 // src/pages/profile/ProfileLayout.tsx
 import React, { useState } from "react";
-import Navbar from "@/components/UiComponents/UserNavbar"; // align with your shared Navbar path
+import Navbar from "@/components/UiComponents/UserNavbar";
 import { NavLink, Outlet } from "react-router-dom";
 import { User, Shield, PawPrint, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";

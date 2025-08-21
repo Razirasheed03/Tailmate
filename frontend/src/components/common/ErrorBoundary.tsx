@@ -1,13 +1,7 @@
-// components/common/ErrorBoundary.tsx
+
 import React from "react";
 import { isRouteErrorResponse, useRouteError, Link, useNavigate, useLocation } from "react-router-dom";
 
-// type ErrorBoundaryProps = {
-//   fallback?: React.ReactNode;
-//   children?: React.ReactNode;
-// };
-
-// Class-based boundary for render errors
 export class ErrorBoundary extends React.Component<
   { fallback?: React.ReactNode; children: React.ReactNode },
   { hasError: boolean; error: any }
