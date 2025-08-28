@@ -4,13 +4,16 @@ import Navbar from "@/components/UiComponents/UserNavbar";
 import { Button } from "@/components/UiComponents/button";
 import { Home, ArrowLeft } from "lucide-react";
 import { APP_ROUTES } from "@/constants/routes";
+import { useAuth } from "@/context/AuthContext";
+
 
 export default function NotFound() {
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF7ED] text-[#111827]">
-      <Navbar />
+         {user?.role==='user'&&<Navbar/>}
 
       <main className="flex-1">
         <section className="container mx-auto px-6 py-24 text-center">

@@ -70,7 +70,7 @@ const Sidebar: React.FC = () => {
   };
 
   const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    return location.pathname === path ;
   };
 
   return (

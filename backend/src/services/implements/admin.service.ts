@@ -1,11 +1,16 @@
+// src/services/implements/admin.service.ts
 import { IAdminService } from "../interfaces/admin.service.interface";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
-
+import { AdminRepository } from "../../repositories/implements/admin.repository";
 
 export class AdminService implements IAdminService {
-  constructor(private _userRepo: IUserRepository) {}
+  constructor(
+    private _userRepo: IUserRepository,
+    private _adminRepo: AdminRepository
+  ) {}
 
+  // Existing user ops
   async getAllUsers(
     page = 1,
     limit = 10,
@@ -35,11 +40,42 @@ export class AdminService implements IAdminService {
   }
 
   async getUserStats() {
-    // Service hands through repo result (totalUsers, totalDoctors, totalPatients, blockedUsers)
     const stats = await this._userRepo.getUserStats();
-    // If your IAdminService interface only includes totalUsers/totalDoctors/blockedUsers,
-    // either extend the interface or drop totalPatients here.
     const { totalUsers, totalDoctors, blockedUsers } = stats;
     return { totalUsers, totalDoctors, blockedUsers };
+  }
+
+  // NEW doctor moderation
+  async listDoctors(page = 1, limit = 10, status = "", search = "") {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
+    return this._adminRepo.listDoctors({
+      page: safePage,
+      limit: safeLimit,
+      status,
+      search: search.trim(),
+    });
+  }
+
+  async verifyDoctor(userId: string, reviewerId: string) {
+    if (!userId) throw new Error("userId required");
+    if (!reviewerId) throw new Error("reviewerId required");
+    const updated = await this._adminRepo.verifyDoctor(userId, reviewerId);
+    return {
+      status: updated.verification?.status as "verified",
+      verifiedAt: updated.verification?.verifiedAt,
+    };
+  }
+
+  async rejectDoctor(userId: string, reviewerId: string, reasons: string[]) {
+    if (!userId) throw new Error("userId required");
+    if (!reviewerId) throw new Error("reviewerId required");
+    if (!Array.isArray(reasons) || reasons.length === 0)
+      throw new Error("At least one reason is required");
+    const updated = await this._adminRepo.rejectDoctor(userId, reviewerId, reasons);
+    return {
+      status: updated.verification?.status as "rejected",
+      rejectionReasons: updated.verification?.rejectionReasons || [],
+    };
   }
 }

@@ -23,7 +23,7 @@ const LandingPage = () => {
   return (
     
     <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
-      <Navbar/>
+      {user?.role==='user'&&<Navbar/>}
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Soft pattern/gradient glow */}
@@ -52,8 +52,6 @@ const LandingPage = () => {
                   Your complete pet care companion — adopt, connect with vets, and join a loving community.
                 </p>
               </div>
-
-              {/* Show CTA buttons only if NOT authenticated */}
               {!isAuthenticated && (
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button

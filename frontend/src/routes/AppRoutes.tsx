@@ -21,6 +21,7 @@ import ProfileLayout from "@/components/Layouts/ProfileLayout";
 import NotFound from "@/pages/user/NotFound";
 import { RouteErrorElement } from "@/components/common/ErrorBoundary";
 import ComingSoon from "@/components/common/ComingSoon";
+import Profile from "@/pages/doctor/Profile";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -106,6 +107,14 @@ export const router = createBrowserRouter([
     element: <DoctorProtectedRoute />,
     errorElement: <RouteErrorElement />,
     children: [{ index: true, element: <DoctorLandingPage /> }],
+  },
+  {
+    path:"/doctor/appointments",
+    element:<ComingSoon/>
+  },
+  {
+    path:"/doctor/profile",
+    element:<Profile/>
   },
   // 404 (must be last)
   { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
