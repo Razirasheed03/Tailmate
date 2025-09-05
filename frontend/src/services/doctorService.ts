@@ -54,6 +54,7 @@ client.interceptors.response.use(
 );
 
 export const doctorService = {
+
   uploadCertificate: async (file: File) => {
     const form = new FormData();
     form.append("certificate", file);
@@ -86,8 +87,6 @@ avatarUrl?: string;
 consultationFee?: number;
 };
 },
-
-// NEW: update doctor profile (verified-only)
 updateProfile: async (payload: {
 displayName?: string;
 bio?: string;
@@ -108,5 +107,14 @@ licenseNumber?: string;
 avatarUrl?: string;
 consultationFee?: number;
 };
+},
+uploadAvatar: async (file: File) => {
+const form = new FormData();
+form.append("avatar", file);
+const { data } = await client.post("/doctor/profile/avatar", form, {
+headers: { "Content-Type": "multipart/form-data" },
+});
+// expecting { success, data: { avatarUrl } }
+return (data?.data?.avatarUrl as string) || "";
 },
 };

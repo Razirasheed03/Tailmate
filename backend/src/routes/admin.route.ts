@@ -1,4 +1,4 @@
-// src/routes/admin/adminRoutes.ts
+// src/routes/admin/admin.routes.ts
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { adminController } from "../dependencies/admin.di";

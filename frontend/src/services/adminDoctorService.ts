@@ -54,12 +54,14 @@ client.interceptors.response.use(
   }
 );
 
-// Types
+
+export type VerificationStatus = "pending" | "verified" | "rejected";
+
 export type DoctorRow = {
   userId: string;            // stringified ObjectId
   username: string;
   email: string;
-  status: "pending" | "verified" | "rejected";
+  status:VerificationStatus;
   certificateUrl?: string;
   submittedAt?: string;
 };
@@ -70,6 +72,28 @@ export type DoctorListResponse = {
   totalPages: number;
   total: number;
 };
+
+export type DoctorDetail = {
+  userId: string;
+  username: string;
+  email: string;
+  status: VerificationStatus;
+  // verification
+  certificateUrl?: string;
+  submittedAt?: string;
+  verifiedAt?: string;
+  rejectionReasons?: string[];
+  // profile
+  displayName?: string;
+  bio?: string;
+  specialties?: string[];
+  experienceYears?: number;
+  licenseNumber?: string;
+  avatarUrl?: string;
+  consultationFee?: number;
+};
+
+
 
 export const adminDoctorService = {
   // why: admins must filter pending/verified/rejected and search
@@ -92,5 +116,9 @@ export const adminDoctorService = {
   reject: async (userId: string, reasons: string[]) => {
     const { data } = await client.post(`/admin/doctors/${userId}/reject`, { reasons });
     return data?.data;
+  },
+   getDetail: async (userId: string): Promise<DoctorDetail> => {
+    const { data } = await client.get<{ success: boolean; data: DoctorDetail }>(`/admin/doctors/${userId}`);
+    return data.data;
   },
 };

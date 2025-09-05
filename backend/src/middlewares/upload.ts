@@ -13,3 +13,14 @@ export const uploadPdf = multer({
     cb(null, true);
   },
 }).single("certificate"); // frontend field name
+
+export const uploadImage = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_req, file, cb) => {
+    if (!/^image\/(png|jpe?g|gif|webp)$/i.test(file.mimetype)) {
+      return cb(new Error("Only image files are allowed (png, jpg, jpeg, gif, webp)"));
+    }
+    cb(null, true);
+  },
+}).single("avatar");

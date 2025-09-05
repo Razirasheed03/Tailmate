@@ -11,11 +11,24 @@ const VerificationSchema = new Schema(
   },
   { _id: false }
 );
+const ProfileSchema = new Schema(
+{
+displayName: { type: String },
+bio: { type: String, maxlength: 5000 },
+specialties: [{ type: String }],
+experienceYears: { type: Number, min: 0, max: 80 },
+licenseNumber: { type: String },
+consultationFee: { type: Number, min: 0 },
+avatarUrl: { type: String },
+},
+{ _id: false }
+);
 
 const DoctorSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", index: true, unique: true, required: true },
     verification: { type: VerificationSchema, default: { status: "pending" } },
+    profile: { type: ProfileSchema, default: {} },
   },
   { timestamps: true }
 );

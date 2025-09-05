@@ -10,7 +10,6 @@ export class AdminService implements IAdminService {
     private _adminRepo: AdminRepository
   ) {}
 
-  // Existing user ops
   async getAllUsers(
     page = 1,
     limit = 10,
@@ -45,7 +44,6 @@ export class AdminService implements IAdminService {
     return { totalUsers, totalDoctors, blockedUsers };
   }
 
-  // NEW doctor moderation
   async listDoctors(page = 1, limit = 10, status = "", search = "") {
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));

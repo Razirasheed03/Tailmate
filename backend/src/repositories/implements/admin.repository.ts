@@ -101,4 +101,45 @@ export class AdminRepository implements IAdminRepository {
     if (!updated) throw new Error("Doctor not found");
     return updated;
   }
+  async getDoctorDetail(userId: string) {
+  const _id = new Types.ObjectId(userId);
+
+  const pipeline: any[] = [
+    { $match: { userId: _id } },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "user",
+      },
+    },
+    { $unwind: "$user" },
+    {
+      $project: {
+        _id: 0,
+        userId: "$userId",
+        username: "$user.username",
+        email: "$user.email",
+        status: "$verification.status",
+        certificateUrl: "$verification.certificateUrl",
+        submittedAt: "$verification.submittedAt",
+        verifiedAt: "$verification.verifiedAt",
+        rejectionReasons: "$verification.rejectionReasons",
+        displayName: "$profile.displayName",
+        bio: "$profile.bio",
+        specialties: "$profile.specialties",
+        experienceYears: "$profile.experienceYears",
+        licenseNumber: "$profile.licenseNumber",
+        avatarUrl: "$profile.avatarUrl",
+        consultationFee: "$profile.consultationFee",
+      },
+    },
+  ];
+
+  const res = await this.doctorModel.aggregate(pipeline);
+  if (!res?.length) throw new Error("Doctor not found");
+  return res[0];
+}
+
 }

@@ -36,4 +36,39 @@ export class DoctorRepository implements IDoctorRepository {
     if (!updated) throw new Error("Doctor not found");
     return updated;
   }
+  async getProfile(userId: string) {
+const doc = await this.model.findOne({ userId }).select("profile");
+if (!doc) return {};
+return doc.profile || {};
+}
+
+async updateProfile(userId: string, profile: Partial<any>) {
+  const $set: Record<string, any> = {};
+
+  if (typeof profile.displayName === "string") $set["profile.displayName"] = profile.displayName;
+  if (typeof profile.bio === "string") $set["profile.bio"] = profile.bio;
+  if (Array.isArray(profile.specialties)) $set["profile.specialties"] = profile.specialties;
+  if (typeof profile.experienceYears === "number") $set["profile.experienceYears"] = profile.experienceYears;
+  if (typeof profile.licenseNumber === "string") $set["profile.licenseNumber"] = profile.licenseNumber;
+  if (typeof profile.avatarUrl === "string") $set["profile.avatarUrl"] = profile.avatarUrl;
+  if (typeof profile.consultationFee === "number") $set["profile.consultationFee"] = profile.consultationFee;
+
+  // If nothing to set, just return current profile
+  if (Object.keys($set).length === 0) {
+    const doc = await this.model.findOne({ userId }).select("profile");
+    if (!doc) throw new Error("Doctor not found");
+    return doc.profile || {};
+  }
+
+  const updated = await this.model
+    .findOneAndUpdate(
+      { userId },
+      { $set },
+      { new: true, upsert: true }
+    )
+    .select("profile");
+
+  if (!updated) throw new Error("Doctor not found");
+  return updated.profile || {};
+}
 }
