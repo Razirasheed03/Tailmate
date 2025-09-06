@@ -21,4 +21,5 @@ export interface IAdminRepository {
 
   verifyDoctor(userId: string, reviewerId: string): Promise<any>;
   rejectDoctor(userId: string, reviewerId: string, reasons: string[]): Promise<any>;
+    getDoctorDetail(userId: string): Promise<any>;
 }

@@ -76,4 +76,9 @@ export class AdminService implements IAdminService {
       rejectionReasons: updated.verification?.rejectionReasons || [],
     };
   }
+  async getDoctorDetail(userId: string) {
+  if (!userId) throw new Error("userId required");
+  return this._adminRepo.getDoctorDetail(userId);
+}
+
 }

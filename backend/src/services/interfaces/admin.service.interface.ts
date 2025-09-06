@@ -38,4 +38,5 @@ export interface IAdminService {
     status: "rejected";
     rejectionReasons: string[];
   }>;
+    getDoctorDetail(userId: string): Promise<any>; 
 }

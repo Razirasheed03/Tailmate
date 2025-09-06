@@ -23,5 +23,7 @@ router.get("/stats", asyncHandler(adminController.getUserStats));
 router.get("/doctors", asyncHandler(adminController.listDoctors));
 router.post("/doctors/:userId/verify", asyncHandler(adminController.verifyDoctor));
 router.post("/doctors/:userId/reject", asyncHandler(adminController.rejectDoctor));
+router.get("/doctors/:userId", asyncHandler(adminController.getDoctorDetail));
+
 
 export default router;

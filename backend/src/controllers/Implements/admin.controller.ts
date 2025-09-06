@@ -79,4 +79,12 @@ export class AdminController {
       res.status(200).json({ success: true, data: result });
     } catch (err) { next(err); }
   };
+  getDoctorDetail = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params as any;
+    const data = await this._adminService.getDoctorDetail(userId);
+    res.status(200).json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 }
