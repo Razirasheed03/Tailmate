@@ -36,7 +36,7 @@ const Sidebar: React.FC = () => {
         { icon: Home, label: 'Dashboard', path: '/admin' },
         { icon: Users, label: 'Users', path: '/admin/users' },
         { icon: Stethoscope, label: 'Doctors', path: '/admin/doctors' },
-        { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+        { icon: BarChart3, label: 'Pet Category', path: '/admin/addpetcategory' },
         { icon: FileText, label: 'Reports', path: '/admin/reports' },
         { icon: Settings, label: 'Settings', path: '/admin/settings' }
       ];

@@ -86,5 +86,41 @@ export class AdminController {
     res.status(200).json({ success: true, data });
   } catch (err) { next(err); }
 };
+ listPetCategories = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = (req.query.search as string) || '';
+      const active = (req.query.active as string) || '';
+      const result = await this._adminService.listPetCategories(page, limit, search, active);
+      res.status(200).json({ success: true, data: result });
+    } catch (err) { next(err); }
+  };
+
+  createPetCategory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const payload = req.body || {};
+      const cat = await this._adminService.createPetCategory(payload);
+      res.status(201).json({ success: true, data: cat });
+    } catch (err) { next(err); }
+  };
+
+  updatePetCategory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id;
+      const payload = req.body || {};
+      const cat = await this._adminService.updatePetCategory(id, payload);
+      if (!cat) return res.status(404).json({ success: false, message: 'Not found' });
+      res.status(200).json({ success: true, data: cat });
+    } catch (err) { next(err); }
+  };
+  deletePetCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    const ok = await this._adminService.deletePetCategory(id);
+    if (!ok) return res.status(404).json({ success: false, message: 'Not found' });
+    return res.status(204).send();
+  } catch (err) { next(err); }
+};
 
 }

@@ -25,5 +25,10 @@ router.post("/doctors/:userId/verify", asyncHandler(adminController.verifyDoctor
 router.post("/doctors/:userId/reject", asyncHandler(adminController.rejectDoctor));
 router.get("/doctors/:userId", asyncHandler(adminController.getDoctorDetail));
 
+///Admin
+router.get('/pet-categories', asyncHandler(adminController.listPetCategories));
+router.post('/pet-categories', asyncHandler(adminController.createPetCategory));
+router.patch('/pet-categories/:id', asyncHandler(adminController.updatePetCategory));
+router.delete('/pet-categories/:id', asyncHandler(adminController.deletePetCategory));
 
 export default router;

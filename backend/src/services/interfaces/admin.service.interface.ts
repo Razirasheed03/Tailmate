@@ -33,10 +33,37 @@ export interface IAdminService {
     status: "verified";
     verifiedAt: Date | string | undefined;
   }>;
-
+  
+  getDoctorDetail(userId: string): Promise<any>; 
   rejectDoctor(userId: string, reviewerId: string, reasons: string[]): Promise<{
     status: "rejected";
     rejectionReasons: string[];
   }>;
-    getDoctorDetail(userId: string): Promise<any>; 
+   listPetCategories(
+    page: number,
+    limit: number,
+    search?: string,
+    active?: string
+  ): Promise<any>;
+
+  createPetCategory(payload: {
+    name: string;
+    iconKey?: string;
+    description?: string;
+    isActive?: boolean;
+    sortOrder?: number;
+  }): Promise<any>;
+
+  updatePetCategory(
+    id: string,
+    payload: Partial<{
+      name: string;
+      iconKey: string;
+      description: string;
+      isActive: boolean;
+      sortOrder: number;
+    }>
+  ): Promise<any>;
+  deletePetCategory(id: string): Promise<boolean>;
+  
 }

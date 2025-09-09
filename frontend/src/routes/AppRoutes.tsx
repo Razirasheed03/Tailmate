@@ -22,6 +22,7 @@ import NotFound from "@/pages/user/NotFound";
 import { RouteErrorElement } from "@/components/common/ErrorBoundary";
 import ComingSoon from "@/components/common/ComingSoon";
 import Profile from "@/pages/doctor/Profile";
+import PetCategory from "@/pages/admin/PetCategory";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -95,6 +96,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "users", element: <UserListing /> },
           { path: "doctors", element: <DoctorListings /> },
+          {path:"addpetcategory",element:<PetCategory/>},
           { index: true, element: <div>Please select an option from above.</div> },
         ],
       },

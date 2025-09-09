@@ -80,5 +80,20 @@ export class AdminService implements IAdminService {
   if (!userId) throw new Error("userId required");
   return this._adminRepo.getDoctorDetail(userId);
 }
+  listPetCategories(page: number, limit: number, search?: string, active?: string) {
+    return this._adminRepo.listPetCategories({ page, limit, search, active });
+  }
 
+  async createPetCategory(payload: { name: string; iconKey?: string; description?: string; isActive?: boolean; sortOrder?: number }) {
+    if (!payload?.name || !payload.name.trim()) throw new Error('name is required');
+    return this._adminRepo.createPetCategory(payload);
+  }
+
+  updatePetCategory(id: string, payload: Partial<{ name: string; iconKey: string; description: string; isActive: boolean; sortOrder: number }>) {
+    return this._adminRepo.updatePetCategory(id, payload);
+  }
+  deletePetCategory(id: string) {
+  return this._adminRepo.deletePetCategory(id);
 }
+}
+
