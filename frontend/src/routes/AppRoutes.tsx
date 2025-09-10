@@ -23,6 +23,7 @@ import { RouteErrorElement } from "@/components/common/ErrorBoundary";
 import ComingSoon from "@/components/common/ComingSoon";
 import Profile from "@/pages/doctor/Profile";
 import PetCategory from "@/pages/admin/PetCategory";
+import Marketplace from "@/pages/user/Marketplace";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -81,7 +82,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/marketplace",
-    element: <ComingSoon />
+    element: <Marketplace />
   },
   ///admin areaa
   {

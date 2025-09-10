@@ -5,8 +5,8 @@ import type { Role } from '@/types/user';
 
 // 1) Shared axios client with base + credentials + Authorization header + 401 refresh
 const client = axios.create({
-  baseURL: API_BASE_URL,          // http://localhost:4000/api
-  withCredentials: true,          // send cookies (refresh/session)
+  baseURL: API_BASE_URL,   
+  withCredentials: true,          
 });
 
 client.interceptors.request.use((config) => {
