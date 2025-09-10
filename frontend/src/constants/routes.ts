@@ -4,6 +4,7 @@ export const APP_ROUTES = {
   SIGNUP: "/signup",
   LANDING: "/",
   PROFILE:"/profile/personal",
+  PETLISTINGS:"/profile/pets",
   Vets:"/vets",
   COMMUNITY:"/community",
   ABOUT:"/about",

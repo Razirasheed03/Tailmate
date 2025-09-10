@@ -20,8 +20,8 @@ export type CreatePetBody = {
 
 // Create an axios client consistent with your other services
 const client = axios.create({
-  baseURL: API_BASE_URL,        // e.g., http://localhost:4000/api
-  withCredentials: true,        // send cookies for refresh/session
+  baseURL: API_BASE_URL,
+  withCredentials: true, 
 });
 
 // Attach Authorization from localStorage token like your other clients
@@ -102,8 +102,6 @@ export async function createPet(body: CreatePetBody) {
   return data;
 }
 
-// Photo upload (Cloudinary via your backend)
-// Route: POST /api/pet-uploads/photo with multipart form field "file"
 export async function uploadPetPhoto(file: File): Promise<{ url: string }> {
   const form = new FormData();
   form.append('file', file);
@@ -114,8 +112,6 @@ export async function uploadPetPhoto(file: File): Promise<{ url: string }> {
   return data as { url: string };
 }
 
-// If you still need S3 presign, keep this. Otherwise, remove it.
-// Route example: POST /api/uploads/pets/photo/presign
 export async function presignPetPhoto(contentType: string, ext?: string) {
   const { data } = await client.post(
     '/uploads/pets/photo/presign',
@@ -124,4 +120,17 @@ export async function presignPetPhoto(contentType: string, ext?: string) {
   );
   // returns { uploadUrl, publicUrl, key, expiresIn }
   return data;
+}
+
+export async function updatePet(id: string, patch: Partial<CreatePetBody>) {
+  const { data } = await client.patch(`/pets/${id}`, patch, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return data; // updated pet
+}
+
+export async function deletePet(id: string) {
+  const { data, status } = await client.delete(`/pets/${id}`);
+  // Some APIs return 204 with empty body; normalize to success boolean
+  return status === 204 ? { success: true } : (data ?? { success: true });
 }

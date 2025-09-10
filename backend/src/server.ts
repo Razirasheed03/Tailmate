@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.route";
 import adminRoutes from './routes/admin.route'
 import petRoutes from './routes/pet.route';
 import doctorRoutes from "./routes/doctor.route";
+import userRoutes from './routes/user.route';
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
@@ -24,6 +25,7 @@ connectDB()
 app.use("/api/auth", authRoutes)
 app.use("/api/admin", adminRoutes);
 app.use("/api/doctor", doctorRoutes);
+app.use('/api', userRoutes);
 app.use('/api', petRoutes);
 app.use((err: any, req: any, res: any, next: any) => {
   res.status(err.status || 400).json({

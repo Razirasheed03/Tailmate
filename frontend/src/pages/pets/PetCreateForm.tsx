@@ -1,7 +1,7 @@
 // src/pages/pets/PetCreateForm.tsx
 import * as React from 'react';
 import { Button } from '@/components/UiComponents/button';
-import { createPet, presignPetPhoto, uploadPetPhoto } from '@/services/petsApiService';
+import { createPet, uploadPetPhoto } from '@/services/petsApiService';
 
 type Props = {
   speciesCategoryId: string;
@@ -85,28 +85,22 @@ const doUpload = async () => {
             <option value="female">Female</option>
           </select>
         </div>
-        <div>
-          <label className="text-sm text-gray-600">Birth date</label>
-          <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mt-1 w-full border rounded-lg p-2 text-sm" />
-        </div>
+    <div>
+  <label className="text-sm text-gray-600">Age (Years)</label>
+  <input
+    type="number"
+    min="0"
+    max="30"
+    value={birthDate}
+    onChange={(e) => setBirthDate(e.target.value)}
+    className="mt-1 w-full border rounded-lg p-2 text-sm"
+    placeholder="Enter age in years"
+  />
+</div>
+
         <div className="sm:col-span-2">
           <label className="text-sm text-gray-600">Notes</label>
           <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 w-full border rounded-lg p-2 text-sm" />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="text-sm text-gray-600">Photo</label>
-          <div className="mt-1 flex items-center gap-3">
-            {previewUrl ? (
-              <img src={previewUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover ring-1 ring-black/5" />
-            ) : (
-              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-xs text-gray-500">No photo</div>
-            )}
-            <input type="file" accept="image/*" onChange={(e) => onFileChange(e.target.files?.[0] || null)} className="text-sm" />
-            <Button type="button" onClick={doUpload} disabled={!photoFile || uploading} className="bg-[#0EA5E9] hover:bg-[#0284C7]">
-              {uploading ? 'Uploading…' : 'Upload Photo'}
-            </Button>
-            {photoUrl && <span className="text-xs text-green-700">Uploaded</span>}
-          </div>
         </div>
       </div>
       <div className="flex justify-end gap-2">

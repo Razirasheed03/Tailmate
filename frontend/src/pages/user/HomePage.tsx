@@ -189,7 +189,7 @@ export default function HomePage() {
                       <Button size="sm" onClick={() => navigate(APP_ROUTES.Vets)} className="bg-[#0EA5E9] hover:bg-[#0284C7]">
                         Book Vet
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => navigate(APP_ROUTES.PROFILE)} className="border-[#E5E7EB] bg-white hover:bg-white/90">
+                      <Button size="sm" variant="outline" onClick={() => navigate(APP_ROUTES.PETLISTINGS)} className="border-[#E5E7EB] bg-white hover:bg-white/90">
                         Manage
                       </Button>
                     </div>
