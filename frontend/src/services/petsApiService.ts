@@ -102,15 +102,22 @@ export async function createPet(body: CreatePetBody) {
   return data;
 }
 
+export async function uploadListingPhoto(file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  // NO manual Content-Type header - let browser set multipart boundary
+  const { data } = await client.post('/marketplace/listings/photo', form);
+  return data as { url: string };
+}
+
 export async function uploadPetPhoto(file: File): Promise<{ url: string }> {
   const form = new FormData();
   form.append('file', file);
-  const { data } = await client.post('/pet-uploads/photo', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  // backend returns { url }
+  const { data } = await client.post('/pet-uploads/photo', form);
+  // Removed: headers: { 'Content-Type': 'multipart/form-data' }
   return data as { url: string };
 }
+
 
 export async function presignPetPhoto(contentType: string, ext?: string) {
   const { data } = await client.post(
@@ -134,3 +141,5 @@ export async function deletePet(id: string) {
   // Some APIs return 204 with empty body; normalize to success boolean
   return status === 204 ? { success: true } : (data ?? { success: true });
 }
+
+

@@ -15,7 +15,6 @@ export class AuthController {
         errors: parsed.error.issues,
       });
     }
-    const { username, email, password, role } = parsed.data;
     try {
       const result = await this._authService.signup(parsed.data);
       res.status(201).json(result);

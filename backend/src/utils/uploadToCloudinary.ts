@@ -56,3 +56,22 @@ export async function uploadPetImageBufferToCloudinary(buffer: Buffer, filename:
     uploadStream.end(buffer);
   });
 }
+export async function uploadMarketplaceImageBufferToCloudinary(buffer: Buffer, filename: string) {
+  return new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'image',
+        folder: 'marketplace-listings', // dedicated folder for listing photos
+        use_filename: true,
+        unique_filename: true,
+        overwrite: false,
+        public_id: filename.replace(/\.[^/.]+$/, ''),
+      },
+      (error, result) => {
+        if (error || !result) return reject(error);
+        resolve({ secure_url: result.secure_url, public_id: result.public_id });
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}

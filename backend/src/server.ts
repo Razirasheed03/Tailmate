@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin.route'
 import petRoutes from './routes/pet.route';
 import doctorRoutes from "./routes/doctor.route";
 import userRoutes from './routes/user.route';
+import marketplaceRoutes from './routes/marketplace.route'
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
@@ -22,6 +23,7 @@ app.use(express.json())
 app.use(cookieParser());
 
 connectDB()
+app.use("/api/marketplace",marketplaceRoutes)
 app.use("/api/auth", authRoutes)
 app.use("/api/admin", adminRoutes);
 app.use("/api/doctor", doctorRoutes);

@@ -1,0 +1,110 @@
+import { Model, Types } from 'mongoose';
+import { MarketplaceListing } from '../../schema/marketplaceListing.schema';
+
+export class MarketplaceRepository {
+  constructor(private readonly model: Model<any> = MarketplaceListing) {}
+
+  async create(userId: string, body: any) {
+    const doc = await this.model.create({
+      ...body,
+      userId: new Types.ObjectId(userId),
+      type: body.price === null || body.price === undefined ? 'adopt' : 'sell',
+      history: [
+        {
+          action: 'created',
+          by: new Types.ObjectId(userId),
+          meta: { price: body.price ?? null, place: body.place },
+        },
+      ],
+    });
+    return doc.toObject();
+  }
+
+  async listPublic(params: { page: number; limit: number; type?: string; q?: string; place?: string }) {
+    const { page, limit } = params;
+    const filter: any = { deletedAt: null, status: 'active' };
+    if (params.type === 'sell' || params.type === 'adopt') filter.type = params.type;
+    if (params.place?.trim()) filter.place = { $regex: params.place.trim(), $options: 'i' };
+    if (params.q?.trim()) {
+      const q = params.q.trim();
+      filter.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { place: { $regex: q, $options: 'i' } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.model.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      this.model.countDocuments(filter),
+    ]);
+    return { data, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
+  }
+
+  async listMine(userId: string, page: number, limit: number) {
+    const filter = { userId: new Types.ObjectId(userId), deletedAt: null };
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.model.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      this.model.countDocuments(filter),
+    ]);
+    return { data, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
+  }
+
+  async update(userId: string, id: string, patch: any) {
+    const _id = new Types.ObjectId(id);
+    const owner = new Types.ObjectId(userId);
+    const set: any = {};
+    const allowed = ['title', 'description', 'price', 'ageText', 'place', 'contact', 'photos', 'status'];
+
+    for (const k of allowed) {
+      if (k in patch) set[k] = patch[k];
+    }
+    if ('price' in patch) set.type = patch.price === null || patch.price === undefined ? 'adopt' : 'sell';
+
+    const updated = await this.model.findOneAndUpdate(
+      { _id, userId: owner, deletedAt: null },
+      {
+        $set: set,
+        $push: {
+          history: {
+            action: 'updated',
+            by: owner,
+            meta: { changed: Object.keys(set) },
+          },
+        },
+      },
+      { new: true, runValidators: true, context: 'query' }
+    ).lean();
+    return updated;
+  }
+
+  async changeStatus(userId: string, id: string, status: 'active' | 'reserved' | 'closed') {
+    const _id = new Types.ObjectId(id);
+    const owner = new Types.ObjectId(userId);
+    const updated = await this.model.findOneAndUpdate(
+      { _id, userId: owner, deletedAt: null },
+      {
+        $set: { status },
+        $push: { history: { action: 'status_changed', by: owner, meta: { status } } },
+      },
+      { new: true }
+    ).lean();
+    return updated;
+  }
+
+  async remove(userId: string, id: string) {
+    const _id = new Types.ObjectId(id);
+    const owner = new Types.ObjectId(userId);
+    const res = await this.model.findOneAndUpdate(
+      { _id, userId: owner, deletedAt: null },
+      {
+        $set: { deletedAt: new Date(), status: 'closed' },
+        $push: { history: { action: 'deleted', by: owner } },
+      },
+      { new: false }
+    );
+    return !!res;
+  }
+}

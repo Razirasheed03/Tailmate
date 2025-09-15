@@ -1,6 +1,7 @@
 // src/components/marketplace/SellAdoptModal.tsx
 import { useRef, useState } from 'react';
-import { uploadPetPhoto } from '@/services/petsApiService';
+import { uploadListingPhoto } from '@/services/petsApiService';
+import { marketplaceService } from '@/services/marketplaceService';
 
 type Props = {
   open: boolean;
@@ -56,17 +57,19 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     e.preventDefault();
     setErr(null);
 
-    if (!title.trim()) return setErr('Title is required');
-    if (!desc.trim()) return setErr('Description is required');
-    if (!place.trim()) return setErr('Place is required');
-    if (!contact.trim()) return setErr('Contact number is required');
+if (!title.trim()) return setErr('Title is required');
+  if (!desc.trim()) return setErr('Description is required');
+  if (desc.trim().length < 10) return setErr('Description must be at least 10 characters');
+  if (!place.trim()) return setErr('Place is required');
+  if (!contact.trim()) return setErr('Contact number is required');
+
 
     setSubmitting(true);
     try {
       // 1) Upload selected images to Cloudinary
       const photos: string[] = [];
       // parallel upload for performance
-      const uploads = images.map((img) => uploadPetPhoto(img.file).then((r) => photos.push(r.url)));
+      const uploads = images.map((img) => uploadListingPhoto(img.file).then((r) => photos.push(r.url)));
       await Promise.all(uploads);
 
       // 2) Build listing payload (backend will be added next)
@@ -81,11 +84,7 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
         type: price.trim() ? 'sell' : 'adopt', // convenience for filters
       };
 
-      // TODO: call marketplace service (to be implemented after backend exists)
-      // await marketplaceService.createListing(body);
-
-      // temporary simulation:
-      await new Promise((r) => setTimeout(r, 400));
+      await marketplaceService.create(body)
 
       reset();
       onClose();
