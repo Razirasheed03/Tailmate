@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../../services/interfaces/auth.service.interface";
 import { signupSchema } from "../../validation/userSchemas";
 import { OAuth2Client } from "google-auth-library";
+import { CookieHelper } from "../../utils/cookie.helper";
 
 export class AuthController {
   constructor(private readonly _authService: IAuthService) { }
@@ -27,13 +28,7 @@ export class AuthController {
     try {
       const { email, otp } = req.body;
       const { accessToken, refreshToken, user } = await this._authService.verifyOtp(email, otp);
-      res
-        .cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000
-        })
+      CookieHelper.setRefreshToken(res, refreshToken) // CHANGED HERE 
         .status(200)
         .json({ success: true, accessToken, user });
     } catch (err) {
@@ -65,12 +60,16 @@ export class AuthController {
     try {
       const { email, password } = req.body;
       const { accessToken, refreshToken, user } = await this._authService.login(email, password);
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      })
+      // res.cookie("refreshToken", refreshToken, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production",
+      //   sameSite: "strict",
+      //   maxAge: 7 * 24 * 60 * 60 * 1000
+      // })
+      //   .status(200)
+      //   .json({ success: true, accessToken, user });
+
+      CookieHelper.setRefreshToken(res, refreshToken) // Changed here (for show ing in review)
         .status(200)
         .json({ success: true, accessToken, user });
     } catch (err) {
@@ -84,13 +83,7 @@ export class AuthController {
       const { idToken } = req.body;
       const { accessToken, refreshToken, user } = await this._authService.googleLogin(idToken);
 
-      res
-        .cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        })
+      CookieHelper.setRefreshToken(res, refreshToken)
         .status(200)
         .json({ success: true, accessToken, user });
     } catch (err) {
@@ -139,13 +132,7 @@ export class AuthController {
       }
 
       const { accessToken, refreshToken, user } = await this._authService.googleLogin(idToken);
-
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      CookieHelper.setRefreshToken(res, refreshToken);
 
       const frontendUrl = `${process.env.FRONTEND_BASE_URL}/login?accessToken=${encodeURIComponent(
         accessToken

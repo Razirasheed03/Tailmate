@@ -59,7 +59,6 @@ client.interceptors.response.use(
   }
 );
 
-// 2) Strongly-typed payloads
 export interface SignupPayload {
   username: string;
   email: string;
