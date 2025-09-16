@@ -12,21 +12,17 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
 });
-
-// Public list (feed) - NO AUTH REQUIRED
-router.get('/listings', asyncHandler(c.listPublic));
-
-// Apply auth middleware to ALL routes below this point
 router.use(authJwt);
-
-// Protected endpoints - ALL REQUIRE AUTH
+router.get('/listings', asyncHandler(c.listPublic));
 router.get('/listings/mine', asyncHandler(c.listMine));
-router.post('/listings', asyncHandler(c.create));
+router.put('/listings/:id', asyncHandler(c.update));
 router.patch('/listings/:id', asyncHandler(c.update));
+router.patch('/listings/:id/status',asyncHandler(c.changeStatus));
+router.patch('/listings/:id/complete', asyncHandler(c.markComplete));
 router.post('/listings/:id/status', asyncHandler(c.changeStatus));
+router.post('/listings', asyncHandler(c.create));
 router.delete('/listings/:id', asyncHandler(c.remove));
 
-// Photo upload - NOW PROTECTED BY AUTH
 router.post(
   '/listings/photo',
   upload.single('file'),

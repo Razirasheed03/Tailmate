@@ -86,11 +86,12 @@ export default function ProfileLayout() {
               </div>
             </div>
 
-            {/* Section links */}
+            
             <nav className="p-3 flex flex-col gap-1.5">
               <SideNavItem to="personal" icon={User} label="Personal" end />
               <SideNavItem to="security" icon={Shield} label="Security" />
               <SideNavItem to="pets" icon={PawPrint} label="Pet Profiles" />
+              <SideNavItem to="listings" icon={PawPrint} label="Listings" />
             </nav>
           </div>
         </aside>

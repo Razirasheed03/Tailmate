@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "../../context/AuthContext";
 import userService from "@/services/userService";
 import { APP_ROUTES } from "@/constants/routes";
+import { AUTH_ROUTES } from "@/constants/apiRoutes";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ const Login = () => {
     }
   };
 const handleGoogleLogin = () => {
-  window.location.href = "http://localhost:4000/api/auth/google";
+  window.location.href = AUTH_ROUTES.GOOGLE;
 };
 
   return (

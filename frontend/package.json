@@ -26,6 +26,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.61.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.6.3",
     "scheduler": "^0.26.0",
     "sonner": "^2.0.7",

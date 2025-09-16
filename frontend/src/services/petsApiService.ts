@@ -1,6 +1,7 @@
 // src/services/petsApiService.ts
-import axios from 'axios';
-import { API_BASE_URL } from '@/constants/apiRoutes';
+
+import httpClient from "./httpClient";
+
 
 export type PetCategory = {
   _id: string;
@@ -18,67 +19,9 @@ export type CreatePetBody = {
   photoUrl?: string;
 };
 
-// Create an axios client consistent with your other services
-const client = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, 
-});
-
-// Attach Authorization from localStorage token like your other clients
-client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers = config.headers || {};
-    (config.headers as any).Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// 401 refresh handling (same pattern as doctor/admin)
-let isRefreshing = false;
-let queue: Array<() => void> = [];
-
-client.interceptors.response.use(
-  (res) => res,
-  async (error) => {
-    const original = error.config;
-    if (error?.response?.status === 401 && !original._retry) {
-      original._retry = true;
-
-      if (isRefreshing) {
-        await new Promise<void>((resolve) => queue.push(resolve));
-      }
-
-      try {
-        isRefreshing = true;
-        const refreshRes = await axios.post(
-          `${API_BASE_URL}/auth/refresh-token`,
-          {},
-          { withCredentials: true }
-        );
-        const newAccess = refreshRes?.data?.accessToken;
-        if (newAccess) {
-          localStorage.setItem('auth_token', newAccess);
-          original.headers = original.headers || {};
-          original.headers.Authorization = `Bearer ${newAccess}`;
-          queue.forEach((fn) => fn());
-          queue = [];
-          return client.request(original);
-        }
-      } catch {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-      } finally {
-        isRefreshing = false;
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
 // Categories
 export async function getActiveCategories(): Promise<PetCategory[]> {
-  const { data } = await client.get('/pet-categories', {
+  const { data } = await httpClient.get('/pet-categories', {
     params: { active: true },
   });
   // backend may return { data } envelope or raw array
@@ -87,7 +30,7 @@ export async function getActiveCategories(): Promise<PetCategory[]> {
 
 // Pets
 export async function listMyPets(page = 1, limit = 6) {
-  const { data } = await client.get('/pets', {
+  const { data } = await httpClient.get('/pets', {
     params: { owner: 'me', page, limit },
   });
   // expected: { data, total, page, totalPages }
@@ -95,7 +38,7 @@ export async function listMyPets(page = 1, limit = 6) {
 }
 
 export async function createPet(body: CreatePetBody) {
-  const { data } = await client.post('/pets', body, {
+  const { data } = await httpClient.post('/pets', body, {
     headers: { 'Content-Type': 'application/json' },
   });
   // returns created pet object
@@ -106,21 +49,21 @@ export async function uploadListingPhoto(file: File): Promise<{ url: string }> {
   const form = new FormData();
   form.append('file', file);
   // NO manual Content-Type header - let browser set multipart boundary
-  const { data } = await client.post('/marketplace/listings/photo', form);
+  const { data } = await httpClient.post('/marketplace/listings/photo', form);
   return data as { url: string };
 }
 
 export async function uploadPetPhoto(file: File): Promise<{ url: string }> {
   const form = new FormData();
   form.append('file', file);
-  const { data } = await client.post('/pet-uploads/photo', form);
+  const { data } = await httpClient.post('/pet-uploads/photo', form);
   // Removed: headers: { 'Content-Type': 'multipart/form-data' }
   return data as { url: string };
 }
 
 
 export async function presignPetPhoto(contentType: string, ext?: string) {
-  const { data } = await client.post(
+  const { data } = await httpClient.post(
     '/uploads/pets/photo/presign',
     { contentType, ext },
     { headers: { 'Content-Type': 'application/json' } }
@@ -130,14 +73,14 @@ export async function presignPetPhoto(contentType: string, ext?: string) {
 }
 
 export async function updatePet(id: string, patch: Partial<CreatePetBody>) {
-  const { data } = await client.patch(`/pets/${id}`, patch, {
+  const { data } = await httpClient.patch(`/pets/${id}`, patch, {
     headers: { 'Content-Type': 'application/json' },
   });
   return data; // updated pet
 }
 
 export async function deletePet(id: string) {
-  const { data, status } = await client.delete(`/pets/${id}`);
+  const { data, status } = await httpClient.delete(`/pets/${id}`);
   // Some APIs return 204 with empty body; normalize to success boolean
   return status === 204 ? { success: true } : (data ?? { success: true });
 }

@@ -25,6 +25,7 @@ import Profile from "@/pages/doctor/Profile";
 import PetCategory from "@/pages/admin/PetCategory";
 import Marketplace from "@/pages/user/Marketplace";
 import ListingDetail from "@/pages/user/ListingDetail";
+import Listings from "@/pages/user/Profile/Listings";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
           { path: "personal", element: <Personal /> },
           { path: "security", element: <Security /> },
           { path: "pets", element: <PetProfiles /> },
+          {path:"listings",element:<Listings/>},
         ],
       },
     ],

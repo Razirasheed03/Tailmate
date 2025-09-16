@@ -145,9 +145,6 @@ export default function ListingDetail() {
           <div className="p-6">
             <div className="flex items-start justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">{listing.title}</h1>
-              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                ❤️
-              </button>
             </div>
             
             <div className="text-3xl font-bold text-green-600 mb-6">

@@ -23,11 +23,57 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // ✅ ADDED: Allowed image formats
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  // ✅ ADDED: Phone number validation
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Supports formats: +91-1234567890, +911234567890, 1234567890, +91 1234567890
+    const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
+
   const pickFiles = () => fileRef.current?.click();
 
   const onFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
-    const next = files.slice(0, 6 - images.length).map((f) => ({ file: f, url: URL.createObjectURL(f) }));
+    
+    // ✅ ADDED: Validate file types and sizes
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach((file) => {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        errors.push(`${file.name}: Only JPEG, PNG, WebP, and GIF formats are allowed`);
+        return;
+      }
+      
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name}: File size must be less than 5MB`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+
+    // Show errors if any
+    if (errors.length > 0) {
+      setErr(errors.join(', '));
+      return;
+    } else {
+      setErr(null); // Clear previous errors
+    }
+
+    // Process valid files
+    const availableSlots = 6 - images.length;
+    const filesToAdd = validFiles.slice(0, availableSlots);
+    
+    if (validFiles.length > availableSlots) {
+      setErr(`Only ${availableSlots} more images can be added (maximum 6 total)`);
+    }
+
+    const next = filesToAdd.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
     setImages((prev) => [...prev, ...next]);
     e.target.value = '';
   };
@@ -57,12 +103,26 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     e.preventDefault();
     setErr(null);
 
-if (!title.trim()) return setErr('Title is required');
-  if (!desc.trim()) return setErr('Description is required');
-  if (desc.trim().length < 10) return setErr('Description must be at least 10 characters');
-  if (!place.trim()) return setErr('Place is required');
-  if (!contact.trim()) return setErr('Contact number is required');
+    // ✅ ADDED: At least one photo validation
+    if (images.length === 0) {
+      return setErr('At least one photo is required');
+    }
 
+    if (!title.trim()) return setErr('Title is required');
+    if (!desc.trim()) return setErr('Description is required');
+    if (desc.trim().length < 10) return setErr('Description must be at least 10 characters');
+    if (!place.trim()) return setErr('Place is required');
+    if (!contact.trim()) return setErr('Contact number is required');
+
+    // ✅ ADDED: Phone number format validation
+    if (!validatePhoneNumber(contact.trim())) {
+      return setErr('Please enter a valid Indian phone number ');
+    }
+
+    // ✅ ADDED: Price validation (if provided)
+    if (price.trim() && (isNaN(Number(price)) || Number(price) < 0)) {
+      return setErr('Price must be a valid positive number');
+    }
 
     setSubmitting(true);
     try {
@@ -84,7 +144,7 @@ if (!title.trim()) return setErr('Title is required');
         type: price.trim() ? 'sell' : 'adopt', // convenience for filters
       };
 
-      await marketplaceService.create(body)
+      await marketplaceService.create(body);
 
       reset();
       onClose();
@@ -113,11 +173,13 @@ if (!title.trim()) return setErr('Title is required');
         <form onSubmit={submit} className="p-5 space-y-4">
           {/* Photos */}
           <div>
-            <label className="block text-sm text-gray-700 mb-2">Photos</label>
+            <label className="block text-sm text-gray-700 mb-2">
+              Photos <span className="text-red-500">*</span>
+            </label>
             <div className="flex flex-wrap gap-3">
               {images.map((img, idx) => (
                 <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                  <img src={img.url} className="w-full h-full object-cover" />
+                  <img src={img.url} className="w-full h-full object-cover" alt={`Upload ${idx + 1}`} />
                   <button type="button" onClick={() => removeImage(idx)} className="absolute -top-2 -right-2 bg-black/70 text-white rounded-full w-6 h-6 text-xs">×</button>
                 </div>
               ))}
@@ -128,27 +190,34 @@ if (!title.trim()) return setErr('Title is required');
                 </button>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
-            <p className="text-xs text-gray-500 mt-1">Up to 6 images</p>
+            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.gif" multiple className="hidden" onChange={onFiles} />
+            <p className="text-xs text-gray-500 mt-1">
+              Up to 6 images • JPEG, PNG, WebP, GIF • Max 5MB each
+            </p>
           </div>
 
           {/* Title */}
           <div>
-            <label className="block text-sm text-gray-700">Title</label>
+            <label className="block text-sm text-gray-700">
+              Title <span className="text-red-500">*</span>
+            </label>
             <input className="mt-1 w-full border rounded px-3 py-2" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="E.g., Friendly Beagle for adoption" />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm text-gray-700">Description</label>
-            <textarea className="mt-1 w-full border rounded px-3 py-2" rows={4} value={desc} onChange={(e) => setDesc(e.target.value)} />
+            <label className="block text-sm text-gray-700">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea className="mt-1 w-full border rounded px-3 py-2" rows={4} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Describe the pet's temperament, health, training status, etc. (min 10 characters)" />
           </div>
 
           {/* Price (optional) */}
           <div>
             <label className="block text-sm text-gray-700">Price (optional)</label>
-            <input type="number" min="0" className="mt-1 w-full border rounded px-3 py-2"
+            <input type="number" min="0" step="1" className="mt-1 w-full border rounded px-3 py-2"
                    value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Leave blank for adoption" />
+            <p className="text-xs text-gray-500 mt-1">Leave empty for free adoption</p>
           </div>
 
           {/* Age & Place */}
@@ -158,22 +227,27 @@ if (!title.trim()) return setErr('Title is required');
               <input className="mt-1 w-full border rounded px-3 py-2" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g., 1 year 6 months" />
             </div>
             <div>
-              <label className="block text-sm text-gray-700">Place</label>
+              <label className="block text-sm text-gray-700">
+                Place <span className="text-red-500">*</span>
+              </label>
               <input className="mt-1 w-full border rounded px-3 py-2" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="City / Area" />
             </div>
           </div>
 
           {/* Contact */}
           <div>
-            <label className="block text-sm text-gray-700">Contact Number</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+91-XXXXXXXXXX" />
+            <label className="block text-sm text-gray-700">
+              Contact Number <span className="text-red-500">*</span>
+            </label>
+            <input className="mt-1 w-full border rounded px-3 py-2" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Add a valid indian number" />
+            <p className="text-xs text-gray-500 mt-1">Indian mobile number</p>
           </div>
 
-          {err && <p className="text-sm text-rose-600">{err}</p>}
+          {err && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded px-3 py-2">{err}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => { reset(); onClose(); }} className="px-4 py-2 border rounded">Cancel</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded bg-orange-600 text-white disabled:opacity-60">
+            <button type="button" onClick={() => { reset(); onClose(); }} className="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+            <button type="submit" disabled={submitting} className="px-4 py-2 rounded bg-orange-600 text-white disabled:opacity-60 hover:bg-orange-700 disabled:hover:bg-orange-600">
               {submitting ? 'Posting…' : 'Post'}
             </button>
           </div>

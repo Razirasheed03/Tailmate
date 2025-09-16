@@ -1,92 +1,189 @@
 // src/services/marketplaceService.ts
-import axios from 'axios';
-import { API_BASE_URL } from '@/constants/apiRoutes';
+import { type AxiosResponse } from 'axios';
+import type {
+  ApiListingResponse,
+  DomainListing,
+} from '@/types/api.types';
+import type{
+    PaginatedResponse,
+  ApiResponse,
+  ListingSearchParams,
+  ListingStatus,
+  LegacyStatus
+} from '@/types/marketplace.types'
+import { ListingMapper } from '@/mappers/listingMapper';
+import httpClient from './httpClient';
 
-const client = axios.create({ baseURL: API_BASE_URL, withCredentials: true });
-client.interceptors.request.use((config) => {
-  const t = localStorage.getItem('auth_token');
-  if (t) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${t}`;
-    console.log('Sending token:', t.substring(0, 20) + '...'); // DEBUG
-  } else {
-    console.log('No token found in localStorage'); // DEBUG
-  }
-  return config;
-});
-
-
-let isRefreshing = false;
-let queue: Array<() => void> = [];
-
-client.interceptors.response.use(
-  (res) => res,
-  async (error) => {
-    const original = error.config;
-    if (error?.response?.status === 401 && !original._retry) {
-      original._retry = true;
-
-      if (isRefreshing) {
-        await new Promise<void>((resolve) => queue.push(resolve));
-      }
-
-      try {
-        isRefreshing = true;
-        const refreshRes = await axios.post(
-          `${API_BASE_URL}/auth/refresh-token`,
-          {},
-          { withCredentials: true }
-        );
-        const newAccess = refreshRes?.data?.accessToken;
-        if (newAccess) {
-          localStorage.setItem("auth_token", newAccess);
-          original.headers = original.headers || {};
-          original.headers.Authorization = `Bearer ${newAccess}`;
-          queue.forEach((fn) => fn());
-          queue = [];
-          return client.request(original);
-        }
-      } catch (e) {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
-      } finally {
-        isRefreshing = false;
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 export const marketplaceService = {
-  create: async (payload: {
-    title: string;
-    description: string;
-    photos: string[];
-    price: number | null;
-    ageText?: string;
-    place: string;
-    contact: string;
-  }) => {
-    const { data } = await client.post('/marketplace/listings', payload);
-    return data?.data ?? data;
+  /**
+   * Create a new marketplace listing - returns domain model
+   */
+  create: async (domainListing: Partial<DomainListing>): Promise<DomainListing> => {
+    // Map domain to API format for request
+    const apiPayload = ListingMapper.domainToApi(domainListing);
+    
+    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.post(
+      '/marketplace/listings', 
+      apiPayload
+    );
+    
+    const apiListing = data?.data ?? data;
+    // Map API response back to domain model
+    return ListingMapper.apiToDomain(apiListing);
   },
-  list: async (params: { page?: number; limit?: number; type?: 'sell'|'adopt'; q?: string; place?: string }) => {
-    const { data } = await client.get('/marketplace/listings', { params });
-    return data?.data ?? data;
+
+  /**
+   * Get public marketplace listings - returns domain models
+   */
+  list: async (params: ListingSearchParams): Promise<PaginatedResponse<DomainListing>> => {
+    const { data }: AxiosResponse<ApiResponse<PaginatedResponse<ApiListingResponse>>> = await httpClient.get(
+      '/marketplace/listings', 
+      { params }
+    );
+    
+    const paginatedApiData = data?.data ?? data;
+    
+    // Map API listings to domain listings
+    const domainListings = ListingMapper.apiArrayToDomainArray(paginatedApiData.data || []);
+    
+    return {
+      ...paginatedApiData,
+      data: domainListings
+    };
   },
-  mine: async (page = 1, limit = 12) => {
-    const { data } = await client.get('/marketplace/listings/mine', { params: { page, limit } });
-    return data?.data ?? data;
+
+  /**
+   * Get current user's listings - returns domain models
+   */
+  getUserListings: async (
+    page: number = 1, 
+    limit: number = 12
+  ): Promise<PaginatedResponse<DomainListing>> => {
+    const { data }: AxiosResponse<ApiResponse<PaginatedResponse<ApiListingResponse>>> = await httpClient.get(
+      '/marketplace/listings/mine', 
+      { params: { page, limit } }
+    );
+    
+    let paginatedApiData;
+    
+    // Handle the nested response structure
+    if (data?.success && data?.data) {
+      paginatedApiData = data.data;
+    } else {
+      paginatedApiData = data?.data ?? data;
+    }
+    
+    // Map API listings to domain listings
+    const domainListings = ListingMapper.apiArrayToDomainArray(paginatedApiData.data || []);
+    
+    return {
+      ...paginatedApiData,
+      data: domainListings
+    };
   },
-  update: async (id: string, patch: any) => {
-    const { data } = await client.patch(`/marketplace/listings/${id}`, patch);
-    return data?.data ?? data;
+
+  /**
+   * Update a listing - returns domain model
+   */
+  updateListing: async (
+    id: string, 
+    domainUpdates: Partial<DomainListing>
+  ): Promise<DomainListing> => {
+    // Map domain updates to API format
+    const apiPayload = ListingMapper.domainToApi(domainUpdates);
+    
+    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.put(
+      `/marketplace/listings/${id}`, 
+      apiPayload
+    );
+    
+    const apiListing = data?.data ?? data;
+    // Map API response back to domain model
+    return ListingMapper.apiToDomain(apiListing);
   },
-  changeStatus: async (id: string, status: 'active'|'reserved'|'closed') => {
-    const { data } = await client.post(`/marketplace/listings/${id}/status`, { status });
-    return data?.data ?? data;
+
+  /**
+   * Update listing status - returns domain model
+   */
+  updateListingStatus: async (
+    id: string, 
+    status: ListingStatus
+  ): Promise<DomainListing> => {
+    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.patch(
+      `/marketplace/listings/${id}/status`, 
+      { status }
+    );
+    
+    const apiListing = data?.data ?? data;
+    return ListingMapper.apiToDomain(apiListing);
   },
-  remove: async (id: string) => {
-    const r = await client.delete(`/marketplace/listings/${id}`);
-    return r.status === 204;
+
+  /**
+   * Delete a user's listing
+   */
+  deleteListing: async (id: string): Promise<boolean> => {
+    const response: AxiosResponse = await httpClient.delete(`/marketplace/listings/${id}`);
+    return response.status === 204 || response.status === 200;
   },
-};
+
+  /**
+   * Mark listing as sold or adopted - returns domain model
+   */
+  markAsSoldAdopted: async (
+    id: string, 
+    status: 'sold' | 'adopted'
+  ): Promise<DomainListing> => {
+    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.patch(
+      `/marketplace/listings/${id}/complete`, 
+      { status }
+    );
+    
+    const apiListing = data?.data ?? data;
+    return ListingMapper.apiToDomain(apiListing);
+  },
+
+  // Legacy methods with improved types (keeping for backward compatibility)
+  /**
+   * @deprecated Use getUserListings instead
+   */
+  mine: async (
+    page: number = 1, 
+    limit: number = 12
+  ): Promise<PaginatedResponse<DomainListing>> => {
+    return await marketplaceService.getUserListings(page, limit);
+  },
+
+  /**
+   * @deprecated Use updateListing instead
+   */
+  update: async (id: string, patch: Partial<DomainListing>): Promise<DomainListing> => {
+    return await marketplaceService.updateListing(id, patch);
+  },
+
+  /**
+   * Change listing status using legacy status mapping
+   */
+  changeStatus: async (
+    id: string, 
+    status: LegacyStatus
+  ): Promise<DomainListing> => {
+    const statusMap: Record<LegacyStatus, ListingStatus> = {
+      'active': 'active',
+      'reserved': 'inactive',
+      'closed': 'inactive'
+    };
+    
+    const mappedStatus = statusMap[status];
+    return await marketplaceService.updateListingStatus(id, mappedStatus);
+  },
+
+  /**
+   * @deprecated Use deleteListing instead
+   */
+  remove: async (id: string): Promise<boolean> => {
+    return await marketplaceService.deleteListing(id);
+  },
+} as const;
+
+// Export type for the service
+export type MarketplaceService = typeof marketplaceService;
