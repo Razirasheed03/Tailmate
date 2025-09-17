@@ -2,7 +2,7 @@
 import { MarketplaceRepository } from '../../repositories/implements/marketplace.repository';
 
 export class MarketplaceService {
-  constructor(private readonly repo = new MarketplaceRepository()) {}
+  constructor(private readonly _repo = new MarketplaceRepository()) {}
 
   async create(userId: string, payload: {
     title: string;
@@ -20,7 +20,7 @@ export class MarketplaceService {
     if (!Array.isArray(payload.photos)) payload.photos = [];
     if (payload.photos.length > 6) throw new Error('Max 6 photos');
 
-    return this.repo.create(userId, {
+    return this._repo.create(userId, {
       title: payload.title.trim(),
       description: payload.description.trim(),
       photos: payload.photos,
@@ -47,7 +47,7 @@ listPublic(
   page = Math.max(1, Number(page) || 1);
   limit = Math.min(50, Math.max(1, Number(limit) || 10));
   
-  return this.repo.listPublic({ 
+  return this._repo.listPublic({ 
     page, 
     limit, 
     type, 
@@ -63,14 +63,14 @@ listPublic(
   listMine(userId: string, page: number, limit: number) {
     page = Math.max(1, Number(page) || 1);
     limit = Math.min(50, Math.max(1, Number(limit) || 10));
-    return this.repo.listMine(userId, page, limit);
+    return this._repo.listMine(userId, page, limit);
   }
 
   update(userId: string, id: string, patch: any) {
     if (patch?.title && String(patch.title).trim().length < 3) throw new Error('Title too short');
     if (patch?.description && String(patch.description).trim().length < 10) throw new Error('Description too short');
     if ('photos' in patch && Array.isArray(patch.photos) && patch.photos.length > 6) throw new Error('Max 6 photos');
-    return this.repo.update(userId, id, patch);
+    return this._repo.update(userId, id, patch);
   }
 
   // ✅ UPDATED: Support both old and new status values
@@ -86,15 +86,15 @@ listPublic(
     };
     
     const mappedStatus = statusMap[status] || 'active';
-    return this.repo.changeStatus(userId, id, mappedStatus);
+    return this._repo.changeStatus(userId, id, mappedStatus);
   }
 
   // ✅ ADDED: New method for completion status
   markAsComplete(userId: string, id: string, status: 'sold' | 'adopted') {
-    return this.repo.changeStatus(userId, id, 'closed');
+    return this._repo.changeStatus(userId, id, 'closed');
   }
 
   remove(userId: string, id: string) {
-    return this.repo.remove(userId, id);
+    return this._repo.remove(userId, id);
   }
 }

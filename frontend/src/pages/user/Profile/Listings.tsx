@@ -34,60 +34,65 @@ const Listings: React.FC = () => {
   }, []);
 
   const fetchListings = useCallback(async (): Promise<void> => {
-    try {
-      updateState({ loading: true, error: null });
+  try {
+    updateState({ loading: true, error: null });
 
-      ///used common response model
-      const response: PaginatedResponse<DomainListing> =
-        await marketplaceService.getUserListings();
+    const response: PaginatedResponse<DomainListing> =
+      await marketplaceService.getUserListings();
 
-      // Handle the pagination response structure
-      if (response && typeof response === "object") {
-        let domainListings: DomainListing[] = [];
+    if (response && typeof response === "object") {
+      let domainListings: DomainListing[] = [];
 
-        if (Array.isArray(response)) {
-          // Direct array response (fallback)
-          domainListings = response;
-        } else if (response.data && Array.isArray(response.data)) {
-          // Proper paginated response
-          domainListings = response.data;
-        } else {
-          console.warn("Unexpected response structure:", response);
-          domainListings = [];
-        }
-
-        // Convert domain models to UI models for display
-        const uiListings = ListingMapper.domainArrayToUIArray(domainListings);
-
-        updateState({
-          domainListings,
-          uiListings,
-        });
+      if (Array.isArray(response)) {
+        domainListings = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        domainListings = response.data;
       } else {
-        console.warn("Invalid response:", response);
-        updateState({
-          domainListings: [],
-          uiListings: [],
-        });
+        console.warn("Unexpected response structure:", response);
+        domainListings = [];
       }
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to load listings";
-      console.error("Fetch listings error:", err);
+
+      // Add validation before mapping
+      const validatedListings = domainListings.filter(listing => {
+        // Ensure required date fields exist and are valid
+        const isValidDate = listing.createdAt instanceof Date && !isNaN(listing.createdAt.getTime());
+        if (!isValidDate) {
+          console.warn("Invalid date in listing:", listing.id, listing.createdAt);
+        }
+        return isValidDate;
+      });
+
+      // Convert domain models to UI models with error handling
+      const uiListings = ListingMapper.domainArrayToUIArray(validatedListings);
+
       updateState({
-        error: errorMessage,
+        domainListings: validatedListings,
+        uiListings,
+      });
+    } else {
+      console.warn("Invalid response:", response);
+      updateState({
         domainListings: [],
         uiListings: [],
       });
-    } finally {
-      updateState({ loading: false });
     }
-  }, [updateState]);
+  } catch (err: unknown) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Failed to load listings";
+    console.error("Fetch listings error:", err);
+    updateState({
+      error: errorMessage,
+      domainListings: [],
+      uiListings: [],
+    });
+  } finally {
+    updateState({ loading: false });
+  }
+}, [updateState]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+useEffect(() => {
+  fetchListings();
+}, [fetchListings]);
 
   const handleDelete = useCallback(
     async (id: string): Promise<void> => {

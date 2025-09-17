@@ -5,23 +5,39 @@ import type { UIListing } from '@/types/api.types';
 
 export class ListingMapper {
   // API to Domain mapping
-  static apiToDomain(apiListing: ApiListingResponse): DomainListing {
-    return {
-      id: apiListing._id,
-      title: apiListing.title,
-      description: apiListing.description,
-      photos: apiListing.photos,
-      price: apiListing.price,
-      type: apiListing.type,
-      status: apiListing.status,
-      ageText: apiListing.age_text,
-      location: apiListing.place,
-      contactInfo: apiListing.contact,
-      ownerId: apiListing.user_id,
-      createdAt: new Date(apiListing.created_at),
-      updatedAt: new Date(apiListing.updated_at)
-    };
-  }
+static apiToDomain(api: ApiListingResponse): DomainListing {
+  // Safe date parsing with validation
+  const parseDate = (dateString: string): Date => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return new Date(); // Fallback to current date
+      }
+      return date;
+    } catch (error) {
+      console.error('Date parsing error:', error);
+      return new Date(); // Fallback to current date
+    }
+  };
+
+  return {
+    id: api._id,
+    title: api.title,
+    description: api.description,
+    photos: api.photos || [],
+    price: api.price,
+    type: api.type,
+    status: api.status,
+    ageText: api.age_text,
+    location: api.place,
+    contactInfo: api.contact,
+    ownerId: api.user_id,
+    createdAt: parseDate(api.created_at),
+    updatedAt: parseDate(api.updated_at)
+  };
+}
+
 
   // Domain to API mapping (for requests)
   static domainToApi(domainListing: Partial<DomainListing>): Partial<ApiListingResponse> {
@@ -37,48 +53,53 @@ export class ListingMapper {
   }
 
   // Domain to UI mapping
-  static domainToUI(domainListing: DomainListing): UIListing {
-    return {
-      id: domainListing.id,
-      title: domainListing.title,
-      description: domainListing.description,
-      primaryImage: domainListing.photos[0] || '',
-      allImages: domainListing.photos,
-      displayPrice: domainListing.price 
-        ? `₹${domainListing.price.toLocaleString()}`
-        : 'Free',
-      type: domainListing.type,
-      status: domainListing.status,
-      age: domainListing.ageText || 'Not specified',
-      location: domainListing.location,
-      contact: domainListing.contactInfo,
-      createdDate: ListingMapper.formatRelativeDate(domainListing.createdAt),
-      statusColor: ListingMapper.getStatusColor(domainListing.status),
-      typeLabel: domainListing.type === 'sell' ? 'For Sale' : 'For Adoption'
-    };
-  }
-
-  // Helper methods
-  private static formatRelativeDate(date: Date): string {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      if (diffInDays < 30) {
-        return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-      } else if (diffInDays < 365) {
-        const months = Math.floor(diffInDays / 30);
-        return `${months} month${months > 1 ? 's' : ''} ago`;
-      } else {
-        const years = Math.floor(diffInDays / 365);
-        return `${years} year${years > 1 ? 's' : ''} ago`;
+    static domainToUI(domain: DomainListing): UIListing {
+    // Safe date formatting with fallback
+    const formatRelativeDate = (date: Date): string => {
+      try {
+        if (!date || isNaN(date.getTime())) {
+          return 'Unknown date';
+        }
+        
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 1) return 'Today';
+        if (diffDays === 1) return '1 day ago';
+        if (diffDays < 30) return `${diffDays} days ago`;
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+        return `${Math.floor(diffDays / 365)} years ago`;
+      } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Unknown date';
       }
-    }
+    };
+
+    // Safe price formatting
+    const formatPrice = (price: number | null, type: string): string => {
+      if (type === 'adopt' || price === null || price === 0) {
+        return 'Free';
+      }
+      return `₹${price.toLocaleString('en-IN')}`;
+    };
+
+    return {
+      id: domain.id,
+      title: domain.title,
+      description: domain.description,
+      primaryImage: domain.photos[0] || '',
+      allImages: domain.photos,
+      displayPrice: formatPrice(domain.price, domain.type),
+      type: domain.type,
+      status: domain.status,
+      age: domain.ageText ? `${domain.ageText} years` : 'Age not specified',
+      location: domain.location,
+      contact: domain.contactInfo,
+      createdDate: formatRelativeDate(domain.createdAt),
+      statusColor: domain.status === 'active' ? '#10B981' : '#6B7280',
+      typeLabel: domain.type === 'sell' ? 'For Sale' : 'For Adoption'
+    };
   }
 
   private static getStatusColor(status: string): string {
@@ -96,7 +117,10 @@ export class ListingMapper {
     return apiListings.map(ListingMapper.apiToDomain);
   }
 
-  static domainArrayToUIArray(domainListings: DomainListing[]): UIListing[] {
-    return domainListings.map(ListingMapper.domainToUI);
+  static domainArrayToUIArray(domains: DomainListing[]): UIListing[] {
+    return domains
+      .filter(domain => domain && domain.createdAt) // Filter out invalid entries
+      .map(domain => this.domainToUI(domain));
   }
 }
+

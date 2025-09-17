@@ -7,7 +7,7 @@ export interface ApiListingResponse {
   price: number | null;
   type: 'sell' | 'adopt';
   status: 'active' | 'inactive' | 'sold' | 'adopted';
-  age_text?: string; // API uses snake_case
+  age_text?: number; // API uses snake_case
   place: string;
   contact: string;
   user_id: string;
@@ -24,7 +24,7 @@ export interface DomainListing {
   price: number | null;
   type: 'sell' | 'adopt';
   status: 'active' | 'inactive' | 'sold' | 'adopted';
-  ageText?: string; // Domain uses camelCase
+  ageText?: number; // Domain uses camelCase
   location: string;
   contactInfo: string;
   ownerId: string;
