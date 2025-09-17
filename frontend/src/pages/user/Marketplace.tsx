@@ -461,24 +461,19 @@ export default function Marketplace() {
         </svg>
       </button>
 
-  {/* Filters Modal - FIXED VERSION */}
 {showFiltersModal && (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-    {/* ✅ FIXED: Backdrop with subtle background and proper click handling */}
     <div 
-      className="absolute inset-0 bg-gray-900 bg-opacity-20 backdrop-blur-sm"
+      className="absolute inset-0 bg-opacity-20 backdrop-blur-sm"
       onClick={() => {
         setShowFiltersModal(false);
         resetTempFilters();
       }}
     />
-    
-    {/* ✅ FIXED: Modal Content with click event prevention */}
     <div 
       className="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-      onClick={(e) => e.stopPropagation()} // Prevents backdrop close when clicking inside
+      onClick={(e) => e.stopPropagation()} 
     >
-      {/* Modal Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Filter Listings</h3>

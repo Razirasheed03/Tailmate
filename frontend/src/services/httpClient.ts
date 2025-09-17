@@ -1,20 +1,18 @@
-// src/services/httpClient.ts
 import axios, {type AxiosInstance, AxiosError } from 'axios';
 import { API_BASE_URL, AUTH_ROUTES } from '@/constants/apiRoutes';
-import { toast } from 'sonner'; // or your toast library
+import { toast } from 'sonner'; 
 
-// Create centralized axios instance
 const httpClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000, // 10 sec
 });
 
 // Refresh token queue management
 let isRefreshing = false;
 let refreshQueue: Array<() => void> = [];
 
-// Request interceptor - add auth token to all requests
+// Request interceptorr
 httpClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
@@ -30,15 +28,13 @@ httpClient.interceptors.request.use(
   }
 );
 
-// Enhanced Response interceptor with comprehensive error handling
 httpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config;
 
-    // Handle different types of errors
+    // Handleing different types of errors
     if (error.response) {
-      // Server responded with error status
       const { status } = error.response;
       
       switch (status) {
@@ -90,8 +86,6 @@ const handleBadRequest = (error: AxiosError) => {
 const handleUnauthorized = async (error: AxiosError, original: any) => {
   if (!original._retry) {
     original._retry = true;
-
-    // If already refreshing, queue the request
     if (isRefreshing) {
       await new Promise<void>((resolve) => refreshQueue.push(resolve));
       return httpClient.request(original);
@@ -99,8 +93,7 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
 
     try {
       isRefreshing = true;
-      
-      // Attempt to refresh token
+
       const refreshResponse = await axios.post(
         AUTH_ROUTES.REFRESH,
         {},
@@ -121,12 +114,10 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
         return httpClient.request(original);
       }
     } catch (refreshError) {
-      // Refresh failed - clear auth data and redirect
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
       toast.error('Session expired. Please login again.');
-      
-      // Redirect to login (adjust path as needed)
+
       setTimeout(() => {
         window.location.href = '/login';
       }, 1500);

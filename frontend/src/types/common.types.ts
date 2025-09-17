@@ -1,5 +1,3 @@
-// src/types/common.types.ts
-
 // Base response interface
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -7,7 +5,7 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: ApiError;
   timestamp: string;
-  requestId?: string; // For debugging/tracing
+  requestId?: string;
 }
 
 // Error details interface
@@ -15,10 +13,8 @@ export interface ApiError {
   code: string;
   message: string;
   details?: any;
-  field?: string; // For validation errors
+  field?: string;
 }
-
-// Paginated response interface
 export interface PaginatedResponse<T> {
   items: T[];
   pagination: {

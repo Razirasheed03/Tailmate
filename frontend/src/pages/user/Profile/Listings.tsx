@@ -1,16 +1,13 @@
 // src/pages/user/profile/Listings.tsx
-import { useEffect, useState, useCallback } from 'react';
-import { marketplaceService } from '@/services/marketplaceService';
-import { ListingMapper } from '@/mappers/listingMapper';
-import type { 
-  PaginatedResponse, 
-  ListingStatus 
-} from '@/types/marketplace.types';
-import type{
-    DomainListing, 
-  UIListing, 
-} from '@/types/api.types'
-import EditListingModal from './EditListingModal';
+import { useEffect, useState, useCallback } from "react";
+import { marketplaceService } from "@/services/marketplaceService";
+import { ListingMapper } from "@/mappers/listingMapper";
+import type {
+  PaginatedResponse,
+  ListingStatus,
+} from "@/types/marketplace.types";
+import type { DomainListing, UIListing } from "@/types/api.types";
+import EditListingModal from "./EditListingModal";
 
 interface ListingsState {
   domainListings: DomainListing[];
@@ -28,29 +25,26 @@ const Listings: React.FC = () => {
     loading: true,
     error: null,
     editingListing: null,
-    deletingId: null
+    deletingId: null,
   });
 
   // Helper function to update state
   const updateState = useCallback((updates: Partial<ListingsState>): void => {
-    setState(prev => ({ ...prev, ...updates }));
+    setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  /**
-   * Fetch user's listings from the API
-   * @returns Promise<void>
-   */
   const fetchListings = useCallback(async (): Promise<void> => {
     try {
       updateState({ loading: true, error: null });
-      
-      // Service now returns domain models
-      const response: PaginatedResponse<DomainListing> = await marketplaceService.getUserListings();
-      
+
+      ///used common response model
+      const response: PaginatedResponse<DomainListing> =
+        await marketplaceService.getUserListings();
+
       // Handle the pagination response structure
-      if (response && typeof response === 'object') {
+      if (response && typeof response === "object") {
         let domainListings: DomainListing[] = [];
-        
+
         if (Array.isArray(response)) {
           // Direct array response (fallback)
           domainListings = response;
@@ -58,31 +52,32 @@ const Listings: React.FC = () => {
           // Proper paginated response
           domainListings = response.data;
         } else {
-          console.warn('Unexpected response structure:', response);
+          console.warn("Unexpected response structure:", response);
           domainListings = [];
         }
 
         // Convert domain models to UI models for display
         const uiListings = ListingMapper.domainArrayToUIArray(domainListings);
-        
-        updateState({ 
-          domainListings, 
-          uiListings 
+
+        updateState({
+          domainListings,
+          uiListings,
         });
       } else {
-        console.warn('Invalid response:', response);
-        updateState({ 
-          domainListings: [], 
-          uiListings: [] 
+        console.warn("Invalid response:", response);
+        updateState({
+          domainListings: [],
+          uiListings: [],
         });
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load listings';
-      console.error('Fetch listings error:', err);
-      updateState({ 
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load listings";
+      console.error("Fetch listings error:", err);
+      updateState({
         error: errorMessage,
         domainListings: [],
-        uiListings: []
+        uiListings: [],
       });
     } finally {
       updateState({ loading: false });
@@ -94,75 +89,64 @@ const Listings: React.FC = () => {
     fetchListings();
   }, [fetchListings]);
 
-  /**
-   * Handle listing deletion
-   * @param id - Listing ID to delete
-   * @returns Promise<void>
-   */
-  const handleDelete = useCallback(async (id: string): Promise<void> => {
-    if (!window.confirm('Are you sure you want to delete this listing?')) return;
-    
-    try {
-      updateState({ deletingId: id, error: null });
-      
-      const success: boolean = await marketplaceService.deleteListing(id);
-      
-      if (success) {
-        await fetchListings(); // Refresh list
-      } else {
-        throw new Error('Delete operation failed');
+  const handleDelete = useCallback(
+    async (id: string): Promise<void> => {
+      if (!window.confirm("Are you sure you want to delete this listing?"))
+        return;
+
+      try {
+        updateState({ deletingId: id, error: null });
+
+        const success: boolean = await marketplaceService.deleteListing(id);
+
+        if (success) {
+          await fetchListings(); // Refresh list
+        } else {
+          throw new Error("Delete operation failed");
+        }
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to delete listing";
+        updateState({ error: errorMessage });
+      } finally {
+        updateState({ deletingId: null });
       }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete listing';
-      updateState({ error: errorMessage });
-    } finally {
-      updateState({ deletingId: null });
-    }
-  }, [updateState, fetchListings]);
+    },
+    [updateState, fetchListings]
+  );
+  const handleStatusToggle = useCallback(
+    async (id: string, currentStatus: string): Promise<void> => {
+      try {
+        updateState({ error: null });
 
-  /**
-   * Handle status toggle for a listing
-   * @param id - Listing ID
-   * @param currentStatus - Current status of the listing
-   * @returns Promise<void>
-   */
-  const handleStatusToggle = useCallback(async (
-    id: string, 
-    currentStatus: string
-  ): Promise<void> => {
-    try {
-      updateState({ error: null });
-      
-      const newStatus: ListingStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      const updatedListing: DomainListing = await marketplaceService.updateListingStatus(id, newStatus);
-      
-      if (updatedListing) {
-        await fetchListings(); // Refresh list
+        const newStatus: ListingStatus =
+          currentStatus === "active" ? "inactive" : "active";
+        const updatedListing: DomainListing =
+          await marketplaceService.updateListingStatus(id, newStatus);
+
+        if (updatedListing) {
+          await fetchListings(); // Refresh list
+        }
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update status";
+        updateState({ error: errorMessage });
       }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update status';
-      updateState({ error: errorMessage });
-    }
-  }, [updateState, fetchListings]);
+    },
+    [updateState, fetchListings]
+  );
 
-  /**
-   * Handle opening edit modal
-   * @param domainListing - Domain listing to edit
-   */
-  const handleEditListing = useCallback((domainListing: DomainListing): void => {
-    updateState({ editingListing: domainListing });
-  }, [updateState]);
+  const handleEditListing = useCallback(
+    (domainListing: DomainListing): void => {
+      updateState({ editingListing: domainListing });
+    },
+    [updateState]
+  );
 
-  /**
-   * Handle closing edit modal
-   */
   const handleCloseEditModal = useCallback((): void => {
     updateState({ editingListing: null });
   }, [updateState]);
 
-  /**
-   * Handle successful listing update
-   */
   const handleListingUpdated = useCallback(async (): Promise<void> => {
     updateState({ editingListing: null });
     await fetchListings();
@@ -182,7 +166,9 @@ const Listings: React.FC = () => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">My Listings ({state.uiListings.length})</h2>
+        <h2 className="text-xl font-semibold">
+          My Listings ({state.uiListings.length})
+        </h2>
         <button
           onClick={fetchListings}
           className="text-sm text-orange-600 hover:text-orange-700 font-medium"
@@ -211,12 +197,18 @@ const Listings: React.FC = () => {
       {state.uiListings.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <div className="text-gray-400 mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className="w-16 h-16 mx-auto"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div className="text-gray-500 text-lg">No listings found</div>
-          <p className="text-gray-400 mt-2">You haven't posted any pet listings yet.</p>
+          <p className="text-gray-400 mt-2">
+            You haven't posted any pet listings yet.
+          </p>
         </div>
       ) : (
         /* Listings Grid - Using UI Models for Display */
@@ -224,43 +216,51 @@ const Listings: React.FC = () => {
           {state.uiListings.map((uiListing: UIListing, index: number) => {
             // Find corresponding domain listing for actions
             const domainListing = state.domainListings[index];
-            
+
             return (
-              <div 
-                key={uiListing.id} 
+              <div
+                key={uiListing.id}
                 className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Image */}
                 <div className="aspect-video bg-gray-200 relative">
                   {uiListing.primaryImage ? (
-                    <img 
-                      src={uiListing.primaryImage} 
+                    <img
+                      src={uiListing.primaryImage}
                       alt={uiListing.title}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-8 h-8"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
                       </svg>
                     </div>
                   )}
-                  
+
                   {/* Status Badge - Using UI Model */}
                   <div className="absolute top-2 right-2">
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${uiListing.statusColor}`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full font-medium ${uiListing.statusColor}`}
+                    >
                       {uiListing.status.toUpperCase()}
                     </span>
                   </div>
 
                   {/* Type Badge - Using UI Model */}
                   <div className="absolute top-2 left-2">
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      uiListing.type === 'sell' 
-                        ? 'bg-orange-100 text-orange-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        uiListing.type === "sell"
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
                       {uiListing.typeLabel}
                     </span>
                   </div>
@@ -269,7 +269,9 @@ const Listings: React.FC = () => {
                 {/* Content - Using UI Model Formatted Data */}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-lg truncate">{uiListing.title}</h3>
+                    <h3 className="font-semibold text-lg truncate">
+                      {uiListing.title}
+                    </h3>
                     <span className="text-orange-600 font-bold">
                       {uiListing.displayPrice}
                     </span>
@@ -280,7 +282,7 @@ const Listings: React.FC = () => {
                   </p>
 
                   <div className="text-xs text-gray-500 space-y-1 mb-4">
-                    {uiListing.age !== 'Not specified' && (
+                    {uiListing.age !== "Not specified" && (
                       <div>Age: {uiListing.age}</div>
                     )}
                     <div>Location: {uiListing.location}</div>
@@ -296,25 +298,34 @@ const Listings: React.FC = () => {
                     >
                       Edit
                     </button>
-                    
+
                     <button
-                      onClick={() => handleStatusToggle(domainListing.id, domainListing.status)}
+                      onClick={() =>
+                        handleStatusToggle(
+                          domainListing.id,
+                          domainListing.status
+                        )
+                      }
                       className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
-                        domainListing.status === 'active' 
-                          ? 'bg-gray-600 text-white hover:bg-gray-700' 
-                          : 'bg-green-600 text-white hover:bg-green-700'
+                        domainListing.status === "active"
+                          ? "bg-gray-600 text-white hover:bg-gray-700"
+                          : "bg-green-600 text-white hover:bg-green-700"
                       }`}
                       disabled={state.loading}
                     >
-                      {domainListing.status === 'active' ? 'Deactivate' : 'Activate'}
+                      {domainListing.status === "active"
+                        ? "Deactivate"
+                        : "Activate"}
                     </button>
 
                     <button
                       onClick={() => handleDelete(domainListing.id)}
-                      disabled={state.deletingId === domainListing.id || state.loading}
+                      disabled={
+                        state.deletingId === domainListing.id || state.loading
+                      }
                       className="bg-red-600 text-white py-2 px-3 rounded text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
                     >
-                      {state.deletingId === domainListing.id ? '...' : 'Delete'}
+                      {state.deletingId === domainListing.id ? "..." : "Delete"}
                     </button>
                   </div>
                 </div>
