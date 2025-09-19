@@ -1,9 +1,7 @@
-// import React from 'react'
+import { Outlet } from "react-router-dom";
 
 const ProfilePage = () => {
-  return (
-    <div>ProfilePage</div>
-  )
-}
+  return <Outlet />;
+};
 
-export default ProfilePage
+export default ProfilePage;

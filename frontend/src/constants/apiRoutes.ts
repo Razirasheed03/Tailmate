@@ -7,7 +7,7 @@ export const AUTH_ROUTES = {
   REFRESH: `${API_BASE_URL}/auth/refresh-token`,
   FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
   RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-  // LOGOUT endpoint not implemented backend; consider adding when available
+  RESEND_OTP:`${API_BASE_URL}/auth/resend-otp`
 };
 
 export const USER_ROUTES = {

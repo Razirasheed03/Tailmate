@@ -4,7 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { APP_ROUTES } from "@/constants/Routes";
+import { APP_ROUTES } from "@/constants/routes";
+import userService from "@/services/userService";
 
 const OtpVerify = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ const OtpVerify = () => {
     setIsResendEnabled(false);
     setOtp(["", "", "", "", "", ""]);
     try {
-      await axios.post("http://localhost:4000/api/auth/resend-otp", { email });
+      await userService.resendOtp(email)
       toast.success("A new OTP has been sent to your email.");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Could not resend OTP right now.");

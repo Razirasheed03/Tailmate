@@ -1,11 +1,12 @@
-import { Button } from "@/components/UiComponents/Button";
+import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
 import { PawPrint, Stethoscope, Users, ShoppingBag, Heart, Star } from "lucide-react";
 import heroPets from "@/assets/images/hero-pets.jpg";
 import petsCircle from "@/assets/images/pets-circle.jpg";
 import { useNavigate } from "react-router-dom";
-import { APP_ROUTES } from "@/constants/Routes";
+import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
+import Navbar from "@/components/UiComponents/UserNavbar";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -20,7 +21,9 @@ const LandingPage = () => {
   };
 
   return (
+    
     <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
+      {user?.role==='user'&&<Navbar/>}
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Soft pattern/gradient glow */}
@@ -49,8 +52,6 @@ const LandingPage = () => {
                   Your complete pet care companion — adopt, connect with vets, and join a loving community.
                 </p>
               </div>
-
-              {/* Show CTA buttons only if NOT authenticated */}
               {!isAuthenticated && (
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button
@@ -72,17 +73,30 @@ const LandingPage = () => {
                   </Button>
                 </div>
               )}
+{isAuthenticated && (
+  <div className="flex items-center gap-3 text-sm text-[#6B7280]">
+    <span>
+      {user?.role === "admin"
+        ? "You are logged in as Admin."
+        : user?.role === "doctor"
+        ? "You are logged in as Doctor."
+        : "You are logged in."}
+    </span>
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        if (user?.role === "admin") return navigate(APP_ROUTES.ADMIN_DASHBOARD);
+        if (user?.role === "doctor") return navigate(APP_ROUTES.DOCTOR_DASHBOARD);
+        return navigate(APP_ROUTES.USER_HOME);
+      }}
+      className="border-[#E5E7EB] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
+    >
+      Go to Home
+    </Button>
+  </div>
+)}
 
-              {/* Optional: If authenticated, show a small hint or a quick navigation chip */}
-              {isAuthenticated && (
-                <div className="text-sm text-[#6B7280]">
-                  {user?.role === "admin"
-                    ? "You are logged in as Admin."
-                    : user?.role === "doctor"
-                    ? "You are logged in as Doctor."
-                    : "You are logged in."}
-                </div>
-              )}
 
               <div className="flex items-center gap-6 text-sm text-[#6B7280]">
                 <div className="flex items-center gap-1">

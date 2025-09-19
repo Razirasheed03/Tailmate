@@ -5,7 +5,6 @@ import LandingPage from "@/pages/user/LandingPage";
 import Signup from "@/pages/user/Signup";
 import Login from "@/pages/user/Login";
 import OtpVerify from "@/pages/user/VerifyOtp";
-import ProfilePage from "@/pages/user/ProfilePage";
 import ProtectedRoute from "@/components/LogicalComponents/ProtectedRoute";
 import ProtectedAdminRoute from "@/components/LogicalComponents/AdminProtectedRoute";
 import AdminLandingPage from "@/pages/admin/AdminLandingPage";
@@ -15,59 +14,110 @@ import ForgotPassword from "@/components/Modals/ForgotPassword";
 import GuestProtectedRoute from "@/components/LogicalComponents/GuestProtectedRoute";
 import HomePage from "@/pages/user/HomePage";
 import DoctorProtectedRoute from "@/components/LogicalComponents/DoctorProtectedRoute";
+import Personal from "@/pages/user/Profile/Personal";
+import Security from "@/pages/user/Profile/Security";
+import PetProfiles from "@/pages/user/Profile/PetProfile";
+import ProfileLayout from "@/components/Layouts/ProfileLayout";
+import NotFound from "@/pages/user/NotFound";
+import { RouteErrorElement } from "@/components/common/ErrorBoundary";
+import ComingSoon from "@/components/common/ComingSoon";
+import Profile from "@/pages/doctor/Profile";
+import PetCategory from "@/pages/admin/PetCategory";
 
 export const router = createBrowserRouter([
-// Public
-{ path: "/", element: <LandingPage /> },
-{ path: "/signup", element: <Signup /> },
-{ path: "/login", element: <Login /> },
-{ path: "/verify-otp", element: <OtpVerify /> },
+  // Public routes
+  { path: "/", element: <LandingPage />, errorElement: <RouteErrorElement /> },
+  { path: "/signup", element: <Signup />, errorElement: <RouteErrorElement /> },
+  { path: "/login", element: <Login />, errorElement: <RouteErrorElement /> },
+  { path: "/verify-otp", element: <OtpVerify />, errorElement: <RouteErrorElement /> },
 
-// Guest-only
-{
-path: "/forgot-password",
-element: <GuestProtectedRoute />,
-children: [{ index: true, element: <ForgotPassword /> }]
-},
-{
-path: "/reset-password",
-element: <GuestProtectedRoute />,
-children: [{ index: true, element: <ResetPassword /> }]
-},
+  // Guest routes
+  {
+    path: "/forgot-password",
+    element: <GuestProtectedRoute />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <ForgotPassword /> }],
+  },
+  {
+    path: "/reset-password",
+    element: <GuestProtectedRoute />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <ResetPassword /> }],
+  },
+  {
+    path: "/home",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <HomePage /> }],
+  },
+  ///user routes
+  {
+    path: "/profile",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [
+      {
+        element: <ProfileLayout />,
+        errorElement: <RouteErrorElement />,
+        children: [
+          {
+            index: true,
+            element: (
+              <div className="text-sm text-gray-600">
+                Select a section from the sidebar.
+              </div>
+            ),
+          },
+          { path: "personal", element: <Personal /> },
+          { path: "security", element: <Security /> },
+          { path: "pets", element: <PetProfiles /> },
+        ],
+      },
+    ],
+  },
+  {
+    path: "/vets",
+    element: <ComingSoon />
+  },
+  {
+    path: "/marketplace",
+    element: <ComingSoon />
+  },
+  ///admin areaa
+  {
+    path: "/admin",
+    element: <ProtectedAdminRoute />,
+    errorElement: <RouteErrorElement />,
+    children: [
+      {
+        path: "",
+        element: <AdminLandingPage />,
+        errorElement: <RouteErrorElement />,
+        children: [
+          { path: "users", element: <UserListing /> },
+          { path: "doctors", element: <DoctorListings /> },
+          {path:"addpetcategory",element:<PetCategory/>},
+          { index: true, element: <div>Please select an option from above.</div> },
+        ],
+      },
+    ],
+  },
 
-// Protected User Routes (only role "user")
-{
-path: "/home",
-element: <ProtectedRoute allowedRoles={["user"]} />,
-children: [{ index: true, element: <HomePage /> }]
-},
-{
-path: "/profile",
-element: <ProtectedRoute allowedRoles={["user"]} />,
-children: [{ index: true, element: <ProfilePage /> }]
-},
-
-// Protected Admin Routes
-{
-path: "/admin",
-element: <ProtectedAdminRoute />,
-children: [
-{
-path: "",
-element: <AdminLandingPage />,
-children: [
-{ path: "users", element: <UserListing /> },
-{ path: "doctors", element: <DoctorListings /> },
-{ index: true, element: <div>Please select an option from above.</div> }
-]
-}
-]
-},
-
-// Protected Doctor Routes
-{
-path: "/doctor",
-element: <DoctorProtectedRoute />,
-children: [{ index: true, element: <DoctorLandingPage /> }]
-}
+  // Doctor area
+  {
+    path: "/doctor",
+    element: <DoctorProtectedRoute />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <DoctorLandingPage /> }],
+  },
+  {
+    path:"/doctor/appointments",
+    element:<ComingSoon/>
+  },
+  {
+    path:"/doctor/profile",
+    element:<Profile/>
+  },
+  // 404 (must be last)
+  { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
 ]);

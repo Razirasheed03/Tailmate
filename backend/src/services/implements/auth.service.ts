@@ -6,14 +6,20 @@ import { sendOtpEmail } from "../../utils/sendEmail";
 import type { SignupInput } from "../../validation/userSchemas";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
-  import crypto from "crypto";
-  import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
+import crypto from "crypto";
+import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client({
+  clientId: process.env.GOOGLE_CLIENT_ID!,
+});
 export class AuthService implements IAuthService {
   constructor(private _userRepo: IUserRepository) { }
 
-  signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{success:boolean, message: string }> => {
+
+  signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ success: boolean, message: string }> => {
     const existing = await this._userRepo.findByEmail(user.email);
     if (existing) throw new Error("User already exists");
 
@@ -22,16 +28,18 @@ export class AuthService implements IAuthService {
 
     const key = `signup:${user.email}`;
     const createdAt = Date.now();
-   const result= await redisClient.setEx(
+    const result = await redisClient.setEx(
       key,
       300,
-      JSON.stringify({ ...user, password: hashedPassword,
-    isBlocked: false, otp, createdAt })
+      JSON.stringify({
+        ...user, password: hashedPassword,
+        isBlocked: false, otp, createdAt
+      })
     );
-    console.log(result,otp)
+    console.log(result, otp)
     await sendOtpEmail(user.email, otp);
 
-    return { success:true,message: "OTP sent to email"};
+    return { success: true, message: "OTP sent to email" };
   };
 
   verifyOtp = async (email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
@@ -113,9 +121,54 @@ export class AuthService implements IAuthService {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error("Invalid email or password");
-      if (user.isBlocked) {
-    throw new Error("You are banned and cannot login.");
-  }
+    if (user.isBlocked) {
+      throw new Error("You are banned and cannot login.");
+    }
+    const userId = user.id.toString();
+    const accessToken = generateAccessToken(userId);
+    const refreshToken = generateRefreshToken(userId);
+
+    await redisClient.setEx(`refresh:${userId}`, 7 * 24 * 60 * 60, refreshToken);
+
+    return { accessToken, refreshToken, user };
+  };
+  googleLogin = async (idToken: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
+    if (!idToken) throw new Error("Missing Google ID token");
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID!,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new Error("Unable to verify Google token");
+    }
+
+    const email = payload.email;
+    const username = payload.name || email.split("@")[0];
+
+    // Find or create user
+    let user = await this._userRepo.findByEmail(email);
+    if (!user) {
+      // Create a random password for Google users (not used for login)
+      const randomPassword = await bcrypt.hash(
+        jwt.sign({ email }, process.env.JWT_SECRET!, { expiresIn: "5m" }),
+        10
+      );
+      user = await this._userRepo.createUser({
+        username,
+        email,
+        password: randomPassword,
+        role: "user" as any,
+        isBlocked: false,
+      } as any);
+    }
+
+    if (user.isBlocked) {
+      throw new Error("You are banned and cannot login.");
+    }
+
     const userId = user.id.toString();
     const accessToken = generateAccessToken(userId);
     const refreshToken = generateRefreshToken(userId);
@@ -126,55 +179,52 @@ export class AuthService implements IAuthService {
   };
 
 
-forgotPassword = async (email: string): Promise<void> => {
-  const user = await this._userRepo.findByEmail(email);
-  if (!user) return; // Always return success (don't leak info)
+  forgotPassword = async (email: string): Promise<void> => {
+    const user = await this._userRepo.findByEmail(email);
+    if (!user) return; // Always return success (don't leak info)
 
-  // Generate token
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
-  const expires = new Date(Date.now() + 3600000); // 1 hour
+    // Generate token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const expires = new Date(Date.now() + 3600000); // 1 hour
 
-  // Save to user
-  (user as any).resetPasswordToken = tokenHash;
-  (user as any).resetPasswordExpires = expires;
-  await (user as any).save();
+    // Save to user
+    (user as any).resetPasswordToken = tokenHash;
+    (user as any).resetPasswordExpires = expires;
+    await (user as any).save();
 
-  // Frontend URL, adjust as needed
-  const resetUrl = `${process.env.FRONTEND_BASE_URL}/reset-password?token=${resetToken}&id=${user._id}`;
-await sendResetPasswordLink(
-  user.email,
-  "Password Reset",
-  `Click here to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore.`
-);
-  // NOTE: sendOtpEmail could be renamed for generic mail
-};
+    // Frontend URL, adjust as needed
+    const resetUrl = `${process.env.FRONTEND_BASE_URL}/reset-password?token=${resetToken}&id=${user._id}`;
+    await sendResetPasswordLink(
+      user.email,
+      "Password Reset",
+      `Click here to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore.`
+    );
+    // NOTE: sendOtpEmail could be renamed for generic mail
+  };
 
-resetPassword = async (userId: string, token: string, newPassword: string): Promise<void> => {
-  const user = await this._userRepo.findById(userId);
-  if (
-    !user ||
-    !user.resetPasswordToken ||
-    !user.resetPasswordExpires
-  )
-    throw new Error("Invalid or expired reset link");
+  resetPassword = async (userId: string, token: string, newPassword: string): Promise<void> => {
+    const user = await this._userRepo.findById(userId);
+    if (
+      !user ||
+      !user.resetPasswordToken ||
+      !user.resetPasswordExpires
+    )
+      throw new Error("Invalid or expired reset link");
 
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  if (
-    user.resetPasswordToken !== tokenHash ||
-    user.resetPasswordExpires < new Date()
-  )
-    throw new Error("Invalid or expired reset link");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    if (
+      user.resetPasswordToken !== tokenHash ||
+      user.resetPasswordExpires < new Date()
+    )
+      throw new Error("Invalid or expired reset link");
 
-  // Hash new password
-  user.password = await bcrypt.hash(newPassword, 10);
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
-  await (user as any).save();
-};
-
-
-
+    // Hash new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await (user as any).save();
+  };
 
 
 }
