@@ -46,19 +46,19 @@ export default function HomePage() {
     })();
   }, []);
 
-  const wellnessTips = [
-    { id: 1, title: "Routine Checkups", desc: "Schedule annual wellness exams to monitor weight, dental health, and vaccinations." },
-    { id: 2, title: "Balanced Nutrition", desc: "Choose age-appropriate food and follow portion guidelines to prevent obesity." },
-    { id: 3, title: "Mental Enrichment", desc: "Use puzzle feeders and short play sessions to keep pets mentally stimulated." },
-    { id: 4, title: "Hydration & Hygiene", desc: "Ensure fresh water daily and maintain grooming, nail trims, and dental care." },
-  ];
+  // const wellnessTips = [
+  //   { id: 1, title: "Routine Checkups", desc: "Schedule annual wellness exams to monitor weight, dental health, and vaccinations." },
+  //   { id: 2, title: "Balanced Nutrition", desc: "Choose age-appropriate food and follow portion guidelines to prevent obesity." },
+  //   { id: 3, title: "Mental Enrichment", desc: "Use puzzle feeders and short play sessions to keep pets mentally stimulated." },
+  //   { id: 4, title: "Hydration & Hygiene", desc: "Ensure fresh water daily and maintain grooming, nail trims, and dental care." },
+  // ];
 
-  const faqs = [
-    { id: 1, q: "How do I book a vet session?", a: "Open Vets, select a specialist, choose a time slot, and confirm your booking. You’ll receive a confirmation instantly." },
-    { id: 2, q: "Can I manage multiple pets?", a: "Yes. Go to Profile to add, edit, or remove pet profiles, and manage their records independently." },
-    { id: 3, q: "Are veterinarians verified?", a: "We verify licenses and credentials before listing a vet on TailMate to maintain quality and trust." },
-    { id: 4, q: "Is there a community code of conduct?", a: "Yes. Our community is moderated and follows clear guidelines to ensure respectful, helpful conversations." },
-  ];
+  // const faqs = [
+  //   { id: 1, q: "How do I book a vet session?", a: "Open Vets, select a specialist, choose a time slot, and confirm your booking. You’ll receive a confirmation instantly." },
+  //   { id: 2, q: "Can I manage multiple pets?", a: "Yes. Go to Profile to add, edit, or remove pet profiles, and manage their records independently." },
+  //   { id: 3, q: "Are veterinarians verified?", a: "We verify licenses and credentials before listing a vet on TailMate to maintain quality and trust." },
+  //   { id: 4, q: "Is there a community code of conduct?", a: "Yes. Our community is moderated and follows clear guidelines to ensure respectful, helpful conversations." },
+  // ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">

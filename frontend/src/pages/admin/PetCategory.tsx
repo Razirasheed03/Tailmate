@@ -11,7 +11,7 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { Button } from '@/components/UiComponents/button';
 import { Edit, Trash2, PlusCircle } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 3;
 
 const PetCategory = () => {
   const [categories, setCategories] = useState<AdminPetCategory[]>([]);

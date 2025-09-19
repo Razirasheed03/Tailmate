@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import LoginImage from "/loginp.png";
+import { AUTH_ROUTES } from "@/constants/apiRoutes";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -13,7 +14,7 @@ const ForgotPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post("http://localhost:4000/api/auth/forgot-password", { email });
+      const response = await axios.post(AUTH_ROUTES.FORGOT_PASSWORD, { email });
       toast.success(response.data.message || "If the email exists, a reset link has been sent.");
       setEmail(""); // Clear form
     } catch (error: any) {

@@ -4,24 +4,24 @@ import { UserRole } from "../../constants/roles";
 
 export class DoctorService {
   constructor(
-    private readonly userRepo: IUserRepository,
-    private readonly doctorRepo: IDoctorRepository
+    private readonly _userRepo: IUserRepository,
+    private readonly _doctorRepo: IDoctorRepository
   ) { }
 
   private async ensureDoctor(userId: string) {
-    const user = await this.userRepo.findById(userId);
+    const user = await this._userRepo.findById(userId);
     if (!user) throw new Error("User not found");
     if (user.role !== UserRole.DOCTOR) throw new Error("Only doctors can access this resource");
   }
 
   async getVerification(userId: string) {
     await this.ensureDoctor(userId);
-    await this.doctorRepo.createIfMissing(userId);
-    return this.doctorRepo.getVerification(userId);
+    await this._doctorRepo.createIfMissing(userId);
+    return this._doctorRepo.getVerification(userId);
   }
 
   private async ensureVerified(userId: string) {
-    const v = await this.doctorRepo.getVerification(userId);
+    const v = await this._doctorRepo.getVerification(userId);
     if (!v || v.status !== "verified") {
       const err: any = new Error("Profile is available after verification");
       err.status = 403;
@@ -32,12 +32,12 @@ export class DoctorService {
   async submitCertificate(userId: string, certificateUrl: string) {
     await this.ensureDoctor(userId);
     if (!certificateUrl) throw new Error("certificateUrl is required");
-    return this.doctorRepo.submitCertificate(userId, certificateUrl);
+    return this._doctorRepo.submitCertificate(userId, certificateUrl);
   }
   async getProfile(userId: string) {
     await this.ensureDoctor(userId);
     await this.ensureVerified(userId);
-    return this.doctorRepo.getProfile(userId);
+    return this._doctorRepo.getProfile(userId);
   }
   async updateProfile(userId: string, payload: Partial<{
     displayName: string;
@@ -71,6 +71,6 @@ export class DoctorService {
       profile.consultationFee = payload.consultationFee;
     }
 
-    return this.doctorRepo.updateProfile(userId, profile);
+    return this._doctorRepo.updateProfile(userId, profile);
   }
 }

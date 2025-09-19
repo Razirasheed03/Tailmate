@@ -2,7 +2,6 @@
 import { Types } from 'mongoose';
 import { PetModel } from '../../models/implements/pet.model';
 import { PetCategoryModel } from '../../models/implements/petCategory.model';
-// Adjust this import to your real helper
 import { uploadPetImageBufferToCloudinary } from '../../utils/uploadToCloudinary'; // expects (buffer|base64, options) -> { secure_url }
 
 export type PetSex = 'male' | 'female' | 'unknown';

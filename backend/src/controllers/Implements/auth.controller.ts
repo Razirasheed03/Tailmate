@@ -2,23 +2,24 @@ import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../../services/interfaces/auth.service.interface";
 import { signupSchema } from "../../validation/userSchemas";
 import { OAuth2Client } from "google-auth-library";
+import { CookieHelper } from "../../utils/cookie.helper";
+import { HttpStatus } from "../../constants/httpStatus";
 
 export class AuthController {
-  constructor(private readonly _authService: IAuthService) { }
+  constructor(private readonly _authService: IAuthService) {}
 
   signup = async (req: Request, res: Response, next: NextFunction) => {
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
+      return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
         message: parsed.error.issues[0].message,
         errors: parsed.error.issues,
       });
     }
-    const { username, email, password, role } = parsed.data;
     try {
       const result = await this._authService.signup(parsed.data);
-      res.status(201).json(result);
+      res.status(HttpStatus.CREATED).json(result);
     } catch (err) {
       next(err);
     }
@@ -27,15 +28,10 @@ export class AuthController {
   verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, otp } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.verifyOtp(email, otp);
-      res
-        .cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000
-        })
-        .status(200)
+      const { accessToken, refreshToken, user } =
+        await this._authService.verifyOtp(email, otp);
+      CookieHelper.setRefreshToken(res, refreshToken) // CHANGED HERE
+        .status(HttpStatus.OK)
         .json({ success: true, accessToken, user });
     } catch (err) {
       next(err);
@@ -46,7 +42,7 @@ export class AuthController {
     try {
       const { email } = req.body;
       await this._authService.resendOtp(email);
-      res.status(200).json({ success: true, message: "OTP resent!" });
+      res.status(HttpStatus.OK).json({ success: true, message: "OTP resent!" });
     } catch (err) {
       next(err);
     }
@@ -65,40 +61,35 @@ export class AuthController {
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.login(email, password);
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      })
-        .status(200)
+      const { accessToken, refreshToken, user } = await this._authService.login(
+        email,
+        password
+      );
+      CookieHelper.setRefreshToken(res, refreshToken) // Changed here (for show ing in review)
+        .status(HttpStatus.OK)
         .json({ success: true, accessToken, user });
     } catch (err) {
       next(err);
     }
   };
 
-  // ADD: Google login with ID token from frontend (One Tap / Credential mode)
-  googleLoginWithToken = async (req: Request, res: Response, next: NextFunction) => {
+  googleLoginWithToken = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { idToken } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.googleLogin(idToken);
+      const { accessToken, refreshToken, user } =
+        await this._authService.googleLogin(idToken);
 
-      res
-        .cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        })
-        .status(200)
+      CookieHelper.setRefreshToken(res, refreshToken)
+        .status(HttpStatus.OK)
         .json({ success: true, accessToken, user });
     } catch (err) {
       next(err);
     }
   };
-
 
   googleRedirect = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -124,7 +115,9 @@ export class AuthController {
     try {
       const code = req.query.code as string;
       if (!code) {
-        return res.status(400).json({ success: false, message: "Missing code" });
+        return res
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ success: false, message: "Missing code" });
       }
 
       const client = new OAuth2Client({
@@ -136,29 +129,30 @@ export class AuthController {
       const { tokens } = await client.getToken(code);
       const idToken = tokens.id_token;
       if (!idToken) {
-        return res.status(400).json({ success: false, message: "No id_token from Google" });
+        return res
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ success: false, message: "No id_token from Google" });
       }
 
-      const { accessToken, refreshToken, user } = await this._authService.googleLogin(idToken);
+      const { accessToken, refreshToken, user } =
+        await this._authService.googleLogin(idToken);
+      CookieHelper.setRefreshToken(res, refreshToken);
 
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-
-      const frontendUrl = `${process.env.FRONTEND_BASE_URL}/login?accessToken=${encodeURIComponent(
+      const frontendUrl = `${
+        process.env.FRONTEND_BASE_URL
+      }/login?accessToken=${encodeURIComponent(
         accessToken
-      )}&user=${encodeURIComponent(JSON.stringify({
-        _id: (user as any)._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        isBlocked: user.isBlocked,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }))}`;
+      )}&user=${encodeURIComponent(
+        JSON.stringify({
+          _id: (user as any)._id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          isBlocked: user.isBlocked,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        })
+      )}`;
 
       res.redirect(302, frontendUrl);
     } catch (err) {
@@ -170,7 +164,12 @@ export class AuthController {
     try {
       const { email } = req.body;
       await this._authService.forgotPassword(email);
-      res.status(200).json({ success: true, message: "If this email is registered, a reset link has been sent." });
+      res
+        .status(HttpStatus.OK)
+        .json({
+          success: true,
+          message: "If this email is registered, a reset link has been sent.",
+        });
     } catch (err) {
       next(err);
     }
@@ -180,7 +179,9 @@ export class AuthController {
     try {
       const { id, token, newPassword } = req.body;
       await this._authService.resetPassword(id, token, newPassword);
-      res.status(200).json({ success: true, message: "Password reset successful." });
+      res
+        .status(HttpStatus.OK)
+        .json({ success: true, message: "Password reset successful." });
     } catch (err) {
       next(err);
     }

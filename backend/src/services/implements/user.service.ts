@@ -3,7 +3,7 @@ import { UserRepository } from '../../repositories/implements/user.repository';
 import { Types } from 'mongoose';
 
 export class UserService {
-  constructor(private readonly userRepo = new UserRepository()) {}
+  constructor(private readonly _userRepo = new UserRepository()) {}
 
   private validateObjectId(id: string) {
     if (!Types.ObjectId.isValid(id)) throw new Error('Invalid user id');
@@ -23,7 +23,7 @@ export class UserService {
     const newUsername = this.validateUsername(username);
 
     // Use findByIdAndUpdate with runValidators and unique index on username
-    const updated = await (this.userRepo as any).model.findByIdAndUpdate(
+    const updated = await (this._userRepo as any).model.findByIdAndUpdate(
       userId,
       { $set: { username: newUsername } },
       { new: true, runValidators: true, context: 'query' }

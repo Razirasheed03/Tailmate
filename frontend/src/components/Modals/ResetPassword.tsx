@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import LoginImage from "/loginp.png";
+import { AUTH_ROUTES } from "@/constants/apiRoutes";
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -41,7 +42,7 @@ const ResetPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post("http://localhost:4000/api/auth/reset-password", {
+      const response = await axios.post(AUTH_ROUTES.RESET_PASSWORD, {
         id,
         token,
         newPassword
