@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {  Ban, CheckCircle, Trash2, Users, Stethoscope, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import {  Ban, CheckCircle, Trash2, Users, Stethoscope } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminService } from '@/services/adminApiServices';
 import type { User, UserStats } from '@/types/user';

@@ -1,65 +1,55 @@
 // src/services/marketplaceService.ts
 import { type AxiosResponse } from 'axios';
 import type {
-  ApiListingResponse,
-  DomainListing,
-} from '@/types/api.types';
-import type{
-    PaginatedResponse,
+  PaginatedResponse,
   ApiResponse,
   ListingSearchParams,
   ListingStatus,
   LegacyStatus
 } from '@/types/marketplace.types'
-import { ListingMapper } from '@/mappers/listingMapper';
 import httpClient from './httpClient';
 
 export const marketplaceService = {
   /**
-   * Create a new marketplace listing - returns domain model
+   * Create a new marketplace listing - returns raw API data
    */
-  create: async (domainListing: Partial<DomainListing>): Promise<DomainListing> => {
-    // Map domain to API format for request
-    const apiPayload = ListingMapper.domainToApi(domainListing);
-    
-    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.post(
+  create: async (listingData: any): Promise<any> => {
+    const { data }: AxiosResponse<ApiResponse<any>> = await httpClient.post(
       '/marketplace/listings', 
-      apiPayload
+      listingData
     );
     
-    const apiListing = data?.data ?? data;
-    // Map API response back to domain model
-    return ListingMapper.apiToDomain(apiListing);
+    return data?.data ?? data;
   },
 
   /**
-   * Get public marketplace listings - returns domain models
+   * Get public marketplace listings - returns raw API data
    */
-  list: async (params: ListingSearchParams): Promise<PaginatedResponse<DomainListing>> => {
-    const { data }: AxiosResponse<ApiResponse<PaginatedResponse<ApiListingResponse>>> = await httpClient.get(
+  list: async (params: ListingSearchParams): Promise<PaginatedResponse<any>> => {
+    const { data }: AxiosResponse<ApiResponse<PaginatedResponse<any>>> = await httpClient.get(
       '/marketplace/listings', 
       { params }
     );
     
     const paginatedApiData = data?.data ?? data;
     
-    // Map API listings to domain listings
-    const domainListings = ListingMapper.apiArrayToDomainArray(paginatedApiData.data || []);
-    
+    // Return raw API data directly
     return {
-      ...paginatedApiData,
-      data: domainListings
+      data: paginatedApiData.data || [],
+      page: paginatedApiData.page || 1,
+      total: paginatedApiData.total || 0,
+      totalPages: paginatedApiData.totalPages || 1
     };
   },
 
   /**
-   * Get current user's listings - returns domain models
+   * Get current user's listings - returns raw API data
    */
   getUserListings: async (
     page: number = 1, 
     limit: number = 12
-  ): Promise<PaginatedResponse<DomainListing>> => {
-    const { data }: AxiosResponse<ApiResponse<PaginatedResponse<ApiListingResponse>>> = await httpClient.get(
+  ): Promise<PaginatedResponse<any>> => {
+    const { data }: AxiosResponse<ApiResponse<PaginatedResponse<any>>> = await httpClient.get(
       '/marketplace/listings/mine', 
       { params: { page, limit } }
     );
@@ -73,49 +63,44 @@ export const marketplaceService = {
       paginatedApiData = data?.data ?? data;
     }
     
-    // Map API listings to domain listings
-    const domainListings = ListingMapper.apiArrayToDomainArray(paginatedApiData.data || []);
-    
+    // Return raw API data directly
     return {
-      ...paginatedApiData,
-      data: domainListings
+      data: paginatedApiData.data || [],
+      page: paginatedApiData.page || page,
+      // limit: paginatedApiData.limit || limit,
+      total: paginatedApiData.total || 0,
+      totalPages: paginatedApiData.totalPages || 1
     };
   },
 
   /**
-   * Update a listing - returns domain model
+   * Update a listing - returns raw API data
    */
   updateListing: async (
     id: string, 
-    domainUpdates: Partial<DomainListing>
-  ): Promise<DomainListing> => {
-    // Map domain updates to API format
-    const apiPayload = ListingMapper.domainToApi(domainUpdates);
-    
-    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.put(
+    updateData: any
+  ): Promise<any> => {
+    const { data }: AxiosResponse<ApiResponse<any>> = await httpClient.put(
       `/marketplace/listings/${id}`, 
-      apiPayload
+      updateData
     );
     
-    const apiListing = data?.data ?? data;
-    // Map API response back to domain model
-    return ListingMapper.apiToDomain(apiListing);
+    return data?.data ?? data;
   },
 
   /**
-   * Update listing status - returns domain model
+   * Update listing status - returns raw API data
    */
   updateListingStatus: async (
     id: string, 
     status: ListingStatus
-  ): Promise<DomainListing> => {
-    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.patch(
+  ): Promise<any> => {
+    const { data }: AxiosResponse<ApiResponse<any>> = await httpClient.patch(
       `/marketplace/listings/${id}/status`, 
       { status }
     );
     
-    const apiListing = data?.data ?? data;
-    return ListingMapper.apiToDomain(apiListing);
+    return data?.data ?? data;
   },
 
   /**
@@ -127,36 +112,35 @@ export const marketplaceService = {
   },
 
   /**
-   * Mark listing as sold or adopted - returns domain model
+   * Mark listing as sold or adopted - returns raw API data
    */
   markAsSoldAdopted: async (
     id: string, 
     status: 'sold' | 'adopted'
-  ): Promise<DomainListing> => {
-    const { data }: AxiosResponse<ApiResponse<ApiListingResponse>> = await httpClient.patch(
+  ): Promise<any> => {
+    const { data }: AxiosResponse<ApiResponse<any>> = await httpClient.patch(
       `/marketplace/listings/${id}/complete`, 
       { status }
     );
     
-    const apiListing = data?.data ?? data;
-    return ListingMapper.apiToDomain(apiListing);
+    return data?.data ?? data;
   },
 
-  // Legacy methods with improved types (keeping for backward compatibility)
+  // Legacy methods (keeping for backward compatibility)
   /**
    * @deprecated Use getUserListings instead
    */
   mine: async (
     page: number = 1, 
     limit: number = 12
-  ): Promise<PaginatedResponse<DomainListing>> => {
+  ): Promise<PaginatedResponse<any>> => {
     return await marketplaceService.getUserListings(page, limit);
   },
 
   /**
    * @deprecated Use updateListing instead
    */
-  update: async (id: string, patch: Partial<DomainListing>): Promise<DomainListing> => {
+  update: async (id: string, patch: any): Promise<any> => {
     return await marketplaceService.updateListing(id, patch);
   },
 
@@ -166,7 +150,7 @@ export const marketplaceService = {
   changeStatus: async (
     id: string, 
     status: LegacyStatus
-  ): Promise<DomainListing> => {
+  ): Promise<any> => {
     const statusMap: Record<LegacyStatus, ListingStatus> = {
       'active': 'active',
       'reserved': 'inactive',

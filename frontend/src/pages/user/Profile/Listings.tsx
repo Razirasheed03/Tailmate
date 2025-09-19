@@ -1,27 +1,20 @@
 // src/pages/user/profile/Listings.tsx
 import { useEffect, useState, useCallback } from "react";
 import { marketplaceService } from "@/services/marketplaceService";
-import { ListingMapper } from "@/mappers/listingMapper";
-import type {
-  PaginatedResponse,
-  ListingStatus,
-} from "@/types/marketplace.types";
-import type { DomainListing, UIListing } from "@/types/api.types";
+import type { ListingStatus } from "@/types/marketplace.types";
 import EditListingModal from "./EditListingModal";
 
 interface ListingsState {
-  domainListings: DomainListing[];
-  uiListings: UIListing[];
+  listings: any[]; // Simplified to single array
   loading: boolean;
   error: string | null;
-  editingListing: DomainListing | null;
+  editingListing: any | null; // Use any instead of DomainListing
   deletingId: string | null;
 }
 
 const Listings: React.FC = () => {
   const [state, setState] = useState<ListingsState>({
-    domainListings: [],
-    uiListings: [],
+    listings: [], // Single array instead of separate domain/ui
     loading: true,
     error: null,
     editingListing: null,
@@ -34,65 +27,49 @@ const Listings: React.FC = () => {
   }, []);
 
   const fetchListings = useCallback(async (): Promise<void> => {
-  try {
-    updateState({ loading: true, error: null });
+    try {
+      updateState({ loading: true, error: null });
 
-    const response: PaginatedResponse<DomainListing> =
-      await marketplaceService.getUserListings();
+      const response = await marketplaceService.getUserListings();
 
-    if (response && typeof response === "object") {
-      let domainListings: DomainListing[] = [];
+      if (response && typeof response === "object") {
+        let apiListings: any[] = [];
 
-      if (Array.isArray(response)) {
-        domainListings = response;
-      } else if (response.data && Array.isArray(response.data)) {
-        domainListings = response.data;
-      } else {
-        console.warn("Unexpected response structure:", response);
-        domainListings = [];
-      }
-
-      // Add validation before mapping
-      const validatedListings = domainListings.filter(listing => {
-        // Ensure required date fields exist and are valid
-        const isValidDate = listing.createdAt instanceof Date && !isNaN(listing.createdAt.getTime());
-        if (!isValidDate) {
-          console.warn("Invalid date in listing:", listing.id, listing.createdAt);
+        if (Array.isArray(response)) {
+          apiListings = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          apiListings = response.data;
+        } else {
+          console.warn("Unexpected response structure:", response);
+          apiListings = [];
         }
-        return isValidDate;
-      });
 
-      // Convert domain models to UI models with error handling
-      const uiListings = ListingMapper.domainArrayToUIArray(validatedListings);
-
+        // Use raw data directly - no mapping or validation needed
+        updateState({
+          listings: apiListings,
+        });
+      } else {
+        console.warn("Invalid response:", response);
+        updateState({
+          listings: [],
+        });
+      }
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load listings";
+      console.error("Fetch listings error:", err);
       updateState({
-        domainListings: validatedListings,
-        uiListings,
+        error: errorMessage,
+        listings: [],
       });
-    } else {
-      console.warn("Invalid response:", response);
-      updateState({
-        domainListings: [],
-        uiListings: [],
-      });
+    } finally {
+      updateState({ loading: false });
     }
-  } catch (err: unknown) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Failed to load listings";
-    console.error("Fetch listings error:", err);
-    updateState({
-      error: errorMessage,
-      domainListings: [],
-      uiListings: [],
-    });
-  } finally {
-    updateState({ loading: false });
-  }
-}, [updateState]);
+  }, [updateState]);
 
-useEffect(() => {
-  fetchListings();
-}, [fetchListings]);
+  useEffect(() => {
+    fetchListings();
+  }, [fetchListings]);
 
   const handleDelete = useCallback(
     async (id: string): Promise<void> => {
@@ -119,6 +96,7 @@ useEffect(() => {
     },
     [updateState, fetchListings]
   );
+
   const handleStatusToggle = useCallback(
     async (id: string, currentStatus: string): Promise<void> => {
       try {
@@ -126,12 +104,10 @@ useEffect(() => {
 
         const newStatus: ListingStatus =
           currentStatus === "active" ? "inactive" : "active";
-        const updatedListing: DomainListing =
-          await marketplaceService.updateListingStatus(id, newStatus);
+        await marketplaceService.updateListingStatus(id, newStatus);
 
-        if (updatedListing) {
-          await fetchListings(); // Refresh list
-        }
+        // Refresh listings after update
+        await fetchListings();
       } catch (err: unknown) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update status";
@@ -142,8 +118,8 @@ useEffect(() => {
   );
 
   const handleEditListing = useCallback(
-    (domainListing: DomainListing): void => {
-      updateState({ editingListing: domainListing });
+    (listing: any): void => {
+      updateState({ editingListing: listing });
     },
     [updateState]
   );
@@ -172,7 +148,7 @@ useEffect(() => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">
-          My Listings ({state.uiListings.length})
+          My Listings ({state.listings.length})
         </h2>
         <button
           onClick={fetchListings}
@@ -199,7 +175,7 @@ useEffect(() => {
       )}
 
       {/* Empty State */}
-      {state.uiListings.length === 0 ? (
+      {state.listings.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <div className="text-gray-400 mb-4">
             <svg
@@ -216,23 +192,23 @@ useEffect(() => {
           </p>
         </div>
       ) : (
-        /* Listings Grid - Using UI Models for Display */
+        /* Listings Grid - Using Raw Data with Inline Formatting */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {state.uiListings.map((uiListing: UIListing, index: number) => {
-            // Find corresponding domain listing for actions
-            const domainListing = state.domainListings[index];
+          {state.listings.map((listing) => {
+            // Get listing ID (handle both _id and id)
+            const listingId = listing._id || listing.id;
 
             return (
               <div
-                key={uiListing.id}
+                key={listingId}
                 className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Image */}
                 <div className="aspect-video bg-gray-200 relative">
-                  {uiListing.primaryImage ? (
+                  {listing.photos?.[0] ? (
                     <img
-                      src={uiListing.primaryImage}
-                      alt={uiListing.title}
+                      src={listing.photos[0]}
+                      alt={listing.title}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
@@ -248,56 +224,71 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* Status Badge - Using UI Model */}
+                  {/* Status Badge - Inline Logic */}
                   <div className="absolute top-2 right-2">
                     <span
-                      className={`px-2 py-1 text-xs rounded-full font-medium ${uiListing.statusColor}`}
+                      className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        listing.status === 'active' 
+                          ? 'bg-green-100 text-green-800'
+                          : listing.status === 'inactive'
+                          ? 'bg-gray-100 text-gray-800'
+                          : listing.status === 'sold'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-purple-100 text-purple-800'
+                      }`}
                     >
-                      {uiListing.status.toUpperCase()}
+                      {listing.status.toUpperCase()}
                     </span>
                   </div>
 
-                  {/* Type Badge - Using UI Model */}
+                  {/* Type Badge - Inline Logic */}
                   <div className="absolute top-2 left-2">
                     <span
                       className={`px-2 py-1 text-xs rounded-full font-medium ${
-                        uiListing.type === "sell"
+                        listing.type === "sell"
                           ? "bg-orange-100 text-orange-800"
                           : "bg-green-100 text-green-800"
                       }`}
                     >
-                      {uiListing.typeLabel}
+                      {listing.type === "sell" ? "For Sale" : "For Adoption"}
                     </span>
                   </div>
                 </div>
 
-                {/* Content - Using UI Model Formatted Data */}
+                {/* Content - Raw Data with Inline Formatting */}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg truncate">
-                      {uiListing.title}
+                      {listing.title}
                     </h3>
                     <span className="text-orange-600 font-bold">
-                      {uiListing.displayPrice}
+                      {/* Inline Price Formatting */}
+                      {listing.type === 'adopt' || !listing.price 
+                        ? 'Free' 
+                        : `₹${listing.price.toLocaleString('en-IN')}`
+                      }
                     </span>
                   </div>
 
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {domainListing.description}
+                    {listing.description}
                   </p>
 
                   <div className="text-xs text-gray-500 space-y-1 mb-4">
-                    {uiListing.age !== "Not specified" && (
-                      <div>Age: {uiListing.age}</div>
+                    {/* Inline Age Formatting */}
+                    {(listing.age_text || listing.ageText) && (
+                      <div>Age: {listing.age_text || listing.ageText} years</div>
                     )}
-                    <div>Location: {uiListing.location}</div>
-                    <div>Posted: {uiListing.createdDate}</div>
+                    <div>Location: {listing.place || listing.location}</div>
+                    <div>
+                      Posted: {new Date(listing.created_at || listing.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
 
-                  {/* Actions - Using Domain Model for Business Logic */}
+                  {/* Actions - Using Raw Data */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleEditListing(domainListing)}
+                      onClick={() => handleEditListing(listing)}
                       className="flex-1 bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 transition-colors"
                       disabled={state.loading}
                     >
@@ -306,31 +297,28 @@ useEffect(() => {
 
                     <button
                       onClick={() =>
-                        handleStatusToggle(
-                          domainListing.id,
-                          domainListing.status
-                        )
+                        handleStatusToggle(listingId, listing.status)
                       }
                       className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
-                        domainListing.status === "active"
+                        listing.status === "active"
                           ? "bg-gray-600 text-white hover:bg-gray-700"
                           : "bg-green-600 text-white hover:bg-green-700"
                       }`}
                       disabled={state.loading}
                     >
-                      {domainListing.status === "active"
+                      {listing.status === "active"
                         ? "Deactivate"
                         : "Activate"}
                     </button>
 
                     <button
-                      onClick={() => handleDelete(domainListing.id)}
+                      onClick={() => handleDelete(listingId)}
                       disabled={
-                        state.deletingId === domainListing.id || state.loading
+                        state.deletingId === listingId || state.loading
                       }
                       className="bg-red-600 text-white py-2 px-3 rounded text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
                     >
-                      {state.deletingId === domainListing.id ? "..." : "Delete"}
+                      {state.deletingId === listingId ? "..." : "Delete"}
                     </button>
                   </div>
                 </div>

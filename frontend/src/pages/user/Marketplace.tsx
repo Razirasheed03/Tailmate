@@ -4,8 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/UiComponents/UserNavbar';
 import SellAdoptModal from '@/components/Modals/SellAdoptModal';
 import { marketplaceService } from '@/services/marketplaceService';
-import { ListingMapper } from '@/mappers/listingMapper';
-import type { DomainListing, UIListing } from '@/types/api.types';
+// import { ListingMapper } from '@/mappers/listingMapper';
 
 interface SearchFilters {
   q: string;
@@ -19,8 +18,7 @@ interface SearchFilters {
 
 export default function Marketplace() {
   const [open, setOpen] = useState(false);
-  const [domainListings, setDomainListings] = useState<DomainListing[]>([]);
-  const [uiListings, setUIListings] = useState<UIListing[]>([]);
+const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -56,59 +54,54 @@ export default function Marketplace() {
 
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchListings = useCallback(async (pageNumber = 1, searchFilters = filters) => {
-    try {
-      setLoading(true);
-      
-      const params: any = {
-        page: pageNumber,
-        limit: 12
-      };
+const fetchListings = useCallback(async (pageNumber = 1, searchFilters = filters) => {
+  try {
+    setLoading(true);
+    
+    const params: any = {
+      page: pageNumber,
+      limit: 12
+    };
 
-      // Add search parameters
-      if (searchFilters.q.trim()) params.q = searchFilters.q.trim();
-      if (searchFilters.place.trim()) params.place = searchFilters.place.trim();
-      if (searchFilters.type !== 'all') params.type = searchFilters.type;
-      if (searchFilters.minPrice.trim()) params.minPrice = parseInt(searchFilters.minPrice);
-      if (searchFilters.maxPrice.trim()) params.maxPrice = parseInt(searchFilters.maxPrice);
-      if (!searchFilters.includeFree) params.excludeFree = true;
-      if (searchFilters.sortBy) params.sortBy = searchFilters.sortBy;
+    // Add search parameters (keep this part same)
+    if (searchFilters.q.trim()) params.q = searchFilters.q.trim();
+    if (searchFilters.place.trim()) params.place = searchFilters.place.trim();
+    if (searchFilters.type !== 'all') params.type = searchFilters.type;
+    if (searchFilters.minPrice.trim()) params.minPrice = parseInt(searchFilters.minPrice);
+    if (searchFilters.maxPrice.trim()) params.maxPrice = parseInt(searchFilters.maxPrice);
+    if (!searchFilters.includeFree) params.excludeFree = true;
+    if (searchFilters.sortBy) params.sortBy = searchFilters.sortBy;
 
-      // Service now returns domain models
-      const paginatedData = await marketplaceService.list(params);
-      
-      // Store domain models
-      setDomainListings(paginatedData.data);
-      
-      // Convert domain models to UI models for display
-      const uiListingsData = ListingMapper.domainArrayToUIArray(paginatedData.data);
-      setUIListings(uiListingsData);
-      
-      setPage(paginatedData.page || pageNumber);
-      setTotalPages(paginatedData.totalPages || 1);
-      setTotal(paginatedData.total || 0);
+    // Get raw data from service
+    const paginatedData = await marketplaceService.list(params);
+    
+    // Use raw data directly - no mapping!
+    setListings(paginatedData.data);
+    
+    setPage(paginatedData.page || pageNumber);
+    setTotalPages(paginatedData.totalPages || 1);
+    setTotal(paginatedData.total || 0);
 
-      // Update URL parameters
-      const newSearchParams = new URLSearchParams();
-      if (searchFilters.q.trim()) newSearchParams.set('q', searchFilters.q.trim());
-      if (searchFilters.place.trim()) newSearchParams.set('place', searchFilters.place.trim());
-      if (searchFilters.type !== 'all') newSearchParams.set('type', searchFilters.type);
-      if (searchFilters.minPrice.trim()) newSearchParams.set('minPrice', searchFilters.minPrice.trim());
-      if (searchFilters.maxPrice.trim()) newSearchParams.set('maxPrice', searchFilters.maxPrice.trim());
-      if (searchFilters.sortBy !== 'newest') newSearchParams.set('sortBy', searchFilters.sortBy);
-      if (!searchFilters.includeFree) newSearchParams.set('includeFree', 'false');
-      if (pageNumber > 1) newSearchParams.set('page', pageNumber.toString());
-      
-      setSearchParams(newSearchParams);
-    } catch (err) {
-      console.error('Failed to fetch listings:', err);
-      setDomainListings([]);
-      setUIListings([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, setSearchParams]);
+    // Update URL parameters (keep this part same)
+    const newSearchParams = new URLSearchParams();
+    if (searchFilters.q.trim()) newSearchParams.set('q', searchFilters.q.trim());
+    if (searchFilters.place.trim()) newSearchParams.set('place', searchFilters.place.trim());
+    if (searchFilters.type !== 'all') newSearchParams.set('type', searchFilters.type);
+    if (searchFilters.minPrice.trim()) newSearchParams.set('minPrice', searchFilters.minPrice.trim());
+    if (searchFilters.maxPrice.trim()) newSearchParams.set('maxPrice', searchFilters.maxPrice.trim());
+    if (searchFilters.sortBy !== 'newest') newSearchParams.set('sortBy', searchFilters.sortBy);
+    if (!searchFilters.includeFree) newSearchParams.set('includeFree', 'false');
+    if (pageNumber > 1) newSearchParams.set('page', pageNumber.toString());
+    
+    setSearchParams(newSearchParams);
+  } catch (err) {
+    console.error('Failed to fetch listings:', err);
+    setListings([]); // Single array instead of two
+    setTotal(0);
+  } finally {
+    setLoading(false);
+  }
+}, [filters, setSearchParams]);
 
   // Handle search with debouncing (only for search input)
   const handleSearchInput = useCallback((searchQuery: string) => {
@@ -146,11 +139,12 @@ export default function Marketplace() {
     setPage(1);
   };
 
-  const handleCardClick = (uiListing: UIListing) => {
-    // Find the corresponding domain listing for navigation
-    const domainListing = domainListings.find(dl => dl.id === uiListing.id);
-    navigate(`/marketplace/${uiListing.id}`, { state: { listing: domainListing } });
-  };
+const handleCardClick = (listing: any) => {
+  // Use raw listing data directly
+  const listingId = listing._id || listing.id;
+  navigate(`/marketplace/${listingId}`, { state: { listing } });
+};
+
 
   const clearFilters = () => {
     const resetFilters: SearchFilters = {
@@ -314,83 +308,95 @@ export default function Marketplace() {
           </div>
         ) : (
           <>
-            {/* Listings Grid - Inline Rendering Using UI Models */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {uiListings.length === 0 ? (
-                <div className="col-span-full text-center py-12">
-                  <div className="text-gray-400 mb-4">
-                    <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500 text-lg">No listings found</p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    {hasActiveFilters
-                      ? 'Try adjusting your search filters'
-                      : 'Be the first to post a listing!'}
-                  </p>
-                </div>
-              ) : (
-                uiListings.map((uiListing) => (
-                  <div
-                    key={uiListing.id}
-                    onClick={() => handleCardClick(uiListing)}
-                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-                  >
-                    <div className="relative">
-                      <div className="aspect-square bg-gray-100 overflow-hidden">
-                        {uiListing.primaryImage ? (
-                          <img
-                            src={uiListing.primaryImage}
-                            alt={uiListing.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-400">
-                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Type Badge - Using UI Model Data */}
-                      <div className="absolute top-2 left-2">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          uiListing.type === 'sell' 
-                            ? 'bg-orange-100 text-orange-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {uiListing.typeLabel}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Content - Using UI Model Formatted Data */}
-                    <div className="p-3">
-                      <h3 className="font-semibold text-sm text-gray-900 truncate mb-1">
-                        {uiListing.title}
-                      </h3>
-                      <p className={`text-lg font-bold mb-1 ${uiListing.statusColor}`}>
-                        {uiListing.displayPrice}
-                      </p>
-                      {uiListing.age !== 'Not specified' && (
-                        <p className="text-xs text-gray-500 truncate mb-1">
-                          Age: {uiListing.age}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-500 truncate mb-1">
-                        📍 {uiListing.location}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {uiListing.createdDate}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+           {/* Listings Grid - Direct Raw Data Usage */}
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+  {listings.length === 0 ? (
+    <div className="col-span-full text-center py-12">
+      <div className="text-gray-400 mb-4">
+        <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <p className="text-gray-500 text-lg">No listings found</p>
+      <p className="text-gray-400 text-sm mt-2">
+        {hasActiveFilters
+          ? 'Try adjusting your search filters'
+          : 'Be the first to post a listing!'}
+      </p>
+    </div>
+  ) : (
+    listings.map((listing) => (
+      <div
+        key={listing._id || listing.id}
+        onClick={() => handleCardClick(listing)}
+        className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+      >
+        <div className="relative">
+          <div className="aspect-square bg-gray-100 overflow-hidden">
+            {listing.photos?.[0] ? (
+              <img
+                src={listing.photos[0]}
+                alt={listing.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                </svg>
+              </div>
+            )}
+          </div>
+          
+          {/* Type Badge - Inline Logic */}
+          <div className="absolute top-2 left-2">
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+              listing.type === 'sell' 
+                ? 'bg-orange-100 text-orange-800' 
+                : 'bg-green-100 text-green-800'
+            }`}>
+              {listing.type === 'sell' ? 'For Sale' : 'For Adoption'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Content - Raw Data with Inline Formatting */}
+        <div className="p-3">
+          <h3 className="font-semibold text-sm text-gray-900 truncate mb-1">
+            {listing.title}
+          </h3>
+          
+          {/* Inline Price Formatting */}
+          <p className="text-lg font-bold mb-1 text-orange-600">
+            {listing.type === 'adopt' || !listing.price 
+              ? 'Free' 
+              : `₹${listing.price.toLocaleString('en-IN')}`
+            }
+          </p>
+          
+          {/* Inline Age Display */}
+          {listing.age_text && (
+            <p className="text-xs text-gray-500 truncate mb-1">
+              Age: {listing.age_text} years
+            </p>
+          )}
+          
+          {/* Location */}
+          <p className="text-xs text-gray-500 truncate mb-1">
+            📍 {listing.place || listing.location}
+          </p>
+          
+          {/* Inline Date Formatting */}
+          <p className="text-xs text-gray-400">
+            {new Date(listing.created_at || listing.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+
 
             {/* Enhanced Pagination */}
             {totalPages > 1 && (

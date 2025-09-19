@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { uploadListingPhoto } from '@/services/petsApiService';
 import { marketplaceService } from '@/services/marketplaceService';
-import type { DomainListing } from '@/types/api.types';
 
 type Props = {
   open: boolean;
@@ -18,9 +17,17 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
   const [age, setAge] = useState('');
   const [place, setPlace] = useState('');
   const [contact, setContact] = useState('');
-  const [type, setType] = useState<'sell' | 'adopt'>('sell'); // ✅ FIXED: Union type
+  const [type, setType] = useState<'sell' | 'adopt'>('sell');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
 
   const submit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -29,9 +36,14 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     // Validation
     if (!title.trim()) return setErr('Title is required');
     if (!desc.trim()) return setErr('Description is required');
-    if (!place.trim()) return setErr('Place is required');
+    if (desc.trim().length < 10) return setErr('Description must be at least 10 characters');
+    if (!place.trim()) return setErr('Location is required');
     if (!contact.trim()) return setErr('Contact is required');
     if (images.length === 0) return setErr('At least one photo is required');
+
+    if (!validatePhoneNumber(contact.trim())) {
+      return setErr('Please enter a valid Indian phone number');
+    }
 
     if (type === 'sell' && price.trim() && (isNaN(Number(price)) || Number(price) < 0)) {
       return setErr('Price must be a valid positive number');
@@ -46,19 +58,19 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
         photoUrls.push(result.url);
       }
 
-      // ✅ FIXED: Create properly typed domain listing
-      const domainListing: Partial<DomainListing> = {
+      // Simple API payload using raw field names
+      const listingData = {
         title: title.trim(),
         description: desc.trim(),
         photos: photoUrls,
         price: (type === 'sell' && price.trim()) ? Number(price) : null,
-        ageText: age.trim() || undefined,
-        location: place.trim(),          // Domain model uses 'location'
-        contactInfo: contact.trim(),     // Domain model uses 'contactInfo'
-        type: type                       // ✅ Already properly typed as union type
+        age_text: age.trim() ? Number(age.trim()) : undefined, // Use API field name
+        place: place.trim(),           // Use API field name
+        contact: contact.trim(),       // Use API field name
+        type: type
       };
 
-      const createdListing = await marketplaceService.create(domainListing);
+      const createdListing = await marketplaceService.create(listingData);
       
       if (createdListing) {
         // Reset form
@@ -87,7 +99,39 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
 
   const onFiles = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const files = e.target.files ? Array.from(e.target.files) : [];
-    const newImages = files.map(file => ({
+    
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach((file) => {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        errors.push(`${file.name}: Only JPEG, PNG, WebP, and GIF formats are allowed`);
+        return;
+      }
+      
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name}: File size must be less than 5MB`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+
+    if (errors.length > 0) {
+      setErr(errors.join(', '));
+      return;
+    } else {
+      setErr(null);
+    }
+
+    const availableSlots = 6 - images.length;
+    const filesToAdd = validFiles.slice(0, availableSlots);
+    
+    if (validFiles.length > availableSlots) {
+      setErr(`Only ${availableSlots} more images can be added (maximum 6 total)`);
+    }
+
+    const newImages = filesToAdd.map(file => ({
       file,
       url: URL.createObjectURL(file)
     }));
@@ -104,10 +148,21 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     });
   };
 
+  // Cleanup URLs on unmount
+  React.useEffect(() => {
+    return () => {
+      images.forEach(img => {
+        if (img.url) {
+          URL.revokeObjectURL(img.url);
+        }
+      });
+    };
+  }, []);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-30">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm bg-opacity-30">
       <div className="bg-white w-full sm:max-w-xl rounded-t-2xl sm:rounded-2xl shadow-lg max-h-[90vh] overflow-y-auto">
         <div className="px-5 py-4 border-b">
           <div className="flex items-center justify-between">
@@ -125,7 +180,7 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
         </div>
 
         <form onSubmit={submit} className="p-5 space-y-4">
-          {/* Type Selection - ✅ FIXED: Proper union type handling */}
+          {/* Type Selection */}
           <div>
             <label className="block text-sm text-gray-700 mb-2">
               Listing Type <span className="text-red-500">*</span>
@@ -185,11 +240,12 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
             <input 
               ref={fileRef} 
               type="file" 
-              accept="image/*" 
+              accept=".jpg,.jpeg,.png,.webp,.gif" 
               multiple 
               className="hidden" 
               onChange={onFiles} 
             />
+            <p className="text-xs text-gray-500 mt-1">Up to 6 images • JPEG, PNG, WebP, GIF • Max 5MB each</p>
           </div>
 
           {/* Title */}
@@ -203,7 +259,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
               value={title} 
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter listing title"
-              required
             />
           </div>
 
@@ -218,7 +273,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
               value={desc} 
               onChange={(e) => setDesc(e.target.value)}
               placeholder="Describe your pet..."
-              required
             />
           </div>
 
@@ -241,13 +295,15 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
           {/* Age and Place */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Age (optional)</label>
+              <label className="block text-sm text-gray-700 mb-1">Age (in years)</label>
               <input 
-                type="text"
+                type="number"
+                min="0"
+                step="0.1"
                 className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500" 
                 value={age} 
                 onChange={(e) => setAge(e.target.value)}
-                placeholder="e.g., 2 months, 1 year"
+                placeholder="e.g., 0.5, 1, 2"
               />
             </div>
             <div>
@@ -260,7 +316,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
                 value={place} 
                 onChange={(e) => setPlace(e.target.value)}
                 placeholder="City, State"
-                required
               />
             </div>
           </div>
@@ -276,7 +331,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
               value={contact} 
               onChange={(e) => setContact(e.target.value)}
               placeholder="+91 9xxxxxxxxx"
-              required
             />
           </div>
 

@@ -2,15 +2,12 @@
 import { useRef, useState } from 'react';
 import { uploadListingPhoto } from '@/services/petsApiService';
 import { marketplaceService } from '@/services/marketplaceService';
-// import { ListingMapper } from '@/mappers/listingMapper';
-import type { DomainListing } from '@/types/api.types';
-// import type {UpdateListingPayload} from '@/types/marketplace.types'
 import React from 'react';
 
-// ✅ FIXED: Use DomainListing instead of ListingResponse
+// Simplified interface using raw data
 interface Props {
   open: boolean;
-  listing: DomainListing; // Changed from ListingResponse
+  listing: any; // Use raw API data instead of DomainListing
   onClose: () => void;
   onUpdated: () => void;
 }
@@ -19,15 +16,17 @@ type LocalImage = { file: File; url: string } | { file: null; url: string; exist
 
 export default function EditListingModal({ open, listing, onClose, onUpdated }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null);
+  
+  // Initialize with raw API field names
   const [images, setImages] = useState<LocalImage[]>(
-    listing.photos.map(url => ({ file: null, url, existing: true }))
+    (listing.photos || []).map((url: string) => ({ file: null, url, existing: true }))
   );
-  const [title, setTitle] = useState<string>(listing.title);
-  const [desc, setDesc] = useState<string>(listing.description);
+  const [title, setTitle] = useState<string>(listing.title || '');
+  const [desc, setDesc] = useState<string>(listing.description || '');
   const [price, setPrice] = useState<string>(listing.price?.toString() || '');
-  const [age, setAge] = useState<string>(listing.ageText || ''); // Handle optional ageText
-  const [place, setPlace] = useState<string>(listing.location); // ✅ FIXED: Use location from domain model
-  const [contact, setContact] = useState<string>(listing.contactInfo); // ✅ FIXED: Use contactInfo from domain model
+  const [age, setAge] = useState<string>(listing.age_text?.toString() || listing.ageText?.toString() || ''); // Handle both field names
+  const [place, setPlace] = useState<string>(listing.place || listing.location || ''); // Handle both field names
+  const [contact, setContact] = useState<string>(listing.contact || listing.contactInfo || ''); // Handle both field names
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -132,22 +131,22 @@ export default function EditListingModal({ open, listing, onClose, onUpdated }: 
         }
       }
 
-      // ✅ FIXED: Create domain model update payload
-      const domainUpdateData: Partial<DomainListing> = {
+      // Simple update payload using API field names
+      const updateData = {
         title: title.trim(),
         description: desc.trim(),
         photos,
         price: price.trim() ? Number(price) : null,
-        ageText: age.trim() || undefined,
-        location: place.trim(), // Domain model uses 'location'
-        contactInfo: contact.trim(), // Domain model uses 'contactInfo'
+        age_text: age.trim() ? Number(age.trim()) : undefined, // Use API field name
+        place: place.trim(), // Use API field name
+        contact: contact.trim(), // Use API field name
       };
 
-      // ✅ FIXED: Service now accepts domain model and returns domain model
-      const updatedListing: DomainListing = await marketplaceService.updateListing(
-        listing.id, // Use domain model's 'id' property
-        domainUpdateData
-      );
+      // Get listing ID (handle both _id and id)
+      const listingId = listing._id || listing.id;
+
+      // Update using raw data
+      const updatedListing = await marketplaceService.updateListing(listingId, updateData);
       
       if (updatedListing) {
         onClose();
@@ -276,13 +275,15 @@ export default function EditListingModal({ open, listing, onClose, onUpdated }: 
           {/* Age and Place */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Age</label>
+              <label className="block text-sm text-gray-700 mb-1">Age (in years)</label>
               <input 
-                type="text"
+                type="number"
+                min="0"
+                step="0.1"
                 className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500" 
                 value={age} 
                 onChange={(e) => setAge(e.target.value)}
-                placeholder="e.g., 2 months, 1 year"
+                placeholder="e.g., 0.5, 1, 2"
               />
             </div>
             <div>
