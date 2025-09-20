@@ -1,17 +1,18 @@
 // src/controllers/user.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../../services/implements/user.service';
+import { HttpStatus } from '../../constants/httpStatus';
 
 const service = new UserService();
 
 export async function updateMyProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const uid = (req as any).user?._id?.toString();
-    if (!uid) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!uid) return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: 'Unauthorized' });
 
     const { username } = req.body || {};
     if (typeof username === 'undefined') {
-      return res.status(400).json({ success: false, message: 'username is required' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'username is required' });
     }
 
     const user = await service.updateMyUsername(uid, username);
@@ -30,10 +31,10 @@ export async function updateMyProfile(req: Request, res: Response, next: NextFun
   } catch (err: any) {
     if (err?.code === 11000) {
       // duplicate key on unique index
-      return res.status(409).json({ success: false, message: 'Username already taken' });
+      return res.status(HttpStatus.CONFLICT).json({ success: false, message: 'Username already taken' });
     }
     if (err?.name === 'ValidationError') {
-      return res.status(400).json({ success: false, message: err.message });
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: err.message });
     }
     return next(err);
   }
