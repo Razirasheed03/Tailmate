@@ -55,9 +55,8 @@ export async function uploadListingPhoto(file: File): Promise<{ url: string }> {
 
 export async function uploadPetPhoto(file: File): Promise<{ url: string }> {
   const form = new FormData();
-  form.append('file', file);
+  form.append('avatar', file, file.name); // MUST match .single("avatar")
   const { data } = await httpClient.post('/pet-uploads/photo', form);
-  // Removed: headers: { 'Content-Type': 'multipart/form-data' }
   return data as { url: string };
 }
 
