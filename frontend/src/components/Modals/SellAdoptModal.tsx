@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { marketplaceService } from '@/services/marketplaceService';
 import { updatePet } from '@/services/petsApiService';
-import { PetPickerForListing } from '../../pages/user/PetPickerForListing';
+import { PetSelectDialog } from '../../pages/pets/PetSelectDialog';
 import { uploadListingPhoto } from '@/services/petsApiService'; // reuse existing uploader
 
 type Props = { open: boolean; onClose: () => void; onCreated: () => void; };
@@ -20,6 +20,7 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
   const [type, setType] = useState<'sell' | 'adopt'>('sell');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+   const [petDialogOpen, setPetDialogOpen] = useState(false);
 
   // Additional photos state
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -163,22 +164,38 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
 
         <form onSubmit={submit} className="p-5 space-y-5">
           {/* Pet chooser */}
-          <section>
-            <label className="block text-sm text-gray-700 mb-2">Choose Pet <span className="text-red-500">*</span></label>
-            <PetPickerForListing onPick={(p) => {
-              setPickedPet(p);
-              if (!title.trim()) setTitle(`${p.name} - ${type === 'sell' ? 'For Sale' : 'For Adoption'}`);
-            }} />
-            {pickedPet && (
-              <div className="mt-2 flex items-center gap-3">
-                {pickedPet.photoUrl && <img src={pickedPet.photoUrl} className="w-14 h-14 rounded object-cover border" alt="" />}
-                <div className="text-sm">
-                  <div className="font-medium">{pickedPet.name}</div>
-                  <div className="text-gray-500">{pickedPet._id}</div>
-                </div>
-              </div>
-            )}
-          </section>
+         <section>
+    <label className="block text-sm text-gray-700 mb-2">Choose Pet <span className="text-red-500">*</span></label>
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => setPetDialogOpen(true)}
+        className="px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50"
+      >
+        {pickedPet ? 'Change pet' : 'Select pet'}
+      </button>
+      {pickedPet && (
+        <div className="flex items-center gap-2 border rounded-lg px-2 py-1">
+          {pickedPet.photoUrl && <img src={pickedPet.photoUrl} alt="" className="w-7 h-7 rounded object-cover border" />}
+          <div className="text-sm">
+            <div className="font-medium leading-tight">{pickedPet.name}</div>
+            <div className="text-xs text-gray-500 leading-tight">{pickedPet._id}</div>
+          </div>
+        </div>
+      )}
+    </div>
+
+    <PetSelectDialog
+      open={petDialogOpen}
+      onClose={() => setPetDialogOpen(false)}
+      onPick={(p) => {
+        setPickedPet(p);
+        if (!title.trim()) {
+          setTitle(`${p.name} - ${type === 'sell' ? 'For Sale' : 'For Adoption'}`);
+        }
+      }}
+    />
+  </section>
 
           {/* Additional photos */}
           <section>
