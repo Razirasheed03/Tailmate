@@ -5,6 +5,7 @@ import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { doctorService } from "@/services/doctorService";
 import { useAuth } from "@/context/AuthContext";
 import { Info, Loader2, Camera, Pencil } from "lucide-react";
+import { toast } from "sonner";
 
 type VerificationStatus = "pending" | "verified" | "rejected";
 
@@ -148,11 +149,11 @@ export default function Profile() {
     const onPickAvatar = (file: File | null) => {
         if (!file) return;
         if (!/^image\/(png|jpe?g|gif|webp)$/i.test(file.type)) {
-            alert("Please upload an image (png, jpg, jpeg, gif, webp)");
+            toast("Please upload an image (png, jpg, jpeg, gif, webp)");
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            alert("Image too large. Max 5MB.");
+            toast("Image too large. Max 5MB.");
             return;
         }
         (async () => {
@@ -162,7 +163,7 @@ export default function Profile() {
                 await doctorService.updateProfile({ avatarUrl: url }); // persist immediately
                 setField("avatarUrl", url);
             } catch (e: any) {
-                alert(e?.response?.data?.message || "Avatar upload failed");
+                toast(e?.response?.data?.message || "Avatar upload failed");
             } finally {
                 setAvatarUploading(false);
             }

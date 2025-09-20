@@ -7,15 +7,16 @@ import {
   FileText,
   Upload,
   CheckCircle2,
-  AlertTriangle,
   Clock,
   Calendar,
   Users,
   MessageSquare,
   DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import { doctorService } from "@/services/doctorService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
+import { toast } from "sonner";
 
 type VerificationStatus = "pending" | "verified" | "rejected";
 
@@ -76,11 +77,11 @@ export default function DoctorLandingPage() {
   const handleChooseFile = (file: File | null) => {
     if (!file) return;
     if (file.type !== "application/pdf") {
-      alert("Please upload a PDF file.");
+      toast("Please upload a PDF file.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      alert("File too large. Max 10MB.");
+      toast("File too large. Max 10MB.");
       return;
     }
     setCertificateFile(file);
@@ -89,7 +90,7 @@ export default function DoctorLandingPage() {
 
   const handleSubmitCertificate = async () => {
     if (!certificateFile) {
-      alert("Please select a PDF certificate first.");
+      toast("Please select a PDF certificate first.");
       return;
     }
     try {
@@ -97,10 +98,10 @@ export default function DoctorLandingPage() {
       const resp = await doctorService.uploadCertificate(certificateFile);
       setVerificationStatus(resp.verification.status);
       setRejectionReasons(null);
-      alert("Certificate submitted. Your profile is now under review.");
+      toast("Certificate submitted. Your profile is now under review.");
     } catch (e: any) {
       const msg = e?.response?.data?.message || "Upload failed. Please try again.";
-      alert(msg);
+      toast(msg);
     } finally {
       setIsSubmitting(false);
     }

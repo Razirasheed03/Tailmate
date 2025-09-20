@@ -42,26 +42,7 @@ export function PetCreateForm({ speciesCategoryId, speciesCategoryName, onCancel
     };
   }, [previewUrl]);
 
-  const doUpload = async () => {
-    if (!photoFile) return;
-    if (!ALLOWED_IMAGE_TYPES.includes(photoFile.type)) {
-      setErr('Only JPEG, PNG, WebP, and GIF formats are allowed');
-      return;
-    }
-    if (photoFile.size > MAX_FILE_SIZE) {
-      setErr('File size must be less than 5MB');
-      return;
-    }
-    setUploading(true);
-    try {
-      const { url } = await uploadPetPhoto(photoFile);
-      setPhotoUrl(url);
-    } catch (e: any) {
-      setErr(e?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
+
 
   const computeBirthDateFromAge = (yearsStr: string): string | undefined => {
     if (!yearsStr.trim()) return undefined;
@@ -71,30 +52,67 @@ export function PetCreateForm({ speciesCategoryId, speciesCategoryName, onCancel
     return new Date(Date.now() - ms).toISOString();
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErr(null);
-    setSaving(true);
-    try {
-      if (photoFile && !photoUrl) {
-        await doUpload();
-      }
-      const payload = {
-        name,
-        speciesCategoryId,
-        sex,
-        birthDate: computeBirthDateFromAge(ageYears),
-        notes: notes || undefined,
-        photoUrl,
-      };
-      const pet = await createPet(payload);
-      onCreated(pet);
-    } catch (e: any) {
-      setErr(e?.message || 'Failed to save pet');
-    } finally {
-      setSaving(false);
+  const validate = React.useCallback((): string | null => {
+  if (!name.trim()) return 'Pet name is required';
+  if (!ageYears.trim()) return 'Age is required';
+  const n = Number(ageYears);
+  if (isNaN(n) || n < 0) return 'Age must be a valid non-negative number';
+  if (!photoUrl && !photoFile) return 'At least one photo is required';
+  return null;
+}, [name, ageYears, photoUrl, photoFile]);
+
+// Change doUpload to return the URL
+const doUpload = async (): Promise<string | undefined> => {
+  if (!photoFile) return undefined;
+  if (!ALLOWED_IMAGE_TYPES.includes(photoFile.type)) { setErr('Only JPEG, PNG, WebP, and GIF formats are allowed'); return; }
+  if (photoFile.size > MAX_FILE_SIZE) { setErr('File size must be less than 5MB'); return; }
+  setUploading(true);
+  try {
+    const { url } = await uploadPetPhoto(photoFile);
+    setPhotoUrl(url);          // keep state for UI
+    return url;                // return for immediate use
+  } catch (e: any) {
+    setErr(e?.message || 'Upload failed');
+    return undefined;
+  } finally {
+    setUploading(false);
+  }
+};
+
+const submit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const v = validate();
+  if (v) { setErr(v); return; }
+
+  setErr(null);
+  setSaving(true);
+  try {
+    let url = photoUrl;
+    if (photoFile && !url) {
+      url = await doUpload();  // get immediate URL
     }
-  };
+    if (!url) { setErr('Photo upload failed, please try again'); return; }
+
+    const payload = {
+      name: name.trim(),
+      speciesCategoryId,
+      sex,
+      birthDate: computeBirthDateFromAge(ageYears),
+      notes: notes || undefined,
+      photoUrl: url,           // use local url
+    };
+    const pet = await createPet(payload);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPhotoFile(null);
+    onCreated(pet);
+  } catch (e: any) {
+    setErr(e?.message || 'Failed to save pet');
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   return (
     <form onSubmit={submit} className="space-y-4">

@@ -14,6 +14,7 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 // PDF viewer
 import { Viewer, Worker } from '@react-pdf-viewer/core';
 import '@react-pdf-viewer/core/lib/styles/index.css';
+import { toast } from 'sonner';
 
 // Keep workerUrl, ensure version matches your installed pdfjs-dist
 const workerUrl = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
@@ -52,7 +53,7 @@ export default function DoctorListings() {
       setTotalPages(res.totalPages);
       setTotal(res.total);
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Failed to load doctors');
+      toast(e?.response?.data?.message || 'Failed to load doctors');
     } finally {
       setLoading(false);
     }
@@ -142,7 +143,7 @@ export default function DoctorListings() {
       await adminDoctorService.verify(userId);
       await fetchList();
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Verify failed');
+      toast(e?.response?.data?.message || 'Verify failed');
     }
   };
 
@@ -156,7 +157,7 @@ export default function DoctorListings() {
     if (!rejectUserId) return;
     const reasons = rejectReasons.split('\n').map((s) => s.trim()).filter(Boolean);
     if (reasons.length === 0) {
-      alert('Enter at least one reason');
+      toast('Enter at least one reason');
       return;
     }
     try {
@@ -166,7 +167,7 @@ export default function DoctorListings() {
       setRejectReasons('');
       await fetchList();
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Reject failed');
+      toast(e?.response?.data?.message || 'Reject failed');
     }
   };
 
@@ -179,7 +180,7 @@ export default function DoctorListings() {
       const data = await adminDoctorService.getDetail(userId);
       setViewData(data);
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Failed to load profile');
+      toast(e?.response?.data?.message || 'Failed to load profile');
       setViewOpen(false);
     } finally {
       setViewLoading(false);
