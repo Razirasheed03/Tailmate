@@ -11,7 +11,7 @@ export async function updateMyProfile(req: Request, res: Response, next: NextFun
     if (!uid) return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: 'Unauthorized' });
 
     const { username } = req.body || {};
-    if (typeof username === 'undefined') {
+    if (!username) {
       return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'username is required' });
     }
 

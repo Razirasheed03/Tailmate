@@ -26,7 +26,7 @@ export class AdminService implements IAdminService {
   async blockUser(userId: string) {
     await this._userRepo.updateUserBlockStatus(userId, true);
     return { message: "User blocked successfully" };
-  }
+  } 
 
   async unblockUser(userId: string) {
     await this._userRepo.updateUserBlockStatus(userId, false);
