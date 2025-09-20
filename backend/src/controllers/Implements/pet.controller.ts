@@ -1,9 +1,9 @@
 // src/controllers/Implements/pet.controller.ts
 import { Request, Response } from 'express';
 import { PetService } from '../../services/implements/pet.service';
+import { HttpStatus } from '../../constants/httpStatus';
 
 export const PetController = {
-  // Categories
   async listCategories(req: Request, res: Response) {
     const active = req.query.active === 'true';
     const data = await PetService.listCategories(active);
@@ -13,19 +13,19 @@ export const PetController = {
   async createCategory(req: Request, res: Response) {
     try {
       const cat = await PetService.createCategory(req.body || {});
-      return res.status(201).json(cat);
+      return res.status(HttpStatus.CREATED).json(cat);
     } catch (e: any) {
-      return res.status(400).json({ message: e.message || 'Create failed' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Create failed' });
     }
   },
 
   async updateCategory(req: Request, res: Response) {
     try {
       const cat = await PetService.updateCategory(req.params.id, req.body || {});
-      if (!cat) return res.status(404).json({ message: 'Not found' });
+      if (!cat) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
       return res.json(cat);
     } catch (e: any) {
-      return res.status(400).json({ message: e.message || 'Update failed' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Update failed' });
     }
   },
 
@@ -42,14 +42,14 @@ export const PetController = {
 
   async getPet(req: Request, res: Response) {
     const pet = await PetService.getPetScoped(req.params.id, (req as any).user);
-    if (!pet) return res.status(404).json({ message: 'Not found' });
+    if (!pet) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
     return res.json(pet);
   },
 
   async createPet(req: Request, res: Response) {
     const b = req.body || {};
     if (!b.name || !b.speciesCategoryId) {
-      return res.status(400).json({ message: 'name and speciesCategoryId are required' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'name and speciesCategoryId are required' });
     }
     try {
       const pet = await PetService.createPet({
@@ -61,31 +61,30 @@ export const PetController = {
         notes: b.notes,
         photoUrl: b.photoUrl,
       });
-      return res.status(201).json(pet);
+      return res.status(HttpStatus.CREATED).json(pet);
     } catch (e: any) {
-      return res.status(400).json({ message: e.message || 'Create failed' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Create failed' });
     }
   },
 
   async updatePet(req: Request, res: Response) {
     try {
       const pet = await PetService.updatePetScoped(req.params.id, (req as any).user, req.body || {});
-      if (!pet) return res.status(404).json({ message: 'Not found' });
+      if (!pet) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
       return res.json(pet);
     } catch (e: any) {
-      return res.status(400).json({ message: e.message || 'Update failed' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Update failed' });
     }
   },
 
   async deletePet(req: Request, res: Response) {
     const ok = await PetService.softDeletePetScoped(req.params.id, (req as any).user);
-    if (!ok) return res.status(404).json({ message: 'Not found' });
-    return res.status(204).send();
+    if (!ok) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
+    return res.status(HttpStatus.NO_CONTENT).send();
   },
 
   async uploadPetPhoto(req: Request, res: Response) {
   try {
-    // If your uploadImage middleware already uploads to Cloudinary and sets a URL, use that directly:
     const directUrl = (req as any).fileUrl || (req as any).upload?.secure_url;
     if (typeof directUrl === 'string' && directUrl) {
       return res.json({ url: directUrl });
@@ -93,12 +92,12 @@ export const PetController = {
 
     // Otherwise, if uploadImage just gives a buffer, upload via service:
     const file = (req as any).file; // provided by uploadImage/multer
-    if (!file?.buffer) return res.status(400).json({ message: 'file is required' });
+    if (!file?.buffer) return res.status(HttpStatus.BAD_REQUEST).json({ message: 'file is required' });
 
     const { url } = await PetService.uploadPetPhotoFromBuffer(file.buffer, file.originalname || 'pet.jpg');
     return res.json({ url });
   } catch (e: any) {
-    return res.status(400).json({ message: e.message || 'Upload failed' });
+    return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Upload failed' });
   }
 },
 };
