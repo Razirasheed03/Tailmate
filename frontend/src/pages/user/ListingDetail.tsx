@@ -75,7 +75,7 @@ export default function ListingDetail() {
                   <img
                     src={listing.photos[currentImageIndex]}
                     alt={`${listing.title} - ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain bg-black"
                   />
                   
                   {/* Navigation Arrows */}
