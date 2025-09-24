@@ -12,7 +12,10 @@ export default function Vets() {
   const [items, setItems] = useState<DoctorCard[]>([]);
   const [total, setTotal] = useState(0);
 
-  const canLoadMore = useMemo(() => items.length < total, [items.length, total]);
+  const canLoadMore = useMemo(
+    () => items.length < total,
+    [items.length, total]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -20,7 +23,10 @@ export default function Vets() {
       setLoading(true);
       try {
         const { data, total } = await vetsService.listDoctors({
-          page, limit, search: query || undefined, specialty: specialty || undefined,
+          page,
+          limit,
+          search: query || undefined,
+          specialty: specialty || undefined,
         });
         if (!mounted) return;
         setItems((prev) => (page === 1 ? data : [...prev, ...data]));
@@ -29,7 +35,9 @@ export default function Vets() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [page, limit, query, specialty]);
 
   function onSearchSubmit(e: React.FormEvent) {
@@ -53,7 +61,10 @@ export default function Vets() {
             <select
               className="border rounded px-3 py-2"
               value={specialty}
-              onChange={(e) => { setSpecialty(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSpecialty(e.target.value);
+                setPage(1);
+              }}
             >
               <option value="">All specialties</option>
               <option value="Dogs">Dogs</option>
@@ -62,7 +73,12 @@ export default function Vets() {
               <option value="Emergency Care">Emergency Care</option>
               {/* add more as needed */}
             </select>
-            <button type="submit" className="px-3 py-2 rounded bg-black text-white">Filter</button>
+            <button
+              type="submit"
+              className="px-3 py-2 rounded bg-black text-white"
+            >
+              Filter
+            </button>
           </form>
         </header>
 
@@ -72,7 +88,10 @@ export default function Vets() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((d) => (
-              <article key={d.doctorId} className="bg-white border rounded-xl p-4 shadow-sm">
+              <article
+                key={d.doctorId}
+                className="bg-white border rounded-xl p-4 shadow-sm"
+              >
                 <div className="flex items-center gap-3">
                   <img
                     src={d.avatarUrl || "https://via.placeholder.com/48"}
@@ -80,19 +99,34 @@ export default function Vets() {
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div>
-                    <div className="font-semibold">{d.displayName || "Dr. (Name)"}</div>
-                    <div className="text-xs text-gray-500">{d.experienceYears ?? 0} years experience</div>
+                    <div className="font-semibold">
+                      {d.displayName || "Dr. (Name)"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {d.experienceYears ?? 0} years experience
+                    </div>
                   </div>
-                  <span className={`ml-auto text-xs px-2 py-1 rounded ${d.isOnline ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                  <span
+                    className={`ml-auto text-xs px-2 py-1 rounded ${
+                      d.isOnline
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
                     {d.isOnline ? "Online" : "Offline"}
                   </span>
                 </div>
 
                 <div className="mt-3">
-                  <div className="text-xs text-gray-600 mb-1">Specializes in:</div>
+                  <div className="text-xs text-gray-600 mb-1">
+                    Specializes in:
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {(d.specialties || []).slice(0, 4).map((s) => (
-                      <span key={s} className="text-xs px-2 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                      <span
+                        key={s}
+                        className="text-xs px-2 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200"
+                      >
                         {s}
                       </span>
                     ))}
@@ -100,13 +134,17 @@ export default function Vets() {
                 </div>
 
                 <div className="mt-3">
-                  <div className="text-xs text-gray-600 mb-1">Next available:</div>
+                  <div className="text-xs text-gray-600 mb-1">
+                    Next available:
+                  </div>
                   {d.nextSlot ? (
                     <div className="text-sm">
                       {d.nextSlot.date} • {d.nextSlot.time}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500">No upcoming slots</div>
+                    <div className="text-sm text-gray-500">
+                      No upcoming slots
+                    </div>
                   )}
                   <div className="text-xs text-gray-500 mt-1">
                     Modes: {(d.modes || []).join(", ") || "—"}
@@ -119,8 +157,12 @@ export default function Vets() {
                     <span className="text-gray-500"> per session</span>
                   </div>
                   <div className="flex gap-2">
-                    <button className="px-3 py-1.5 text-sm border rounded">Profile</button>
-                    <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">Book</button>
+                    <button className="px-3 py-1.5 text-sm border rounded">
+                      Profile
+                    </button>
+                    <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">
+                      Book
+                    </button>
                   </div>
                 </div>
               </article>
