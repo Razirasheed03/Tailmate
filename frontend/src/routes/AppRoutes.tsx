@@ -26,6 +26,8 @@ import PetCategory from "@/pages/admin/PetCategory";
 import Marketplace from "@/pages/user/Marketplace";
 import ListingDetail from "@/pages/user/ListingDetail";
 import Listings from "@/pages/user/Profile/Listings";
+import Appointments from "@/pages/doctor/Appointments";
+import Vets from "@/pages/user/Vets";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -81,7 +83,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/vets",
-    element: <ComingSoon />
+    element: <Vets />
   },
   {
     path: "/marketplace",
@@ -120,7 +122,7 @@ export const router = createBrowserRouter([
   },
   {
     path:"/doctor/appointments",
-    element:<ComingSoon/>
+    element:<Appointments/>
   },
   {
     path:"/doctor/profile",

@@ -132,4 +132,50 @@ export class DoctorController {
       next(err);
     }
   };
+  listDaySlots = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const date = String(req.query.date || "");
+      if (!date) return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: "date is required" });
+      const data = await this.svc.listDaySlots(userId, date);
+      res.status(HttpStatus.OK).json({ success: true, data });
+    } catch (err) { next(err); }
+  };
+
+  saveDaySchedule = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const { date, slots } = req.body || {};
+      if (!date || !Array.isArray(slots)) return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: "date and slots are required" });
+      const data = await this.svc.saveDaySchedule(userId, { date, slots });
+      res.status(HttpStatus.OK).json({ success: true, data });
+    } catch (err) { next(err); }
+  };
+
+  createDaySlot = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const data = await this.svc.createDaySlot(userId, req.body);
+      res.status(HttpStatus.CREATED).json({ success: true, data });
+    } catch (err) { next(err); }
+  };
+
+  updateSlotStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const { status } = req.body || {};
+      if (status !== "available" && status !== "booked")
+        return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: "invalid status" });
+      const data = await this.svc.updateSlotStatus(userId, req.params.id, status);
+      res.status(HttpStatus.OK).json({ success: true, data });
+    } catch (err) { next(err); }
+  };
+
+  deleteDaySlot = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const ok = await this.svc.deleteDaySlot(userId, req.params.id);
+      res.status(HttpStatus.OK).json({ success: true, data: { deleted: ok } });
+    } catch (err) { next(err); }
+  };
 }
