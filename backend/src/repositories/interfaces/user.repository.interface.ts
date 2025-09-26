@@ -1,7 +1,4 @@
 import { IUserModel } from "../../models/interfaces/user.model.interface";
-
-
-
 export interface IUserRepository {
   createUser(user: IUserModel): Promise<IUserModel>;
   findByEmail(email: string): Promise<IUserModel | null>;

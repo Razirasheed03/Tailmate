@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { vetsService, type DoctorCard } from "@/services/vetsService";
+import { Link } from "react-router-dom";
 
 export default function Vets() {
   const [query, setQuery] = useState("");
@@ -106,7 +107,7 @@ export default function Vets() {
                       {d.experienceYears ?? 0} years experience
                     </div>
                   </div>
-                  <span
+                  {/* <span
                     className={`ml-auto text-xs px-2 py-1 rounded ${
                       d.isOnline
                         ? "bg-emerald-50 text-emerald-700"
@@ -114,7 +115,7 @@ export default function Vets() {
                     }`}
                   >
                     {d.isOnline ? "Online" : "Offline"}
-                  </span>
+                  </span> */}
                 </div>
 
                 <div className="mt-3">
@@ -157,12 +158,10 @@ export default function Vets() {
                     <span className="text-gray-500"> per session</span>
                   </div>
                   <div className="flex gap-2">
-                    <button className="px-3 py-1.5 text-sm border rounded">
-                      Profile
-                    </button>
-                    <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">
-                      Book
-                    </button>
+                <div className="flex gap-2">
+<Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm border rounded">Profile</Link>
+<Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">Book</Link>
+</div>
                   </div>
                 </div>
               </article>

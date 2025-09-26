@@ -28,6 +28,7 @@ import ListingDetail from "@/pages/user/ListingDetail";
 import Listings from "@/pages/user/Profile/Listings";
 import Appointments from "@/pages/doctor/Appointments";
 import Vets from "@/pages/user/Vets";
+import VetDetail from "@/pages/user/VetDetail";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -84,6 +85,10 @@ export const router = createBrowserRouter([
   {
     path: "/vets",
     element: <Vets />
+  },
+  {
+    path:"/vets/:id",
+    element:<VetDetail/>
   },
   {
     path: "/marketplace",
