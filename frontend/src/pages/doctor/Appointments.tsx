@@ -285,7 +285,7 @@ export default function SimpleAvailability() {
                 value={form.time}
                 onChange={(e) => {
                   setForm((f) => ({ ...f, time: e.target.value }));
-                  setPastTimeError(""); // reset error on change
+                  setPastTimeError(""); 
                 }}
               />
               {pastTimeError && (
@@ -302,9 +302,7 @@ export default function SimpleAvailability() {
                 }
               >
                 <option value={15}>15</option>
-                <option value={20}>20</option>
                 <option value={30}>30</option>
-                <option value={45}>45</option>
                 <option value={60}>60</option>
               </select>
             </div>

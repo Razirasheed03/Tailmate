@@ -205,7 +205,7 @@ export default function VetDetail() {
             {/* Duration selector */}
             <div className="text-xs text-gray-600 mb-1">Select session duration</div>
             <div className="flex gap-2 mb-4">
-              {[30, 50, 90].map((d) => {
+              {[15, 30, 60].map((d) => {
                 const active = duration === d;
                 return (
                   <button
