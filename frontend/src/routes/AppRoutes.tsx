@@ -29,6 +29,7 @@ import Listings from "@/pages/user/Profile/Listings";
 import Appointments from "@/pages/doctor/Appointments";
 import Vets from "@/pages/user/Vets";
 import VetDetail from "@/pages/user/VetDetail";
+import Checkout from "@/pages/user/Checkout";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -97,6 +98,10 @@ export const router = createBrowserRouter([
   {
     path:"/marketplace/:id",
     element:<ListingDetail/>
+  },
+  {
+    path:"/checkout",
+    element:<Checkout/>
   },
   ///admin areaa
   {

@@ -104,4 +104,14 @@ export class UserRepository extends BaseRepository<IUserModel> implements IUserR
       blockedUsers
     };
   }
+   async updateUsername(userId: string, username: string) {
+    const updated = await this.model
+      .findByIdAndUpdate(
+        userId,
+        { $set: { username } },
+        { new: true, runValidators: true, context: "query" }
+      )
+      .select("-password");
+    return updated ? updated.toObject() : null;
+  }
 }
