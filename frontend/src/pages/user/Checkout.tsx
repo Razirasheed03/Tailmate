@@ -98,7 +98,24 @@ export default function Checkout() {
       };
 
       const res = await checkoutService.createCheckout(payload);
-      // For now, if backend returns redirectUrl, send there; else navigate to a confirmation stub
+     if (res.redirectUrl) {
+  window.location.href = res.redirectUrl;
+} else if (res.bookingId) {
+  // Mock-complete the payment and lock the slot
+  const paid = await checkoutService.mockPay(res.bookingId);
+
+  nav("/booking/confirm", {
+    state: {
+      bookingId: res.bookingId,
+      status: paid.status,         // "paid" if success
+      doctorName: doctorName || ctx.doctorId,
+      ...payload,                  // echoes session details
+    },
+  });
+} else {
+  // defensive: should not happen
+  nav("/vets", { replace: true });
+}
       if (res.redirectUrl) {
         window.location.href = res.redirectUrl;
       } else {

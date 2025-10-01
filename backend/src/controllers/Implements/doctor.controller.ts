@@ -178,4 +178,28 @@ export class DoctorController {
       res.status(HttpStatus.OK).json({ success: true, data: { deleted: ok } });
     } catch (err) { next(err); }
   };
+  listSessions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const doctorId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const page = Number(req.query.page || 1);
+      const limit = Number(req.query.limit || 10);
+      const scope = String(req.query.scope || "upcoming") as "upcoming" | "today" | "past";
+      const mode = req.query.mode ? String(req.query.mode) as "video" | "audio" | "inPerson" : undefined;
+      const q = req.query.q ? String(req.query.q) : undefined;
+
+      const data = await this.svc.listSessions(doctorId, { page, limit, scope, mode, q });
+      return res.status(HttpStatus.OK).json({ success: true, data: { items: data.items, total: data.total } });
+    } catch (err) { next(err); }
+  };
+
+  // NEW: single session detail
+  getSession = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const doctorId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const id = String(req.params.id);
+      const row = await this.svc.getSession(doctorId, id);
+      if (!row) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: "Not found" });
+      return res.status(HttpStatus.OK).json({ success: true, data: row });
+    } catch (err) { next(err); }
+  };
 }

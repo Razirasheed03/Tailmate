@@ -11,7 +11,7 @@ import userRoutes from './routes/user.route';
 import marketplaceRoutes from './routes/marketplace.route'
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
+import checkoutRoutes from "./routes/checkout.route";
 const app = express();
 
 app.use(cors({
@@ -29,6 +29,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use('/api', userRoutes);
 app.use('/api', petRoutes);
+app.use("/api/checkout", checkoutRoutes);
 app.use((err: any, req: any, res: any, next: any) => {
   res.status(err.status || 400).json({
     success: false,
