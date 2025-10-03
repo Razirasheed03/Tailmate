@@ -4,6 +4,7 @@ import { signupSchema } from "../../validation/userSchemas";
 import { OAuth2Client } from "google-auth-library";
 import { CookieHelper } from "../../utils/cookie.helper";
 import { HttpStatus } from "../../constants/httpStatus";
+import { ResponseHelper } from "../../http/ResponseHelper";
 
 export class AuthController {
   constructor(private readonly _authService: IAuthService) {}
@@ -19,7 +20,7 @@ export class AuthController {
     }
     try {
       const result = await this._authService.signup(parsed.data);
-      res.status(HttpStatus.CREATED).json(result);
+     return ResponseHelper.ok(res,result)
     } catch (err) {
       next(err);
     }
@@ -30,7 +31,7 @@ export class AuthController {
       const { email, otp } = req.body;
       const { accessToken, refreshToken, user } =
         await this._authService.verifyOtp(email, otp);
-      CookieHelper.setRefreshToken(res, refreshToken) // CHANGED HERE
+      CookieHelper.setRefreshToken(res, refreshToken)
         .status(HttpStatus.OK)
         .json({ success: true, accessToken, user });
     } catch (err) {
@@ -42,7 +43,7 @@ export class AuthController {
     try {
       const { email } = req.body;
       await this._authService.resendOtp(email);
-      res.status(HttpStatus.OK).json({ success: true, message: "OTP resent!" });
+      return ResponseHelper.ok(res,{email},"OTP resent")
     } catch (err) {
       next(err);
     }
@@ -52,7 +53,7 @@ export class AuthController {
     try {
       const token = req.cookies.refreshToken || req.body.refreshToken;
       const { accessToken } = await this._authService.refreshToken(token);
-      res.json({ success: true, accessToken });
+      return ResponseHelper.ok(res, { accessToken });
     } catch (err) {
       next(err);
     }
@@ -65,7 +66,7 @@ export class AuthController {
         email,
         password
       );
-      CookieHelper.setRefreshToken(res, refreshToken) // Changed here (for show ing in review)
+      CookieHelper.setRefreshToken(res, refreshToken)
         .status(HttpStatus.OK)
         .json({ success: true, accessToken, user });
     } catch (err) {

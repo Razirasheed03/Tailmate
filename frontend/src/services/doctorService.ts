@@ -1,11 +1,11 @@
 // src/services/doctorService.ts
 import httpClient from "./httpClient";
 
-// Shared types
-export type UIMode = "video" | "audio" | "inPerson"; // used for filters and rows [web:467]
-export type BookingStatus = "pending" | "paid" | "cancelled" | "failed" | "refunded"; // list badge values [web:467]
 
-// Row shape for list
+export type UIMode = "video" | "audio" | "inPerson"; 
+export type BookingStatus = "pending" | "paid" | "cancelled" | "failed" | "refunded"; 
+
+
 export type SessionRow = {
   _id: string;
   date: string;           // YYYY-MM-DD
@@ -18,18 +18,18 @@ export type SessionRow = {
   patientId: string;
   patientName?: string;
   patientEmail?: string;
-}; // exported for pages [web:123]
+}; 
 
-// Detail shape extends row
+
 export type SessionDetail = SessionRow & {
   doctorId: string;
   slotId?: string | null;
   amount: number;
   currency: string;
   createdAt?: string;
-}; // exported for detail page [web:123]
+};
 
-// Existing doctor APIs
+
 export const doctorService = {
   uploadCertificate: async (file: File) => {
     const form = new FormData();
@@ -95,7 +95,7 @@ export const doctorService = {
     return (data?.data?.avatarUrl as string) || "";
   },
 
-  // NEW: sessions list for doctor
+
   async listSessions(params: {
     page?: number;
     limit?: number;
@@ -111,7 +111,7 @@ export const doctorService = {
     return { data: payload.items, total: payload.total };
   },
 
-  // NEW: single session detail
+
   async getSession(id: string): Promise<SessionDetail> {
     const { data } = await httpClient.get<{ success: boolean; data: SessionDetail }>(`/doctor/sessions/${id}`);
     return data.data;

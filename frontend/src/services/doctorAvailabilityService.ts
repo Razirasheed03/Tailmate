@@ -14,7 +14,6 @@ export type UISlot = {
 
 type ApiResponse<T> = { success: boolean; data: T; message?: string };
 
-// Shape returned by backend
 type ApiSlot = {
   _id: string;
   userId?: string;
@@ -26,7 +25,6 @@ type ApiSlot = {
   status: "available" | "booked";
 };
 
-// Normalize API slot -> UI slot
 const normalize = (s: ApiSlot): UISlot => ({
   id: s._id,
   date: s.date,
@@ -40,7 +38,7 @@ const normalize = (s: ApiSlot): UISlot => ({
 });
 
 export const doctorAvailabilityService = {
-  // GET /doctor/availability/slots?date=YYYY-MM-DD
+
   async getDaySlots(date: string): Promise<UISlot[]> {
     const { data } = await httpClient.get<ApiResponse<ApiSlot[]>>(
       "/doctor/availability/slots",
@@ -50,7 +48,6 @@ export const doctorAvailabilityService = {
     return list.map(normalize);
   },
 
-  // POST /doctor/availability/save-day
   async saveDaySchedule(payload: { date: string; slots: UISlot[] }): Promise<UISlot[]> {
     const body = {
       date: payload.date,
@@ -71,7 +68,6 @@ export const doctorAvailabilityService = {
     return list.map(normalize);
   },
 
-  // POST /doctor/availability/slots
   async createSlot(slot: Omit<UISlot, "id">): Promise<UISlot> {
     const body = {
       date: slot.date,
@@ -88,7 +84,6 @@ export const doctorAvailabilityService = {
     return normalize(data.data as ApiSlot);
   },
 
-  // PATCH /doctor/availability/slots/:id/status
   async updateSlotStatus(id: string, status: UISlot["status"]): Promise<UISlot> {
     const { data } = await httpClient.patch<ApiResponse<ApiSlot>>(
       `/doctor/availability/slots/${id}/status`,
@@ -97,7 +92,7 @@ export const doctorAvailabilityService = {
     return normalize(data.data as ApiSlot);
   },
 
-  // DELETE /doctor/availability/slots/:id
+
   async deleteSlot(id: string): Promise<boolean> {
     const { data } = await httpClient.delete<ApiResponse<{ deleted?: boolean }>>(
       `/doctor/availability/slots/${id}`

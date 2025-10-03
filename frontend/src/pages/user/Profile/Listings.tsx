@@ -63,9 +63,21 @@ const Listings: React.FC = () => {
     editingListing: null,
     deletingId: null,
   });
-
   // confirm modal state
   const [confirmFor, setConfirmFor] = useState<string | null>(null);
+const [toggledIds, setToggledIds] = useState<Set<string>>(() => {
+  try {
+    const raw = localStorage.getItem("listing-toggle");
+    const arr: string[] = raw ? JSON.parse(raw) : [];
+    return new Set(arr);
+  } catch { return new Set(); }
+});
+useEffect(() => {
+  try {
+    localStorage.setItem("listing-toggle", JSON.stringify([...toggledIds]));
+  } catch {}
+}, [toggledIds]);
+
 
   const updateState = useCallback((updates: Partial<ListingsState>): void => {
     setState((prev) => ({ ...prev, ...updates }));
@@ -276,15 +288,37 @@ const Listings: React.FC = () => {
                       Edit
                     </button>
 
-                    <button
-                      onClick={() => handleStatusToggle(listingId, listing.status)}
-                      className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
-                        listing.status === "active" ? "bg-gray-600 text-white hover:bg-gray-700" : "bg-green-600 text-white hover:bg-green-700"
-                      }`}
-                      disabled={state.loading}
-                    >
-                      {listing.status === "active" ? "Deactivate" : "Activate"}
-                    </button>
+
+{(() => {
+  const isToggled = toggledIds.has(listingId);
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await handleStatusToggle(listingId, listing.status);
+          setToggledIds((prev) => {
+            const next = new Set(prev);
+            if (prev.has(listingId)) next.delete(listingId);
+            else next.add(listingId);
+            return next;
+          });
+        } catch {
+        }
+      }}
+      className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
+        isToggled
+          ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
+          : "bg-rose-600 text-white hover:bg-rose-700"
+      }`}
+      disabled={state.loading}
+    >
+      {isToggled ? "Repost" : "Sold"}
+    </button>
+  );
+})()}
+
+
+
 
                     <button
                       onClick={() => askDelete(listingId)}

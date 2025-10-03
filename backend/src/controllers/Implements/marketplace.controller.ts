@@ -9,8 +9,8 @@ export class MarketplaceController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?._id?.toString();
-      console.log('Auth user:', (req as any).user); // DEBUG
-      console.log('Request body:', req.body); // DEBUG
+      console.log('Auth user:', (req as any).user)
+      console.log('Request body:', req.body);
       
       if (!userId) {
         return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: 'No authenticated user' });
@@ -19,7 +19,7 @@ export class MarketplaceController {
       const listing = await svc.create(userId, req.body || {});
       res.status(HttpStatus.CREATED).json({ success: true, data: listing });
     } catch (err) { 
-      console.error('Create listing error:', err); // DEBUG
+      console.error('Create listing error:', err);
       next(err); 
     }
   };

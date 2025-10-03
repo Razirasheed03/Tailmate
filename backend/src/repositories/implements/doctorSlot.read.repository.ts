@@ -3,7 +3,6 @@ import { Types } from "mongoose";
 import { DoctorSlot } from "../../schema/doctorSlot.schema";
 
 export class DoctorSlotReadRepository {
-  // Find a slot by doctor+date+time and ensure it is "available"
   async findExactAvailable(doctorId: string, date: string, time: string) {
     if (!Types.ObjectId.isValid(doctorId)) return null;
     const slot = await DoctorSlot.findOne({

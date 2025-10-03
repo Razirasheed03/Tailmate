@@ -19,6 +19,7 @@ export class MarketplaceService {
     if (!payload.contact?.trim()) throw new Error('Contact is required');
     if (!Array.isArray(payload.photos)) payload.photos = [];
     if (payload.photos.length > 6) throw new Error('Max 6 photos');
+    
 
     return this._repo.create(userId, {
       title: payload.title.trim(),

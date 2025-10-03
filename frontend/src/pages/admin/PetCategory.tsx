@@ -10,6 +10,7 @@ import { TablePagination } from '@/components/table/TablePagination';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { Button } from '@/components/UiComponents/button';
 import { Edit, Trash2, PlusCircle } from 'lucide-react';
+import { HttpResponse } from '@/constants/messageConstant';
 
 const ITEMS_PER_PAGE = 3;
 
@@ -43,7 +44,7 @@ const PetCategory = () => {
       setTotalPages(response.totalPages);
       setTotal(response.total);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to fetch categories');
+   toast.error(error?.response?.data?.message || HttpResponse.SERVER_ERROR);
     } finally {
       setLoading(false);
     }
@@ -67,12 +68,12 @@ const PetCategory = () => {
     if (!selectedCategory) return;
     try {
       await adminCategoryService.delete(selectedCategory._id);
-      toast.success('Category deleted successfully');
+      toast.success(HttpResponse.CATEGORY_DELETED);
       setShowDeleteModal(false);
       setSelectedCategory(null);
       fetchCategories(currentPage, searchQuery);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to delete category');
+   toast.error(error?.response?.data?.message || HttpResponse.DELETE_FAILED);
     }
   };
 
@@ -99,15 +100,15 @@ const PetCategory = () => {
     try {
       if (editing) {
         await adminCategoryService.update(editing._id, form);
-        toast.success('Category updated successfully');
+       toast.success(HttpResponse.CATEGORY_UPDATED);
       } else {
         await adminCategoryService.create(form);
-        toast.success('Category created successfully');
+        toast.success(HttpResponse.CATEGORY_CREATED);
       }
       setShowForm(false);
       fetchCategories(currentPage, searchQuery);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to save category');
+     toast.error(error?.response?.data?.message || HttpResponse.SAVE_FAILED);
     }
   };
 

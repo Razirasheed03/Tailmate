@@ -3,7 +3,7 @@ import httpClient from "./httpClient";
 export type VerificationStatus = "pending" | "verified" | "rejected";
 
 export type DoctorRow = {
-  userId: string;            // stringified ObjectId
+  userId: string;          
   username: string;
   email: string;
   status:VerificationStatus;
@@ -41,23 +41,20 @@ export type DoctorDetail = {
 
 
 export const adminDoctorService = {
-  // why: admins must filter pending/verified/rejected and search
   list: async (params: { page?: number; limit?: number; status?: string; search?: string }) => {
     const { page = 1, limit = 10, status = "", search = "" } = params || {};
     const { data } = await httpClient.get("/admin/doctors", {
       params: { page, limit, status, search },
     });
-    // backend should reply with { success, data: { data, page, totalPages, total } }
     return data.data as DoctorListResponse;
   },
 
-  // why: one-click verification
+
   verify: async (userId: string) => {
     const { data } = await httpClient.post(`/admin/doctors/${userId}/verify`);
     return data?.data;
   },
 
-  // why: record context on rejection
   reject: async (userId: string, reasons: string[]) => {
     const { data } = await httpClient.post(`/admin/doctors/${userId}/reject`, { reasons });
     return data?.data;

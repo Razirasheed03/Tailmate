@@ -1,4 +1,3 @@
-// src/http/response.types.ts
 export interface ErrorItem {
   path?: string;
   message: string;

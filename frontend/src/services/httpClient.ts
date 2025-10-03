@@ -8,11 +8,11 @@ const httpClient: AxiosInstance = axios.create({
   timeout: 10000, // 10 sec
 });
 
-// Refresh token queue management
+
 let isRefreshing = false;
 let refreshQueue: Array<() => void> = [];
 
-// Request interceptorr
+
 httpClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');

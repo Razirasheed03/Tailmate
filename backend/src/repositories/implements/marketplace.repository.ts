@@ -46,7 +46,7 @@ export class MarketplaceRepository {
     ];
   }
 
-  // ✅ NEW: Price filtering logic
+
   if (params.minPrice !== undefined || params.maxPrice !== undefined || params.excludeFree) {
     const priceFilter: any = {};
     
