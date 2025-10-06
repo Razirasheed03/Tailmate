@@ -97,6 +97,6 @@ export default function SessionDetailPage() {
           </div>
         </main>
       </div>
-    </div>
+    </div> 
   );
 }

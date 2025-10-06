@@ -31,8 +31,8 @@ import Vets from "@/pages/user/Vets";
 import VetDetail from "@/pages/user/VetDetail";
 import Checkout from "@/pages/user/Checkout";
 import BookingConfirm from "@/pages/user/BookingConfirm";
-import DoctorSessions from "@/pages/doctor/sessions";
-import SessionDetailPage from "@/pages/doctor/sessionDetail";
+import DoctorSessions from "@/pages/doctor/Sessions";
+// import SessionDetailPage from "@/pages/doctor/SessionDetail";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -111,7 +111,6 @@ export const router = createBrowserRouter([
     element:<BookingConfirm/>
   },
   { path: "/doctor/sessions", element: <DoctorSessions /> },
-{ path: "/doctor/sessions/:id", element: <SessionDetailPage /> },
   ///admin areaa
   {
     path: "/admin",

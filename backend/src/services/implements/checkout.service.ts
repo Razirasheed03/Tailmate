@@ -1,125 +1,122 @@
-// backend/src/services/implements/checkout.service.ts
 import { Types } from "mongoose";
-import { ICheckoutService, QuoteInput, QuoteOutput, CreateCheckoutInput, CreateCheckoutResult } from "../interfaces/checkout.service.interface";
-import { BookingRepository } from "../../repositories/implements/booking.repository";
-import { DoctorSlotReadRepository } from "../../repositories/implements/doctorSlot.read.repository";
 import { DoctorPublicRepository } from "../../repositories/implements/doctorPublic.repository";
-import { DoctorSlotWriteRepository } from "../../repositories/implements/doctorSlot.write.repository";
+import { Booking } from "../../schema/booking.schema";
 
-export class CheckoutService implements ICheckoutService {
-  constructor(
-    private readonly _bookingRepo = new BookingRepository(),
-    private readonly _slotRepo = new DoctorSlotReadRepository(),
-    private readonly _doctorPubRepo = new DoctorPublicRepository(),
-    private readonly _slotWriteRepo = new DoctorSlotWriteRepository()
-  ) {}
+type UIMode = "video" | "audio" | "inPerson";
 
-  private mustObjectId(id: string) {
-    if (!Types.ObjectId.isValid(id)) throw new Error("Invalid id");
-  }
+function toUTCDate(date: string, time: string) {
+  const d = new Date(`${date}T00:00:00Z`);
+  const [h, m] = time.split(":").map(Number);
+  d.setUTCHours(h || 0, m || 0, 0, 0);
+  return d;
+}
 
-  private validateQuotePayload(input: QuoteInput) {
-    if (!input?.doctorId) throw new Error("doctorId is required");
-    if (!input?.date) throw new Error("date is required");
-    if (!input?.time) throw new Error("time is required");
-    if (!input?.durationMins) throw new Error("durationMins is required");
-    if (!input?.baseFee && input.baseFee !== 0) throw new Error("baseFee is required");
-  }
+export class CheckoutService {
+  constructor(private readonly pub = new DoctorPublicRepository()) {}
 
-  async getQuote(userId: string, input: QuoteInput): Promise<QuoteOutput> {
-    this.mustObjectId(userId);
-    this.mustObjectId(input.doctorId);
-    this.validateQuotePayload(input);
+  private async verifyGeneratedSlot(
+    doctorId: string,
+    sel: { date: string; time: string; durationMins: number; mode: UIMode },
+    opts?: { minLeadMinutes?: number }
+  ) {
+    if (!Types.ObjectId.isValid(doctorId)) return null;
 
-    const doctor = await this._doctorPubRepo.getDoctorPublicById(input.doctorId);
-    if (!doctor) throw new Error("Doctor not found or not verified");
-
-    const slot = await this._slotRepo.findExactAvailable(input.doctorId, input.date, input.time);
-    if (!slot) throw new Error("Selected slot is not available");
-
-    if (slot.durationMins !== input.durationMins) {
-      // optional: enforce equality
-    }
-    if (!slot.modes?.includes(input.mode)) {
-      throw new Error("Selected mode not available on this slot");
+    if (opts?.minLeadMinutes) {
+      const start = toUTCDate(sel.date, sel.time);
+      const diffMin = Math.floor((start.getTime() - Date.now()) / 60000);
+      if (diffMin < opts.minLeadMinutes) return null;
     }
 
-    const amount = Math.max(0, Number(input.baseFee || 0));
-    const tax = Math.round(amount * 0.18);
+    const gen = await this.pub.listGeneratedAvailability(doctorId, { from: sel.date, to: sel.date });
+    const match = gen.find(
+      s =>
+        s.date === sel.date &&
+        s.time === sel.time &&
+        s.durationMins === sel.durationMins &&
+        Array.isArray(s.modes) &&
+        s.modes.includes(sel.mode)
+    );
+    if (!match) return null;
+
+    const conflict = await Booking.findOne({
+      doctorId: new Types.ObjectId(doctorId),
+      date: sel.date,
+      time: sel.time,
+      status: { $in: ["pending", "paid"] },
+    }).lean();
+
+    return conflict ? null : match;
+  }
+
+  // No tax: user pays exactly the slot fee
+  async getQuote(userId: string, payload: any) {
+    const { doctorId, date, time, durationMins, mode, baseFee } = payload || {};
+    if (!doctorId || !date || !time || !durationMins || !mode) {
+      throw Object.assign(new Error("Missing required fields"), { status: 400 });
+    }
+
+    const match = await this.verifyGeneratedSlot(
+      doctorId,
+      { date, time, durationMins: Number(durationMins), mode },
+      { minLeadMinutes: 30 }
+    );
+    if (!match) {
+      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
+    }
+
+    const fee = Number(match.fee ?? baseFee ?? 0);
+    const tax = 0;
     const discount = 0;
-    const totalAmount = amount + tax - discount;
+    const totalAmount = fee;
 
-    return { amount, tax, discount, totalAmount, currency: "INR" };
+    return { amount: fee, tax, discount, totalAmount, currency: "INR" };
   }
 
-  private validateCreatePayload(input: CreateCheckoutInput) {
-    if (!input?.doctorId) throw new Error("doctorId is required");
-    if (!input?.date) throw new Error("date is required");
-    if (!input?.time) throw new Error("time is required");
-    if (!input?.durationMins) throw new Error("durationMins is required");
-    if (!input?.amount && input.amount !== 0) throw new Error("amount is required");
-    if (!input?.currency) throw new Error("currency is required");
-    if (!input?.petName?.trim()) throw new Error("petName is required");
-    if (!input?.paymentMethod) throw new Error("paymentMethod is required");
-  }
-
-  async createCheckout(userId: string, input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
-    this.mustObjectId(userId);
-    this.mustObjectId(input.doctorId);
-    this.validateCreatePayload(input);
-
-    const doctor = await this._doctorPubRepo.getDoctorPublicById(input.doctorId);
-    if (!doctor) throw new Error("Doctor not found or not verified");
-
-    const slot = await this._slotRepo.findExactAvailable(input.doctorId, input.date, input.time);
-    if (!slot) throw new Error("Selected slot is not available");
-
-    if (!slot.modes?.includes(input.mode)) {
-      throw new Error("Selected mode not available on this slot");
+  async createCheckout(userId: string, payload: any) {
+    const { doctorId, date, time, durationMins, mode, amount, currency, petName, notes, paymentMethod, petId } = payload || {};
+    if (!doctorId || !date || !time || !durationMins || !mode || amount == null || !currency || !petName || !paymentMethod) {
+      throw Object.assign(new Error("Missing required fields"), { status: 400 });
     }
 
-    const paymentProvider = "mock";
-    const paymentSessionId = "";
-    const paymentRedirectUrl = "";
+    const match = await this.verifyGeneratedSlot(
+      doctorId,
+      { date, time, durationMins: Number(durationMins), mode },
+      { minLeadMinutes: 30 }
+    );
+    if (!match) {
+      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
+    }
 
-    const created = await this._bookingRepo.create({
-      patientId: userId,
-      doctorId: input.doctorId,
-      slotId: String(slot._id),
-      date: input.date,
-      time: input.time,
-      durationMins: input.durationMins,
-      mode: input.mode,
-      amount: input.amount,
-      currency: input.currency,
-      petName: input.petName.trim(),
-      notes: input.notes?.trim() || "",
-      paymentMethod: input.paymentMethod,
-      paymentProvider,
-      paymentSessionId,
-      paymentRedirectUrl,
-    });
+    // Amount must exactly equal the slot fee (no tax)
+    const fee = Number(match.fee ?? amount ?? 0);
 
-    return { bookingId: String(created._id), redirectUrl: paymentRedirectUrl || undefined };
+    const booking = await Booking.create({
+      patientId: new Types.ObjectId(userId),
+      doctorId: new Types.ObjectId(doctorId),
+      slotId: null,
+      date,
+      time,
+      durationMins: Number(durationMins),
+      mode,
+      amount: fee,
+      currency,
+      petName,
+      notes: notes || "",
+      paymentMethod,
+      status: "pending",
+      paymentProvider: "mock",
+    } as any);
+
+    return { bookingId: String(booking._id), redirectUrl: "" };
   }
 
   async mockPay(userId: string, bookingId: string) {
-    this.mustObjectId(userId);
-    this.mustObjectId(bookingId);
-
-    const booking = await this._bookingRepo.findById(bookingId);
-    if (!booking) throw new Error("Booking not found");
-    if (String(booking.patientId) !== String(userId)) throw new Error("Forbidden");
-    if (booking.status !== "pending") return { status: booking.status, bookingId };
-
-    if (booking.slotId) {
-      const booked = await this._slotWriteRepo.markBooked(String(booking.slotId));
-      if (!booked) {
-        await this._bookingRepo.updateStatus(bookingId, "failed");
-        throw new Error("Slot was taken by another booking");
-      }
-    }
-    const updated = await this._bookingRepo.markPaid(bookingId);
-    return { status: updated?.status || "paid", bookingId };
+    const updated = await Booking.findOneAndUpdate(
+      { _id: new Types.ObjectId(bookingId), patientId: new Types.ObjectId(userId) },
+      { $set: { status: "paid" } },
+      { new: true }
+    ).lean();
+    if (!updated) throw Object.assign(new Error("Booking not found"), { status: 404 });
+    return { bookingId: String(updated._id), status: updated.status };
   }
 }

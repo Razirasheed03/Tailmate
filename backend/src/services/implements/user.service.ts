@@ -51,4 +51,10 @@ export class UserService {
   ) {
     return this._doctorPubRepo.listSlotsBetween(id, opts);
   }
+    async listDoctorGeneratedAvailability(
+    id: string,
+    opts: { from: string; to: string }
+  ) {
+    return this._doctorPubRepo.listGeneratedAvailability(id, opts);
+  }
 }
