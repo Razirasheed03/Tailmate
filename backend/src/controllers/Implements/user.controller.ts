@@ -68,11 +68,10 @@ export async function getVetSlots(req: Request, res: Response, next: NextFunctio
     const id = String(req.params.id || '').trim();
     const from = String(req.query.from || '').trim();
     const to = String(req.query.to || '').trim();
-    const status = req.query.status === 'available' || req.query.status === 'booked' ? String(req.query.status) : undefined;
     if (!id || !from || !to) {
       return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'id, from and to are required' });
     }
-    const data = await service.listDoctorSlotsBetween(id, { from, to});
+    const data = await service.listDoctorGeneratedAvailability(id, { from, to });
     return res.status(HttpStatus.OK).json({ success: true, data });
   } catch (err) {
     return next(err);

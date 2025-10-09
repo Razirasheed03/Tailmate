@@ -1,5 +1,5 @@
 // src/pages/user/VetDetail.tsx
-import  { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { vetsService, type UIMode } from "@/services/vetsService";
@@ -21,7 +21,7 @@ type Slot = {
   id: string;
   date: string;          // YYYY-MM-DD
   time: string;          // HH:mm
-  durationMins: number;  // e.g., 30, 50, 90
+  durationMins: number;  // e.g., 15, 30, 60
   fee: number;           // integer
   modes: UIMode[];
   status: "available" | "booked";
@@ -54,7 +54,6 @@ function format12h(hhmm: string) {
 }
 
 export default function VetDetail() {
-  // FIX: your route is /vets/:id, so read `id`, not `doctorId`
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -64,62 +63,93 @@ export default function VetDetail() {
 
   const [mode, setMode] = useState<UIMode>("video");
   const [duration, setDuration] = useState<number>(30);
+
+  // Calendly‑style: pick a day first, then times
+  const [selectedDate, setSelectedDate] = useState<string>(toYMD(new Date()));
   const [selected, setSelected] = useState<{ date: string; time: string } | null>(null);
 
+  // 7‑day rolling window
+  const from = useMemo(() => toYMD(new Date()), []);
+  const to = useMemo(() => toYMD(addDays(new Date(), 6)), []);
+
+  // Load profile + next 7 days availability (generated from weekly fixtures)
   useEffect(() => {
     let mounted = true;
     (async () => {
       if (!id) {
-        // hard guard: route param missing → go back
         navigate("/vets", { replace: true });
         return;
       }
       setLoading(true);
       try {
         const d = await vetsService.getDoctor(id);
-        const from = toYMD(new Date());
-        const to = toYMD(addDays(new Date(), 6));
         const s = await vetsService.getDoctorSlots(id, { from, to, status: "available" });
         if (!mounted) return;
         setDoctor(d);
         setSlots(s);
         if (d?.modes?.length) setMode(d.modes[0]);
+        // Default to first day that actually has slots; else today
+        const firstDayWithSlots = s.find((x) => x.status === "available")?.date;
+        setSelectedDate(firstDayWithSlots || from);
+        // Default duration: smallest available in window
+        const allDurations = Array.from(new Set(s.map((x) => x.durationMins))).sort((a, b) => a - b);
+        if (allDurations.length) setDuration(allDurations[0]);
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, [id, navigate]);
+  }, [id, navigate, from, to]);
 
-  // Filter + group slots
-  const grouped = useMemo(() => {
-    const byDate: Record<string, Slot[]> = {};
-    slots
+  // Build date strip (7 days)
+  const dates = useMemo(() => {
+    const arr: string[] = [];
+    for (let i = 0; i < 7; i++) arr.push(toYMD(addDays(new Date(from), i)));
+    return arr;
+  }, [from]);
+
+  // Available durations from loaded slots
+  const durations = useMemo(() => {
+    const set = new Set<number>();
+    slots.forEach((s) => set.add(s.durationMins));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [slots]);
+
+  // Times for the selected day, filtered by mode+duration
+  const daySlots = useMemo(() => {
+    return slots
       .filter((s) => s.status === "available")
+      .filter((s) => s.date === selectedDate)
       .filter((s) => s.modes.includes(mode))
       .filter((s) => (duration ? s.durationMins === duration : true))
-      .forEach((s) => {
-        (byDate[s.date] ||= []).push(s);
-      });
-    // sort times
-    Object.keys(byDate).forEach((d) => byDate[d].sort((a, b) => a.time.localeCompare(b.time)));
-    return Object.entries(byDate)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(0, 7); // keep at most 7 days
-  }, [slots, mode, duration]);
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [slots, selectedDate, mode, duration]);
+
+  // Keep selection valid when filters change
+  useEffect(() => {
+    if (!selected) return;
+    const stillExists = daySlots.some((s) => s.date === selected.date && s.time === selected.time);
+    if (!stillExists) setSelected(null);
+  }, [daySlots, selected]);
+
+  const selectedSlot = useMemo(() => {
+    if (!selected) return null;
+    return slots.find((x) => x.date === selected.date && x.time === selected.time) || null;
+  }, [selected, slots]);
 
   function onProceed() {
-    if (!selected || !doctor) return;
-    // carry booking context forward; replace with actual checkout route later
+    if (!selected || !doctor || !selectedSlot) return; // require slot selection to proceed
+    const fee = selectedSlot.fee;                       // use slot fee only
+    const dur = selectedSlot.durationMins;              // use slot duration
     navigate(`/checkout`, {
       state: {
         doctorId: doctor.doctorId,
         doctorName: doctor.displayName,
         date: selected.date,
         time: selected.time,
-        durationMins: duration,
+        durationMins: dur,
         mode,
-        fee: doctor.consultationFee ?? 0,
+        fee,
       },
     });
   }
@@ -164,7 +194,7 @@ export default function VetDetail() {
             </div>
           </section>
 
-          {/* Tabs stub + About */}
+          {/* About */}
           <section className="mt-4 bg-white border rounded-xl p-5">
             <div className="flex gap-3 text-sm border-b pb-2">
               <button className="px-3 py-1 rounded bg-gray-100">About Me</button>
@@ -184,17 +214,38 @@ export default function VetDetail() {
               {doctor?.displayName || "Doctor"} available on
             </div>
 
+            {/* Date strip (Calendly‑style quick day picker) */}
+            <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar">
+              {dates.map((d) => {
+                const active = selectedDate === d;
+                const has = slots.some((s) => s.date === d && s.status === "available");
+                return (
+                  <button
+                    key={d}
+                    onClick={() => { setSelectedDate(d); setSelected(null); }}
+                    className={`px-3 py-2 rounded border text-sm whitespace-nowrap ${
+                      active ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-white border-gray-300 text-gray-700"
+                    } ${!has ? "opacity-60" : ""}`}
+                    title={prettyDateLabel(d)}
+                  >
+                    {prettyDateLabel(d)}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Mode selector */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-3">
               {(["video", "audio", "inPerson"] as UIMode[]).map((m) => {
                 const active = mode === m;
+                const disabled = doctor?.modes && !doctor.modes.includes(m);
                 return (
                   <button
                     key={m}
-                    onClick={() => setMode(m)}
+                    onClick={() => !disabled && setMode(m)}
                     className={`px-3 py-2 rounded border text-sm ${
                       active ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-white border-gray-300 text-gray-700"
-                    }`}
+                    } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {m === "inPerson" ? "In‑Person" : m[0].toUpperCase() + m.slice(1)}
                   </button>
@@ -202,58 +253,56 @@ export default function VetDetail() {
               })}
             </div>
 
-            {/* Duration selector */}
-            <div className="text-xs text-gray-600 mb-1">Select session duration</div>
-            <div className="flex gap-2 mb-4">
-              {[15, 30, 60].map((d) => {
-                const active = duration === d;
-                return (
-                  <button
-                    key={d}
-                    onClick={() => setDuration(d)}
-                    className={`px-3 py-2 rounded border text-sm ${
-                      active ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-gray-300 text-gray-700"
-                    }`}
-                  >
-                    {d} mins
-                  </button>
-                );
-              })}
-            </div>
+            {/* Duration selector (per event type style) */}
+            {durations.length > 1 && (
+              <>
+                <div className="text-xs text-gray-600 mb-1">Select session duration</div>
+                <div className="flex gap-2 mb-3">
+                  {durations.map((d) => {
+                    const active = duration === d;
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => setDuration(d)}
+                        className={`px-3 py-2 rounded border text-sm ${
+                          active ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-gray-300 text-gray-700"
+                        }`}
+                      >
+                        {d} mins
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
-            {/* Slots */}
+            {/* Time slots for selected day */}
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium">Check available slots</div>
+              <div className="text-sm font-medium">Available times</div>
               <div className="text-gray-400">🗓️</div>
             </div>
 
             {loading ? (
               <div className="text-xs text-gray-500">Loading slots…</div>
-            ) : grouped.length === 0 ? (
-              <div className="text-xs text-gray-500">No matching slots for the selected mode/duration.</div>
+            ) : daySlots.length === 0 ? (
+              <div className="text-xs text-gray-500">No matching slots for the selected filters.</div>
             ) : (
-              <div className="space-y-3">
-                {grouped.map(([date, daySlots]) => (
-                  <div key={date}>
-                    <div className="text-xs text-gray-500 mb-2">{prettyDateLabel(date)}</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {daySlots.map((s) => {
-                        const isSel = selected?.date === s.date && selected?.time === s.time;
-                        return (
-                          <button
-                            key={`${s.date}-${s.time}`}
-                            onClick={() => setSelected({ date: s.date, time: s.time })}
-                            className={`px-3 py-2 rounded border text-sm ${
-                              isSel ? "bg-teal-600 text-white border-teal-700" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            {format12h(s.time)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-2">
+                {daySlots.map((s) => {
+                  const isSel = selected?.date === s.date && selected?.time === s.time;
+                  return (
+                    <button
+                      key={`${s.date}-${s.time}`}
+                      onClick={() => setSelected({ date: s.date, time: s.time })}
+                      className={`px-3 py-2 rounded border text-sm ${
+                        isSel ? "bg-teal-600 text-white border-teal-700" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                      title={`${format12h(s.time)} • ₹${s.fee}`}
+                    >
+                      {format12h(s.time)}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -261,14 +310,14 @@ export default function VetDetail() {
             <div className="mt-6">
               <div className="text-sm text-gray-600">Consultation Fee</div>
               <div className="text-lg font-semibold">
-                ₹{doctor?.consultationFee ?? 0}
-                <span className="text-sm text-gray-500"> / session</span>
+                {selectedSlot ? `₹${selectedSlot.fee}` : "Select a time"}
+                {selectedSlot ? <span className="text-sm text-gray-500"> / session</span> : null}
               </div>
             </div>
 
             <button
               onClick={onProceed}
-              disabled={!selected || loading}
+              disabled={!selected || !selectedSlot || loading}
               className="mt-3 w-full px-3 py-2 rounded bg-teal-600 text-white disabled:opacity-50"
             >
               Proceed

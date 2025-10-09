@@ -21,7 +21,7 @@ const items: SidebarItem[] = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: "/doctor" },
     { key: "sessions", label: "Sessions", icon: Layers, to: "/doctor/appointments", requiresVerified: true },
     { key: "bookings", label: "Bookings", icon: Calendar, to: "/doctor/sessions", requiresVerified: true },
-    { key: "earnings", label: "Earnings", icon: DollarSign, to: "/doctor/earnings", requiresVerified: true },
+    { key: "wallet", label: "Earnings", icon: DollarSign, to: "/doctor/wallet", requiresVerified: true },
     { key: "reviews", label: "Reviews", icon: Star, to: "/doctor/reviews", requiresVerified: true },
     { key: "profile", label: "Profile", icon: Settings, to: "/doctor/profile", requiresVerified: true },
 ];
