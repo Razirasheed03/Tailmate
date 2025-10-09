@@ -20,7 +20,7 @@ import PetProfiles from "@/pages/user/Profile/PetProfile";
 import ProfileLayout from "@/components/Layouts/ProfileLayout";
 import NotFound from "@/pages/user/NotFound";
 import { RouteErrorElement } from "@/components/common/ErrorBoundary";
-import ComingSoon from "@/components/common/ComingSoon";
+// import ComingSoon from "@/components/common/ComingSoon";
 import Profile from "@/pages/doctor/Profile";
 import PetCategory from "@/pages/admin/PetCategory";
 import Marketplace from "@/pages/user/Marketplace";
@@ -32,7 +32,9 @@ import VetDetail from "@/pages/user/VetDetail";
 import Checkout from "@/pages/user/Checkout";
 import BookingConfirm from "@/pages/user/BookingConfirm";
 import DoctorSessions from "@/pages/doctor/Sessions";
-// import SessionDetailPage from "@/pages/doctor/SessionDetail";
+import Success from "@/pages/payments/Success";
+import DoctorWallet from "@/pages/doctor/Wallet";
+import SessionDetailPage from "@/pages/doctor/SessionDetail";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -111,6 +113,7 @@ export const router = createBrowserRouter([
     element:<BookingConfirm/>
   },
   { path: "/doctor/sessions", element: <DoctorSessions /> },
+{ path: "/payments/Success", element: <Success /> },
   ///admin areaa
   {
     path: "/admin",
@@ -146,6 +149,8 @@ export const router = createBrowserRouter([
     path:"/doctor/profile",
     element:<Profile/>
   },
+  { path: "/doctor/wallet", element: <DoctorWallet /> },
+  { path: "/doctor/sessions/:id", element: <SessionDetailPage /> },
   // 404 (must be last)
   { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
 ]);

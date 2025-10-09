@@ -45,12 +45,6 @@ export class UserService {
     return this._doctorPubRepo.getDoctorPublicById(id);
   }
 
-  async listDoctorSlotsBetween(
-    id: string,
-    opts: { from: string; to: string; status?: "available" | "booked" }
-  ) {
-    return this._doctorPubRepo.listSlotsBetween(id, opts);
-  }
     async listDoctorGeneratedAvailability(
     id: string,
     opts: { from: string; to: string }

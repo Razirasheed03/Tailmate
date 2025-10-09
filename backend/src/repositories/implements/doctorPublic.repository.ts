@@ -20,7 +20,6 @@ type WeeklyRule = {
   fee?: number;
 };
 
-// Type guard + normalizer to ensure UIMode[]
 function isUIMode(x: unknown): x is UIMode {
   return x === "video" || x === "audio" || x === "inPerson";
 }
@@ -36,7 +35,7 @@ function hmUTC(d: Date) {
   return `${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}`;
 }
 
-// Minimal read-model for weekly rules saved by DoctorService
+
 const WeeklyRuleSchema = new Schema<WeeklyRule>({
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true, required: true },
   weekday: { type: Number, min: 0, max: 6, index: true, required: true },

@@ -1,4 +1,4 @@
-// backend/src/routes/doctor.routes.ts
+// backend/src/routes/doctor.route.ts
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { authJwt } from "../middlewares/authJwt";
@@ -6,11 +6,28 @@ import { requireRole } from "../middlewares/requireRoles";
 import { UserRole } from "../constants/roles";
 import { doctorController } from "../dependencies/doctor.di";
 import { uploadImage, uploadPdf } from "../middlewares/upload";
+import { Doctor } from "../schema/doctor.schema";
 
 const router = Router();
 
 router.use(authJwt, requireRole([UserRole.DOCTOR]));
 
+router.get("/me-id", asyncHandler(async (req: any, res) => {
+  // user id comes from authJwt middleware
+  const userId = req.user?._id?.toString() || req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+  // find the doctor document linked to this user; return only its _id
+  const doc = await Doctor.findOne({ userId }).select("_id").lean();
+  if (!doc) return res.status(404).json({ success: false, message: "Doctor profile not found" });
+
+  return res.json({ success: true, data: { _id: String(doc._id) } });
+}));
+router.get("/me-user-id", asyncHandler(async (req: any, res) => {
+  const userId = req.user?._id?.toString() || req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+  return res.json({ success: true, data: { userId } });
+}));
 // Verification
 router.get("/verification", asyncHandler(doctorController.getVerification));
 router.post("/verification/upload", uploadPdf, asyncHandler(doctorController.uploadCertificate));

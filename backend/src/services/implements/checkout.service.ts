@@ -1,6 +1,8 @@
+// backend/src/services/implements/checkout.service.ts
 import { Types } from "mongoose";
 import { DoctorPublicRepository } from "../../repositories/implements/doctorPublic.repository";
 import { Booking } from "../../schema/booking.schema";
+import { stripe } from "../../utils/stripe";
 
 type UIMode = "video" | "audio" | "inPerson";
 
@@ -12,6 +14,7 @@ function toUTCDate(date: string, time: string) {
 }
 
 export class CheckoutService {
+
   constructor(private readonly pub = new DoctorPublicRepository()) {}
 
   private async verifyGeneratedSlot(
@@ -27,9 +30,12 @@ export class CheckoutService {
       if (diffMin < opts.minLeadMinutes) return null;
     }
 
-    const gen = await this.pub.listGeneratedAvailability(doctorId, { from: sel.date, to: sel.date });
+    const gen = await this.pub.listGeneratedAvailability(doctorId, {
+      from: sel.date,
+      to: sel.date,
+    });
     const match = gen.find(
-      s =>
+      (s) =>
         s.date === sel.date &&
         s.time === sel.time &&
         s.durationMins === sel.durationMins &&
@@ -48,11 +54,12 @@ export class CheckoutService {
     return conflict ? null : match;
   }
 
-  // No tax: user pays exactly the slot fee
   async getQuote(userId: string, payload: any) {
     const { doctorId, date, time, durationMins, mode, baseFee } = payload || {};
     if (!doctorId || !date || !time || !durationMins || !mode) {
-      throw Object.assign(new Error("Missing required fields"), { status: 400 });
+      throw Object.assign(new Error("Missing required fields"), {
+        status: 400,
+      });
     }
 
     const match = await this.verifyGeneratedSlot(
@@ -61,7 +68,9 @@ export class CheckoutService {
       { minLeadMinutes: 30 }
     );
     if (!match) {
-      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
+      throw Object.assign(new Error("Selected slot is not available"), {
+        status: 400,
+      });
     }
 
     const fee = Number(match.fee ?? baseFee ?? 0);
@@ -72,51 +81,123 @@ export class CheckoutService {
     return { amount: fee, tax, discount, totalAmount, currency: "INR" };
   }
 
+  // REPLACED: creates a Stripe Checkout Session and returns a hosted redirectUrl
   async createCheckout(userId: string, payload: any) {
-    const { doctorId, date, time, durationMins, mode, amount, currency, petName, notes, paymentMethod, petId } = payload || {};
-    if (!doctorId || !date || !time || !durationMins || !mode || amount == null || !currency || !petName || !paymentMethod) {
-      throw Object.assign(new Error("Missing required fields"), { status: 400 });
-    }
+  const {
+    doctorId,
+    date,
+    time,
+    durationMins,
+    mode,
+    amount,
+    currency,
+    petName,
+    notes,
+    paymentMethod,
+    petId,
+  } = payload || {};
 
-    const match = await this.verifyGeneratedSlot(
-      doctorId,
-      { date, time, durationMins: Number(durationMins), mode },
-      { minLeadMinutes: 30 }
-    );
-    if (!match) {
-      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
-    }
-
-    // Amount must exactly equal the slot fee (no tax)
-    const fee = Number(match.fee ?? amount ?? 0);
-
-    const booking = await Booking.create({
-      patientId: new Types.ObjectId(userId),
-      doctorId: new Types.ObjectId(doctorId),
-      slotId: null,
-      date,
-      time,
-      durationMins: Number(durationMins),
-      mode,
-      amount: fee,
-      currency,
-      petName,
-      notes: notes || "",
-      paymentMethod,
-      status: "pending",
-      paymentProvider: "mock",
-    } as any);
-
-    return { bookingId: String(booking._id), redirectUrl: "" };
+  if (
+    !doctorId ||
+    !date ||
+    !time ||
+    !durationMins ||
+    !mode ||
+    amount == null ||
+    !currency ||
+    !petName ||
+    !paymentMethod
+  ) {
+    throw Object.assign(new Error("Missing required fields"), { status: 400 });
   }
 
+  const match = await this.verifyGeneratedSlot(
+    doctorId,
+    { date, time, durationMins: Number(durationMins), mode },
+    { minLeadMinutes: 30 }
+  );
+  if (!match) {
+    throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
+  }
+
+  const fee = Number(match.fee ?? amount ?? 0);
+
+  // 1) Create booking as pending
+  const booking = await Booking.create({
+    patientId: new Types.ObjectId(userId),
+    doctorId: new Types.ObjectId(doctorId),
+    slotId: null,
+    date,
+    time,
+    durationMins: Number(durationMins),
+    mode,
+    amount: fee,
+    currency,
+    petName,
+    notes: notes || "",
+    paymentMethod,
+    status: "pending",
+    paymentProvider: "stripe",
+  } as any);
+
+  try {
+    // 2) Create Stripe Checkout Session (no Connect split)
+    const unitAmountMinor = Math.round(fee * 100);
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency,
+              unit_amount: unitAmountMinor,
+              product_data: { name: "Doctor consultation" },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.APP_URL}/payments/cancel`,
+        metadata: {
+          bookingId: String(booking._id),
+          userId: String(userId),
+          doctorId: String(doctorId),
+        },
+      },
+      { idempotencyKey: `chk:${booking._id}:${userId}` }
+    );
+
+    // 3) Persist session identifiers
+    await Booking.updateOne(
+      { _id: booking._id },
+      {
+        $set: {
+          paymentSessionId: session.id,
+          paymentRedirectUrl: session.url || "",
+        },
+      }
+    );
+
+    // 4) Return hosted Checkout URL
+    return { bookingId: String(booking._id), redirectUrl: session.url };
+  } catch (err) {
+    await Booking.deleteOne({ _id: booking._id });
+    throw Object.assign(new Error("Failed to create payment session"), { status: 502 });
+  }
+}
+
+  // Keep mockPay only for non-production if desired; production should rely on webhooks
   async mockPay(userId: string, bookingId: string) {
     const updated = await Booking.findOneAndUpdate(
-      { _id: new Types.ObjectId(bookingId), patientId: new Types.ObjectId(userId) },
+      {
+        _id: new Types.ObjectId(bookingId),
+        patientId: new Types.ObjectId(userId),
+      },
       { $set: { status: "paid" } },
       { new: true }
     ).lean();
-    if (!updated) throw Object.assign(new Error("Booking not found"), { status: 404 });
+    if (!updated)
+      throw Object.assign(new Error("Booking not found"), { status: 404 });
     return { bookingId: String(updated._id), status: updated.status };
   }
 }

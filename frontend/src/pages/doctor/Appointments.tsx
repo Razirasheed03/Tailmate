@@ -60,7 +60,6 @@ export default function Appointments() {
   );
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedWeekday, setSelectedWeekday] = useState<number>(1);
 
   // Template controls (applied to all chosen days)
   const [tplStart, setTplStart] = useState("09:00");
