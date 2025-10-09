@@ -1,14 +1,22 @@
-//services/implements/payment.service.ts
+// services/implements/payment.service.ts
 import { Request } from "express";
 import Stripe from "stripe";
 import { stripe } from "../../utils/stripe";
 import { PaymentRepository } from "../../repositories/implements/payment.repository";
 import { Booking } from "../../schema/booking.schema";
 
+export type CreateCheckoutSessionResponse = { url: string | null }; // session.url may be null in some cases [Stripe]
+export type WebhookProcessResult =
+  | { handled: true; type: "checkout.session.completed"; paymentId?: string }
+  | { handled: false; type: string }
+
 export class PaymentService {
   constructor(private repo = new PaymentRepository()) {}
 
-  async createCheckoutSession(payload: { bookingId: string }, userId: string) {
+  async createCheckoutSession(
+    payload: { bookingId: string },
+    userId: string
+  ): Promise<CreateCheckoutSessionResponse> {
     const booking = await Booking.findById(payload.bookingId).lean();
     if (!booking) throw new Error("Booking not found");
     if (String(booking.patientId) !== String(userId)) throw new Error("Forbidden");
@@ -32,14 +40,19 @@ export class PaymentService {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency: currency.toLowerCase(),
-          product_data: { name: "Doctor consultation", metadata: { bookingId: String(booking._id) } },
-          unit_amount: Math.round(amount * 100),
+      line_items: [
+        {
+          price_data: {
+            currency: currency.toLowerCase(),
+            product_data: {
+              name: "Doctor consultation",
+              metadata: { bookingId: String(booking._id) },
+            },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
         },
-        quantity: 1,
-      }],
+      ],
       success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.APP_URL}/payments/cancel`,
       metadata: {
@@ -50,11 +63,10 @@ export class PaymentService {
       },
     });
 
-    console.log("Created Checkout Session:", session.id, "for payment:", String(payment._id));
-    return { url: session.url! };
+    return { url: session.url ?? null };
   }
 
-  async processWebhook(req: Request) {
+  async processWebhook(req: Request): Promise<WebhookProcessResult> {
     const sig = req.headers["stripe-signature"] as string;
     let event: Stripe.Event;
     try {
@@ -79,10 +91,14 @@ export class PaymentService {
           receiptUrl: session.url || "",
         });
       }
+      return { handled: true, type: "checkout.session.completed", paymentId };
     }
+
+
+    return { handled: false, type: event.type };
   }
 
-  async doctorPayments(doctorId: string) {
+  async doctorPayments(doctorId: string): Promise<any> {
     return await this.repo.byDoctor(doctorId);
   }
 }

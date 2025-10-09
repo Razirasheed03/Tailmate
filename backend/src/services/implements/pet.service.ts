@@ -6,9 +6,19 @@ import { uploadPetImageBufferToCloudinary } from '../../utils/uploadToCloudinary
 
 export type PetSex = 'male' | 'female' | 'unknown';
 
+export type PetCategory = any;
+export type Pet = any;
+
+export type Paginated<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
+
 export const PetService = {
   // Categories
-  async listCategories(activeOnly: boolean) {
+  async listCategories(activeOnly: boolean): Promise<PetCategory[]> {
     const filter = activeOnly ? { isActive: true } : {};
     return PetCategoryModel.find(filter).sort({ sortOrder: 1, name: 1 }).lean();
   },
@@ -19,7 +29,7 @@ export const PetService = {
     description?: string;
     isActive?: boolean;
     sortOrder?: number;
-  }) {
+  }): Promise<PetCategory> {
     if (!payload.name) throw new Error('name is required');
     return PetCategoryModel.create({
       name: payload.name,
@@ -30,7 +40,7 @@ export const PetService = {
     });
   },
 
-  async updateCategory(id: string, payload: any) {
+  async updateCategory(id: string, payload: any): Promise<PetCategory | null> {
     const cat = await PetCategoryModel.findById(id);
     if (!cat) return null;
     if (typeof payload.name === 'string') cat.name = payload.name;
@@ -43,20 +53,22 @@ export const PetService = {
   },
 
   // Pets
-  async listPetsByOwner(ownerId: string, page: number, limit: number) {
+  async listPetsByOwner(ownerId: string, page: number, limit: number): Promise<Paginated<Pet>> {
     const owner = new Types.ObjectId(ownerId);
     const filter = { userId: owner, deletedAt: null as any };
-    const skip = (page - 1) * limit;
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
+    const skip = (safePage - 1) * safeLimit;
 
     const [data, total] = await Promise.all([
-      PetModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      PetModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(),
       PetModel.countDocuments(filter),
     ]);
 
-    return { data, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
+    return { data, total, page: safePage, totalPages: Math.max(1, Math.ceil(total / safeLimit)) };
   },
 
-  async getPetScoped(petId: string, user: any) {
+  async getPetScoped(petId: string, user: any): Promise<Pet | null> {
     const pet = await PetModel.findById(petId).lean();
     if (!pet || pet.deletedAt) return null;
     const isOwner = String(pet.userId) === String(user._id);
@@ -73,7 +85,7 @@ export const PetService = {
     birthDate?: string;
     notes?: string;
     photoUrl?: string;
-  }) {
+  }): Promise<Pet> {
     const cat = await PetCategoryModel.findById(payload.speciesCategoryId).lean();
     if (!cat || !cat.isActive) throw new Error('Invalid or inactive category');
 
@@ -90,7 +102,7 @@ export const PetService = {
     return doc.toObject();
   },
 
-  async updatePetScoped(petId: string, user: any, body: any) {
+  async updatePetScoped(petId: string, user: any, body: any): Promise<Pet | null> {
     const pet = await PetModel.findById(petId);
     if (!pet || pet.deletedAt) return null;
     const isOwner = String(pet.userId) === String(user._id);
@@ -113,7 +125,7 @@ export const PetService = {
     return pet.toObject();
   },
 
-  async softDeletePetScoped(petId: string, user: any) {
+  async softDeletePetScoped(petId: string, user: any): Promise<boolean> {
     const pet = await PetModel.findById(petId);
     if (!pet || pet.deletedAt) return false;
     const isOwner = String(pet.userId) === String(user._id);
@@ -125,8 +137,10 @@ export const PetService = {
     return true;
   },
 
-async uploadPetPhotoFromBuffer(fileBuffer: Buffer, filename: string) {
-    // Create a safe filename (e.g., timestamp); Cloudinary will still ensure uniqueness
+  async uploadPetPhotoFromBuffer(
+    fileBuffer: Buffer,
+    filename: string
+  ): Promise<{ url: string; public_id: string }> {
     const safeName = filename?.trim() || `pet-${Date.now()}.jpg`;
     const result = await uploadPetImageBufferToCloudinary(fileBuffer, safeName);
     return { url: result.secure_url, public_id: result.public_id };
