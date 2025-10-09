@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import { IAdminService } from "../../services/interfaces/admin.service.interface";
 import { HttpStatus } from "../../constants/httpStatus";
+import { ResponseHelper } from "../../http/ResponseHelper";
 
 export class AdminController {
   constructor(private readonly _adminService: IAdminService) {}
@@ -13,7 +14,7 @@ export class AdminController {
       const limit = parseInt(req.query.limit as string) || 10;
       const search = (req.query.search as string) || "";
       const result = await this._adminService.getAllUsers(page, limit, search);
-      res.status(HttpStatus.OK).json({ success: true, data: result });
+      ResponseHelper.ok(res,result)
     } catch (err) { next(err); }
   };
 
@@ -21,7 +22,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
       const result = await this._adminService.blockUser(userId);
-      res.status(HttpStatus.OK).json({ success: true, message: result.message });
+      ResponseHelper.ok(res, result, 'User blocked');
     } catch (err) { next(err); }
   };
 

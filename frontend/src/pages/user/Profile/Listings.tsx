@@ -4,24 +4,69 @@ import { marketplaceService } from "@/services/marketplaceService";
 import type { ListingStatus } from "@/types/marketplace.types";
 import EditListingModal from "./EditListingModal";
 
+/* Simple confirm dialog component (inline) */
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmText = 'Delete',
+  cancelText = 'Cancel',
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message?: string;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl w-full max-w-sm p-5">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {message && <p className="text-sm text-gray-600 mt-1">{message}</p>}
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={onCancel}
+            className="px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-3 py-2 text-sm rounded bg-rose-600 text-white hover:bg-rose-700"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ListingsState {
-  listings: any[]; // Simplified to single array
+  listings: any[];
   loading: boolean;
   error: string | null;
-  editingListing: any | null; // Use any instead of DomainListing
+  editingListing: any | null;
   deletingId: string | null;
 }
 
 const Listings: React.FC = () => {
   const [state, setState] = useState<ListingsState>({
-    listings: [], // Single array instead of separate domain/ui
+    listings: [],
     loading: true,
     error: null,
     editingListing: null,
     deletingId: null,
   });
 
-  // Helper function to update state
+  // confirm modal state
+  const [confirmFor, setConfirmFor] = useState<string | null>(null);
+
   const updateState = useCallback((updates: Partial<ListingsState>): void => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -34,7 +79,6 @@ const Listings: React.FC = () => {
 
       if (response && typeof response === "object") {
         let apiListings: any[] = [];
-
         if (Array.isArray(response)) {
           apiListings = response;
         } else if (response.data && Array.isArray(response.data)) {
@@ -43,86 +87,65 @@ const Listings: React.FC = () => {
           console.warn("Unexpected response structure:", response);
           apiListings = [];
         }
-
-        // Use raw data directly - no mapping or validation needed
-        updateState({
-          listings: apiListings,
-        });
+        updateState({ listings: apiListings });
       } else {
         console.warn("Invalid response:", response);
-        updateState({
-          listings: [],
-        });
+        updateState({ listings: [] });
       }
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to load listings";
+      const errorMessage = err instanceof Error ? err.message : "Failed to load listings";
       console.error("Fetch listings error:", err);
-      updateState({
-        error: errorMessage,
-        listings: [],
-      });
+      updateState({ error: errorMessage, listings: [] });
     } finally {
       updateState({ loading: false });
     }
   }, [updateState]);
 
-  useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+  useEffect(() => { fetchListings(); }, [fetchListings]);
 
-  const handleDelete = useCallback(
-    async (id: string): Promise<void> => {
-      if (!window.confirm("Are you sure you want to delete this listing?"))
-        return;
+  // show confirm modal instead of window.confirm
+  const askDelete = useCallback((id: string) => {
+    setConfirmFor(id);
+  }, []);
 
-      try {
-        updateState({ deletingId: id, error: null });
-
-        const success: boolean = await marketplaceService.deleteListing(id);
-
-        if (success) {
-          await fetchListings(); // Refresh list
-        } else {
-          throw new Error("Delete operation failed");
-        }
-      } catch (err: unknown) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to delete listing";
-        updateState({ error: errorMessage });
-      } finally {
-        updateState({ deletingId: null });
+  const handleDeleteConfirmed = useCallback(async () => {
+    if (!confirmFor) return;
+    const id = confirmFor;
+    setConfirmFor(null);
+    try {
+      updateState({ deletingId: id, error: null });
+      const success: boolean = await marketplaceService.deleteListing(id);
+      if (success) {
+        await fetchListings();
+      } else {
+        throw new Error("Delete operation failed");
       }
-    },
-    [updateState, fetchListings]
-  );
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete listing";
+      updateState({ error: errorMessage });
+    } finally {
+      updateState({ deletingId: null });
+    }
+  }, [confirmFor, updateState, fetchListings]);
 
   const handleStatusToggle = useCallback(
     async (id: string, currentStatus: string): Promise<void> => {
       try {
         updateState({ error: null });
-
-        const newStatus: ListingStatus =
-          currentStatus === "active" ? "inactive" : "active";
+        const newStatus: ListingStatus = currentStatus === "active" ? "inactive" : "active";
         await marketplaceService.updateListingStatus(id, newStatus);
-
-        // Refresh listings after update
         await fetchListings();
       } catch (err: unknown) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to update status";
+        const errorMessage = err instanceof Error ? err.message : "Failed to update status";
         updateState({ error: errorMessage });
       }
     },
     [updateState, fetchListings]
   );
 
-  const handleEditListing = useCallback(
-    (listing: any): void => {
-      updateState({ editingListing: listing });
-    },
-    [updateState]
-  );
+  const handleEditListing = useCallback((listing: any): void => {
+    updateState({ editingListing: listing });
+  }, [updateState]);
 
   const handleCloseEditModal = useCallback((): void => {
     updateState({ editingListing: null });
@@ -133,7 +156,6 @@ const Listings: React.FC = () => {
     await fetchListings();
   }, [updateState, fetchListings]);
 
-  // Loading state
   if (state.loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -147,9 +169,7 @@ const Listings: React.FC = () => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">
-          My Listings ({state.listings.length})
-        </h2>
+        <h2 className="text-xl font-semibold">My Listings ({state.listings.length})</h2>
         <button
           onClick={fetchListings}
           className="text-sm text-orange-600 hover:text-orange-700 font-medium"
@@ -164,12 +184,7 @@ const Listings: React.FC = () => {
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
           <div className="flex justify-between items-center">
             <span>{state.error}</span>
-            <button
-              onClick={() => updateState({ error: null })}
-              className="text-red-400 hover:text-red-600"
-            >
-              ×
-            </button>
+            <button onClick={() => updateState({ error: null })} className="text-red-400 hover:text-red-600">×</button>
           </div>
         </div>
       )}
@@ -178,57 +193,38 @@ const Listings: React.FC = () => {
       {state.listings.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <div className="text-gray-400 mb-4">
-            <svg
-              className="w-16 h-16 mx-auto"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
+            <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div className="text-gray-500 text-lg">No listings found</div>
-          <p className="text-gray-400 mt-2">
-            You haven't posted any pet listings yet.
-          </p>
+          <p className="text-gray-400 mt-2">You haven't posted any pet listings yet.</p>
         </div>
       ) : (
-        /* Listings Grid - Using Raw Data with Inline Formatting */
+        /* Listings Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {state.listings.map((listing) => {
-            // Get listing ID (handle both _id and id)
             const listingId = listing._id || listing.id;
 
             return (
-              <div
-                key={listingId}
-                className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-              >
+              <div key={listingId} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 {/* Image */}
                 <div className="aspect-video bg-gray-200 relative">
                   {listing.photos?.[0] ? (
-                    <img
-                      src={listing.photos[0]}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <svg
-                        className="w-8 h-8"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
+                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
                       </svg>
                     </div>
                   )}
 
-                  {/* Status Badge - Inline Logic */}
+                  {/* Status Badge */}
                   <div className="absolute top-2 right-2">
                     <span
                       className={`px-2 py-1 text-xs rounded-full font-medium ${
-                        listing.status === 'active' 
+                        listing.status === 'active'
                           ? 'bg-green-100 text-green-800'
                           : listing.status === 'inactive'
                           ? 'bg-gray-100 text-gray-800'
@@ -237,17 +233,15 @@ const Listings: React.FC = () => {
                           : 'bg-purple-100 text-purple-800'
                       }`}
                     >
-                      {listing.status.toUpperCase()}
+                      {String(listing.status).toUpperCase()}
                     </span>
                   </div>
 
-                  {/* Type Badge - Inline Logic */}
+                  {/* Type Badge */}
                   <div className="absolute top-2 left-2">
                     <span
                       className={`px-2 py-1 text-xs rounded-full font-medium ${
-                        listing.type === "sell"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-green-100 text-green-800"
+                        listing.type === "sell" ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"
                       }`}
                     >
                       {listing.type === "sell" ? "For Sale" : "For Adoption"}
@@ -255,37 +249,24 @@ const Listings: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Content - Raw Data with Inline Formatting */}
+                {/* Content */}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-lg truncate">
-                      {listing.title}
-                    </h3>
+                    <h3 className="font-semibold text-lg truncate">{listing.title}</h3>
                     <span className="text-orange-600 font-bold">
-                      {/* Inline Price Formatting */}
-                      {listing.type === 'adopt' || !listing.price 
-                        ? 'Free' 
-                        : `₹${listing.price.toLocaleString('en-IN')}`
-                      }
+                      {listing.type === 'adopt' || !listing.price ? 'Free' : `₹${Number(listing.price).toLocaleString('en-IN')}`}
                     </span>
                   </div>
 
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {listing.description}
-                  </p>
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">{listing.description}</p>
 
                   <div className="text-xs text-gray-500 space-y-1 mb-4">
-                    {/* Inline Age Formatting */}
-                    {(listing.age_text || listing.ageText) && (
-                      <div>Age: {listing.age_text || listing.ageText} years</div>
-                    )}
+                    {(listing.age_text || listing.ageText) && <div>Age: {listing.age_text || listing.ageText} years</div>}
                     <div>Location: {listing.place || listing.location}</div>
-                    <div>
-                      Posted: {new Date(listing.created_at || listing.createdAt).toLocaleDateString()}
-                    </div>
+                    <div>Posted: {new Date(listing.created_at || listing.createdAt).toLocaleDateString()}</div>
                   </div>
 
-                  {/* Actions - Using Raw Data */}
+                  {/* Actions */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditListing(listing)}
@@ -296,26 +277,18 @@ const Listings: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() =>
-                        handleStatusToggle(listingId, listing.status)
-                      }
+                      onClick={() => handleStatusToggle(listingId, listing.status)}
                       className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
-                        listing.status === "active"
-                          ? "bg-gray-600 text-white hover:bg-gray-700"
-                          : "bg-green-600 text-white hover:bg-green-700"
+                        listing.status === "active" ? "bg-gray-600 text-white hover:bg-gray-700" : "bg-green-600 text-white hover:bg-green-700"
                       }`}
                       disabled={state.loading}
                     >
-                      {listing.status === "active"
-                        ? "Deactivate"
-                        : "Activate"}
+                      {listing.status === "active" ? "Deactivate" : "Activate"}
                     </button>
 
                     <button
-                      onClick={() => handleDelete(listingId)}
-                      disabled={
-                        state.deletingId === listingId || state.loading
-                      }
+                      onClick={() => askDelete(listingId)}
+                      disabled={state.deletingId === listingId || state.loading}
                       className="bg-red-600 text-white py-2 px-3 rounded text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
                     >
                       {state.deletingId === listingId ? "..." : "Delete"}
@@ -337,6 +310,17 @@ const Listings: React.FC = () => {
           onUpdated={handleListingUpdated}
         />
       )}
+
+      {/* Confirm dialog */}
+      <ConfirmDialog
+        open={!!confirmFor}
+        title="Delete this listing?"
+        message="This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmFor(null)}
+      />
     </div>
   );
 };

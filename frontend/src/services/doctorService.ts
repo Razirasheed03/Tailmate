@@ -1,7 +1,36 @@
+// src/services/doctorService.ts
 import httpClient from "./httpClient";
 
-export const doctorService = {
+// Shared types
+export type UIMode = "video" | "audio" | "inPerson"; // used for filters and rows [web:467]
+export type BookingStatus = "pending" | "paid" | "cancelled" | "failed" | "refunded"; // list badge values [web:467]
 
+// Row shape for list
+export type SessionRow = {
+  _id: string;
+  date: string;           // YYYY-MM-DD
+  time: string;           // HH:mm
+  durationMins: number;   // minutes
+  mode: UIMode;
+  status: BookingStatus;
+  petName: string;
+  notes?: string;
+  patientId: string;
+  patientName?: string;
+  patientEmail?: string;
+}; // exported for pages [web:123]
+
+// Detail shape extends row
+export type SessionDetail = SessionRow & {
+  doctorId: string;
+  slotId?: string | null;
+  amount: number;
+  currency: string;
+  createdAt?: string;
+}; // exported for detail page [web:123]
+
+// Existing doctor APIs
+export const doctorService = {
   uploadCertificate: async (file: File) => {
     const form = new FormData();
     form.append("certificate", file);
@@ -13,6 +42,8 @@ export const doctorService = {
       verification: { status: "pending" | "verified" | "rejected"; rejectionReasons?: string[] };
     };
   },
+  
+
   getVerification: async () => {
     const { data } = await httpClient.get("/doctor/verification");
     return data.data as {
@@ -21,47 +52,84 @@ export const doctorService = {
       rejectionReasons?: string[];
     };
   },
+
   getProfile: async () => {
-const { data } = await httpClient.get("/doctor/profile");
-// server should return { success, data: profile }
-return data.data as {
-displayName?: string;
-bio?: string;
-specialties?: string[];
-experienceYears?: number;
-licenseNumber?: string;
-avatarUrl?: string;
-consultationFee?: number;
+    const { data } = await httpClient.get("/doctor/profile");
+    return data.data as {
+      displayName?: string;
+      bio?: string;
+      specialties?: string[];
+      experienceYears?: number;
+      licenseNumber?: string;
+      avatarUrl?: string;
+      consultationFee?: number;
+    };
+  },
+
+  updateProfile: async (payload: {
+    displayName?: string;
+    bio?: string;
+    specialties?: string[];
+    experienceYears?: number;
+    licenseNumber?: string;
+    avatarUrl?: string;
+    consultationFee?: number;
+  }) => {
+    const { data } = await httpClient.put("/doctor/profile", payload);
+    return data.data as {
+      displayName?: string;
+      bio?: string;
+      specialties?: string[];
+      experienceYears?: number;
+      licenseNumber?: string;
+      avatarUrl?: string;
+      consultationFee?: number;
+    };
+  },
+
+  uploadAvatar: async (file: File) => {
+    const form = new FormData();
+    form.append("avatar", file);
+    const { data } = await httpClient.post("/doctor/profile/avatar", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return (data?.data?.avatarUrl as string) || "";
+  },
+
+  // NEW: sessions list for doctor
+  async listSessions(params: {
+    page?: number;
+    limit?: number;
+    scope?: "upcoming" | "today" | "past";
+    q?: string;
+    mode?: UIMode;
+  }): Promise<{ data: SessionRow[]; total: number }> {
+    const { data } = await httpClient.get<{ success: boolean; data: { items: SessionRow[]; total: number } }>(
+      "/doctor/sessions",
+      { params }
+    );
+    const payload = data?.data || { items: [], total: 0 };
+    return { data: payload.items, total: payload.total };
+  },
+
+  // NEW: single session detail
+  async getSession(id: string): Promise<SessionDetail> {
+    const { data } = await httpClient.get<{ success: boolean; data: SessionDetail }>(`/doctor/sessions/${id}`);
+    return data.data;
+  },
+   async getMyUserId(): Promise<{ userId: string }> {
+    const { data } = await httpClient.get<{ success: boolean; data: { userId: string } }>("/doctor/me-user-id");
+    return data.data;
+  },
 };
-},
-updateProfile: async (payload: {
-displayName?: string;
-bio?: string;
-specialties?: string[];
-experienceYears?: number;
-licenseNumber?: string;
-avatarUrl?: string;
-consultationFee?: number;
-}) => {
-const { data } = await httpClient.put("/doctor/profile", payload);
-// server should return { success, data: updatedProfile }
-return data.data as {
-displayName?: string;
-bio?: string;
-specialties?: string[];
-experienceYears?: number;
-licenseNumber?: string;
-avatarUrl?: string;
-consultationFee?: number;
+
+export const doctorIdService = {
+  async getMyId(): Promise<{ _id: string }> {
+    const { data } = await httpClient.get<{ success: boolean; data: { _id: string } }>(
+      "/doctor/me-id"
+    );
+    return data.data;
+  },
 };
-},
-uploadAvatar: async (file: File) => {
-const form = new FormData();
-form.append("avatar", file);
-const { data } = await httpClient.post("/doctor/profile/avatar", form, {
-headers: { "Content-Type": "multipart/form-data" },
-});
-// expecting { success, data: { avatarUrl } }
-return (data?.data?.avatarUrl as string) || "";
-},
-};
+
+

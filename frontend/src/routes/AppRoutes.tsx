@@ -20,12 +20,21 @@ import PetProfiles from "@/pages/user/Profile/PetProfile";
 import ProfileLayout from "@/components/Layouts/ProfileLayout";
 import NotFound from "@/pages/user/NotFound";
 import { RouteErrorElement } from "@/components/common/ErrorBoundary";
-import ComingSoon from "@/components/common/ComingSoon";
+// import ComingSoon from "@/components/common/ComingSoon";
 import Profile from "@/pages/doctor/Profile";
 import PetCategory from "@/pages/admin/PetCategory";
 import Marketplace from "@/pages/user/Marketplace";
 import ListingDetail from "@/pages/user/ListingDetail";
 import Listings from "@/pages/user/Profile/Listings";
+import Appointments from "@/pages/doctor/Appointments";
+import Vets from "@/pages/user/Vets";
+import VetDetail from "@/pages/user/VetDetail";
+import Checkout from "@/pages/user/Checkout";
+import BookingConfirm from "@/pages/user/BookingConfirm";
+import DoctorSessions from "@/pages/doctor/Sessions";
+import Success from "@/pages/payments/Success";
+import DoctorWallet from "@/pages/doctor/Wallet";
+import SessionDetailPage from "@/pages/doctor/SessionDetail";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -81,7 +90,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/vets",
-    element: <ComingSoon />
+    element: <Vets />
+  },
+  {
+    path:"/vets/:id",
+    element:<VetDetail/>
   },
   {
     path: "/marketplace",
@@ -91,6 +104,16 @@ export const router = createBrowserRouter([
     path:"/marketplace/:id",
     element:<ListingDetail/>
   },
+  {
+    path:"/checkout",
+    element:<Checkout/>
+  },
+  {
+    path:"/booking/confirm",
+    element:<BookingConfirm/>
+  },
+  { path: "/doctor/sessions", element: <DoctorSessions /> },
+{ path: "/payments/Success", element: <Success /> },
   ///admin areaa
   {
     path: "/admin",
@@ -120,12 +143,14 @@ export const router = createBrowserRouter([
   },
   {
     path:"/doctor/appointments",
-    element:<ComingSoon/>
+    element:<Appointments/>
   },
   {
     path:"/doctor/profile",
     element:<Profile/>
   },
+  { path: "/doctor/wallet", element: <DoctorWallet /> },
+  { path: "/doctor/sessions/:id", element: <SessionDetailPage /> },
   // 404 (must be last)
   { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
 ]);

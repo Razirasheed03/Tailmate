@@ -5,6 +5,7 @@ import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { doctorService } from "@/services/doctorService";
 import { useAuth } from "@/context/AuthContext";
 import { Info, Loader2, Camera, Pencil } from "lucide-react";
+import { toast } from "sonner";
 
 type VerificationStatus = "pending" | "verified" | "rejected";
 
@@ -35,6 +36,8 @@ export default function Profile() {
         avatarUrl: "",
         consultationFee: "",
     });
+
+    const [specialtyInput, setSpecialtyInput] = useState(""); // NEW
 
     const [editOpen, setEditOpen] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
@@ -100,13 +103,19 @@ export default function Profile() {
     const setField = <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) =>
         setForm((prev) => ({ ...prev, [key]: value }));
 
-    const onSpecialtiesChange = (value: string) => {
-        const arr = value
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-        setField("specialties", Array.from(new Set(arr)));
+    // ---------------- NEW Specialty handlers ----------------
+    const onAddSpecialty = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" && specialtyInput.trim()) {
+            e.preventDefault();
+            setField("specialties", [...form.specialties, specialtyInput.trim()]);
+            setSpecialtyInput("");
+        }
     };
+
+    const onRemoveSpecialty = (s: string) => {
+        setField("specialties", form.specialties.filter((item) => item !== s));
+    };
+    // ---------------------------------------------------------
 
     const validate = (): string | null => {
         if (!isVerified) return "Profile can be edited after verification";
@@ -148,11 +157,11 @@ export default function Profile() {
     const onPickAvatar = (file: File | null) => {
         if (!file) return;
         if (!/^image\/(png|jpe?g|gif|webp)$/i.test(file.type)) {
-            alert("Please upload an image (png, jpg, jpeg, gif, webp)");
+            toast("Please upload an image (png, jpg, jpeg, gif, webp)");
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            alert("Image too large. Max 5MB.");
+            toast("Image too large. Max 5MB.");
             return;
         }
         (async () => {
@@ -162,7 +171,7 @@ export default function Profile() {
                 await doctorService.updateProfile({ avatarUrl: url }); // persist immediately
                 setField("avatarUrl", url);
             } catch (e: any) {
-                alert(e?.response?.data?.message || "Avatar upload failed");
+                toast(e?.response?.data?.message || "Avatar upload failed");
             } finally {
                 setAvatarUploading(false);
             }
@@ -348,16 +357,35 @@ export default function Profile() {
                                                         />
                                                     </div>
 
-                                                    <div className="space-y-2">
+                                                    {/* Specialties tag input */}
+                                                    <div className="space-y-2 md:col-span-2">
                                                         <label className="text-sm font-medium">Specialties</label>
-                                                        <input
-                                                            type="text"
-                                                            value={form.specialties.join(",")}
-                                                            onChange={(e) => onSpecialtiesChange(e.target.value)}
-                                                            disabled={!isVerified || saving}
-                                                            className="w-full border rounded-lg px-3 py-2 text-sm"
-                                                            placeholder="Cardiology, Pediatrics, Telemedicine"
-                                                        />
+                                                        <div className="flex flex-wrap gap-2 border rounded-lg px-3 py-2">
+                                                            {form.specialties.map((s) => (
+                                                                <span
+                                                                    key={s}
+                                                                    className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center gap-1"
+                                                                >
+                                                                    {s}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => onRemoveSpecialty(s)}
+                                                                        className="text-gray-500 hover:text-red-500"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </span>
+                                                            ))}
+                                                            <input
+                                                                type="text"
+                                                                value={specialtyInput}
+                                                                onChange={(e) => setSpecialtyInput(e.target.value)}
+                                                                onKeyDown={onAddSpecialty}
+                                                                disabled={!isVerified || saving}
+                                                                className="flex-1 min-w-[120px] border-0 focus:ring-0 text-sm"
+                                                                placeholder="Type & press Enter"
+                                                            />
+                                                        </div>
                                                     </div>
 
                                                     <div className="space-y-2">
@@ -406,21 +434,21 @@ export default function Profile() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t">
+                                            <div className="flex justify-end gap-3 px-5 py-4 border-t">
                                                 <Button
-                                                    variant="outline"
-                                                    className="border-[#E5E7EB] bg-white hover:bg-white/90"
                                                     onClick={() => setEditOpen(false)}
+                                                    variant="outline"
+                                                    disabled={saving}
                                                 >
                                                     Cancel
                                                 </Button>
-                                                <Button onClick={onSave} disabled={!isVerified || saving} className="bg-[#0EA5E9] hover:bg-[#0284C7]">
+                                                <Button onClick={onSave} disabled={!isVerified || saving}>
                                                     {saving ? (
-                                                        <span className="inline-flex items-center gap-2">
+                                                        <span className="flex items-center gap-1">
                                                             <Loader2 className="w-4 h-4 animate-spin" /> Saving...
                                                         </span>
                                                     ) : (
-                                                        "Save changes"
+                                                        "Save"
                                                     )}
                                                 </Button>
                                             </div>

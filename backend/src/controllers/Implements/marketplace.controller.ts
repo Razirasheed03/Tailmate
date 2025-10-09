@@ -1,6 +1,7 @@
 // src/controllers/marketplace.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import { MarketplaceService } from '../../services/implements/marketplace.service';
+import { HttpStatus } from '../../constants/httpStatus';
 
 const svc = new MarketplaceService();
 
@@ -12,11 +13,11 @@ export class MarketplaceController {
       console.log('Request body:', req.body); // DEBUG
       
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'No authenticated user' });
+        return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: 'No authenticated user' });
       }
       
       const listing = await svc.create(userId, req.body || {});
-      res.status(201).json({ success: true, data: listing });
+      res.status(HttpStatus.CREATED).json({ success: true, data: listing });
     } catch (err) { 
       console.error('Create listing error:', err); // DEBUG
       next(err); 
@@ -60,7 +61,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       const userId = (req as any).user?._id?.toString();
       const id = req.params.id;
       const updated = await svc.update(userId, id, req.body || {});
-      if (!updated) return res.status(404).json({ success: false, message: 'Not found' });
+      if (!updated) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
       res.json({ success: true, data: updated });
     } catch (err) { next(err); }
   };
@@ -72,11 +73,11 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       
       const validStatuses = ['active', 'reserved', 'closed', 'inactive', 'sold', 'adopted'];
       if (!validStatuses.includes(status)) {
-        return res.status(400).json({ success: false, message: 'Invalid status' });
+        return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid status' });
       }
       
       const updated = await svc.changeStatus(userId, id, status);
-      if (!updated) return res.status(404).json({ success: false, message: 'Not found' });
+      if (!updated) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
       res.json({ success: true, data: updated });
     } catch (err) { next(err); }
   };
@@ -88,11 +89,11 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       const status = req.body?.status as 'sold' | 'adopted';
       
       if (!['sold', 'adopted'].includes(status)) {
-        return res.status(400).json({ success: false, message: 'Invalid completion status' });
+        return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid completion status' });
       }
       
       const updated = await svc.markAsComplete(userId, id, status);
-      if (!updated) return res.status(404).json({ success: false, message: 'Not found' });
+      if (!updated) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
       res.json({ success: true, data: updated });
     } catch (err) { next(err); }
   };
@@ -102,8 +103,8 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       const userId = (req as any).user?._id?.toString();
       const id = req.params.id;
       const ok = await svc.remove(userId, id);
-      if (!ok) return res.status(404).json({ success: false, message: 'Not found' });
-      res.status(204).send();
+      if (!ok) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
+      res.status(HttpStatus.NO_CONTENT).send();
     } catch (err) { next(err); }
   };
 }

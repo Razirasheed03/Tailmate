@@ -4,6 +4,34 @@ import { IUserRepository } from "../../repositories/interfaces/user.repository.i
 import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { AdminRepository } from "../../repositories/implements/admin.repository";
 
+export type OkMessage = { message: string };
+export type PageMeta = { total: number; page: number; totalPages: number };
+export type ListDoctorsParams = {
+  page: number;
+  limit: number;
+  status?: string;
+  search?: string;
+};
+export type DoctorVerified = {
+  status: "verified";
+  verifiedAt: string | Date | null;
+};
+export type DoctorRejected = { status: "rejected"; rejectionReasons: string[] };
+export type CreatePetCategoryPayload = {
+  name: string;
+  iconKey?: string;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+};
+export type UpdatePetCategoryPayload = Partial<{
+  name: string;
+  iconKey: string;
+  description: string;
+  isActive: boolean;
+  sortOrder: number;
+}>;
+
 export class AdminService implements IAdminService {
   constructor(
     private _userRepo: IUserRepository,
@@ -23,28 +51,32 @@ export class AdminService implements IAdminService {
     return await this._userRepo.getAllUsers(page, limit, search);
   }
 
-  async blockUser(userId: string) {
+  async blockUser(userId: string): Promise<OkMessage> {
     await this._userRepo.updateUserBlockStatus(userId, true);
     return { message: "User blocked successfully" };
   }
 
-  async unblockUser(userId: string) {
+  async unblockUser(userId: string): Promise<OkMessage> {
     await this._userRepo.updateUserBlockStatus(userId, false);
     return { message: "User unblocked successfully" };
   }
 
-  async deleteUser(userId: string) {
+  async deleteUser(userId: string): Promise<OkMessage> {
     await this._userRepo.deleteUser(userId);
     return { message: "User deleted successfully" };
   }
 
-  async getUserStats() {
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    totalDoctors: number;
+    blockedUsers: number;
+  }> {
     const stats = await this._userRepo.getUserStats();
     const { totalUsers, totalDoctors, blockedUsers } = stats;
     return { totalUsers, totalDoctors, blockedUsers };
   }
 
-  async listDoctors(page = 1, limit = 10, status = "", search = "") {
+  async listDoctors(page = 1, limit = 10, status = "", search = ""): Promise<any>{
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
     return this._adminRepo.listDoctors({
@@ -65,35 +97,59 @@ export class AdminService implements IAdminService {
     };
   }
 
-  async rejectDoctor(userId: string, reviewerId: string, reasons: string[]) {
+  async rejectDoctor(userId: string, reviewerId: string, reasons: string[]) : Promise<DoctorRejected>{
     if (!userId) throw new Error("userId required");
     if (!reviewerId) throw new Error("reviewerId required");
     if (!Array.isArray(reasons) || reasons.length === 0)
       throw new Error("At least one reason is required");
-    const updated = await this._adminRepo.rejectDoctor(userId, reviewerId, reasons);
+    const updated = await this._adminRepo.rejectDoctor(
+      userId,
+      reviewerId,
+      reasons
+    );
     return {
       status: updated.verification?.status as "rejected",
       rejectionReasons: updated.verification?.rejectionReasons || [],
     };
   }
-  async getDoctorDetail(userId: string) {
-  if (!userId) throw new Error("userId required");
-  return this._adminRepo.getDoctorDetail(userId);
-}
-  listPetCategories(page: number, limit: number, search?: string, active?: string) {
+  async getDoctorDetail(userId: string)  :Promise<any>{
+    if (!userId) throw new Error("userId required");
+    return this._adminRepo.getDoctorDetail(userId);
+  }
+  listPetCategories(
+    page: number,
+    limit: number,
+    search?: string,
+    active?: string
+  ) {
     return this._adminRepo.listPetCategories({ page, limit, search, active });
   }
 
-  async createPetCategory(payload: { name: string; iconKey?: string; description?: string; isActive?: boolean; sortOrder?: number }) {
-    if (!payload?.name || !payload.name.trim()) throw new Error('name is required');
+  async createPetCategory(payload: {
+    name: string;
+    iconKey?: string;
+    description?: string;
+    isActive?: boolean;
+    sortOrder?: number;
+  }) {
+    if (!payload?.name || !payload.name.trim())
+      throw new Error("name is required");
     return this._adminRepo.createPetCategory(payload);
   }
 
-  updatePetCategory(id: string, payload: Partial<{ name: string; iconKey: string; description: string; isActive: boolean; sortOrder: number }>) {
+  updatePetCategory(
+    id: string,
+    payload: Partial<{
+      name: string;
+      iconKey: string;
+      description: string;
+      isActive: boolean;
+      sortOrder: number;
+    }>
+  ) {
     return this._adminRepo.updatePetCategory(id, payload);
   }
-  deletePetCategory(id: string) {
-  return this._adminRepo.deletePetCategory(id);
+  deletePetCategory(id: string):  Promise<boolean> {
+    return this._adminRepo.deletePetCategory(id);
+  }
 }
-}
-
