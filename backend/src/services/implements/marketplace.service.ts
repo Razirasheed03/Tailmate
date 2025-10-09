@@ -1,101 +1,142 @@
 // src/services/implements/marketplace.service.ts
-import { MarketplaceRepository } from '../../repositories/implements/marketplace.repository';
+import { MarketplaceRepository } from "../../repositories/implements/marketplace.repository";
+
+export type MarketplaceCreatePayload = {
+  title: string;
+  description: string;
+  photos: string[];
+  price: number | null;
+  ageText?: string;
+  place: string;
+  contact: string;
+}; 
+
+export type MarketplaceItem = any; 
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
+
+export type ListPublicParams = {
+  page: number;
+  limit: number;
+  type?: string;
+  q?: string;
+  place?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  excludeFree?: boolean;
+  sortBy?: string;
+}; 
+
+export type MarketStatus =
+  | "active"
+  | "reserved"
+  | "closed"
+  | "inactive"
+  | "sold"
+  | "adopted";
 
 export class MarketplaceService {
   constructor(private readonly _repo = new MarketplaceRepository()) {}
 
-  async create(userId: string, payload: {
-    title: string;
-    description: string;
-    photos: string[];
-    price: number | null;
-    ageText?: string;
-    place: string;
-    contact: string;
-  }) {
-    if (!payload.title?.trim()) throw new Error('Title is required');
-    if (!payload.description?.trim()) throw new Error('Description is required');
-    if (!payload.place?.trim()) throw new Error('Place is required');
-    if (!payload.contact?.trim()) throw new Error('Contact is required');
-    if (!Array.isArray(payload.photos)) payload.photos = [];
-    if (payload.photos.length > 6) throw new Error('Max 6 photos');
-    
+  async create(userId: string, payload: MarketplaceCreatePayload): Promise<MarketplaceItem> {
+    if (!payload.title?.trim()) throw new Error("Title is required"); 
+    if (!payload.description?.trim()) throw new Error("Description is required"); 
+    if (!payload.place?.trim()) throw new Error("Place is required"); 
+    if (!payload.contact?.trim()) throw new Error("Contact is required"); 
+    if (!Array.isArray(payload.photos)) payload.photos = []; 
+    if (payload.photos.length > 6) throw new Error("Max 6 photos"); 
 
     return this._repo.create(userId, {
       title: payload.title.trim(),
       description: payload.description.trim(),
       photos: payload.photos,
       price: payload.price ?? null,
-      ageText: payload.ageText?.trim() || '',
+      ageText: payload.ageText?.trim() || "",
       place: payload.place.trim(),
       contact: payload.contact.trim(),
     });
   }
 
-listPublic(
-  page: number, 
-  limit: number, 
-  type?: string, 
-  q?: string, 
-  place?: string, 
-  priceOptions?: { 
-    minPrice?: number; 
-    maxPrice?: number; 
-    excludeFree?: boolean; 
-    sortBy?: string; 
-  }
-) {
-  page = Math.max(1, Number(page) || 1);
-  limit = Math.min(50, Math.max(1, Number(limit) || 10));
-  
-  return this._repo.listPublic({ 
-    page, 
-    limit, 
-    type, 
-    q, 
-    place, 
-    minPrice: priceOptions?.minPrice,
-    maxPrice: priceOptions?.maxPrice,
-    excludeFree: priceOptions?.excludeFree,
-    sortBy: priceOptions?.sortBy
-  });
-}
-
-  listMine(userId: string, page: number, limit: number) {
+  async listPublic(
+    page: number,
+    limit: number,
+    type?: string,
+    q?: string,
+    place?: string,
+    priceOptions?: {
+      minPrice?: number;
+      maxPrice?: number;
+      excludeFree?: boolean;
+      sortBy?: string;
+    }
+  ): Promise<Paginated<MarketplaceItem>> {
     page = Math.max(1, Number(page) || 1);
-    limit = Math.min(50, Math.max(1, Number(limit) || 10));
-    return this._repo.listMine(userId, page, limit);
+    limit = Math.min(50, Math.max(1, Number(limit) || 10)); 
+
+    const res = await this._repo.listPublic({
+      page,
+      limit,
+      type,
+      q,
+      place,
+      minPrice: priceOptions?.minPrice,
+      maxPrice: priceOptions?.maxPrice,
+      excludeFree: priceOptions?.excludeFree,
+      sortBy: priceOptions?.sortBy,
+    } as ListPublicParams);
+
+    return {
+      items: res.data,
+      total: res.total,
+      page: res.page,
+      totalPages: res.totalPages,
+    };
   }
 
-  update(userId: string, id: string, patch: any) {
-    if (patch?.title && String(patch.title).trim().length < 3) throw new Error('Title too short');
-    if (patch?.description && String(patch.description).trim().length < 10) throw new Error('Description too short');
-    if ('photos' in patch && Array.isArray(patch.photos) && patch.photos.length > 6) throw new Error('Max 6 photos');
+  async listMine(userId: string, page: number, limit: number): Promise<Paginated<MarketplaceItem>> {
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.min(50, Math.max(1, Number(limit) || 10)); 
+    const res = await this._repo.listMine(userId, page, limit); 
+    return {
+      items: res.data,
+      total: res.total,
+      page: res.page,
+      totalPages: res.totalPages,
+    }; 
+  }
+
+  update(userId: string, id: string, patch: Partial<MarketplaceCreatePayload>): Promise<MarketplaceItem> {
+    if (patch?.title && String(patch.title).trim().length < 3) throw new Error("Title too short"); 
+    if (patch?.description && String(patch.description).trim().length < 10)
+      throw new Error("Description too short");
+    if ("photos" in patch && Array.isArray(patch.photos) && patch.photos.length > 6)
+      throw new Error("Max 6 photos");
     return this._repo.update(userId, id, patch);
   }
 
-  // ✅ UPDATED: Support both old and new status values
-  changeStatus(userId: string, id: string, status: 'active' | 'reserved' | 'closed' | 'inactive' | 'sold' | 'adopted') {
-    // Map new frontend status values to backend values
-    const statusMap: Record<string, 'active' | 'reserved' | 'closed'> = {
-      'active': 'active',
-      'inactive': 'reserved', // inactive maps to reserved
-      'sold': 'closed',
-      'adopted': 'closed',
-      'reserved': 'reserved',
-      'closed': 'closed'
-    };
-    
-    const mappedStatus = statusMap[status] || 'active';
-    return this._repo.changeStatus(userId, id, mappedStatus);
+  changeStatus(userId: string, id: string, status: MarketStatus): Promise<MarketplaceItem> {
+    const statusMap: Record<MarketStatus, "active" | "reserved" | "closed"> = {
+      active: "active",
+      inactive: "reserved",
+      sold: "closed",
+      adopted: "closed",
+      reserved: "reserved",
+      closed: "closed",
+    }; 
+
+    const mappedStatus = statusMap[status] ?? "active";
+    return this._repo.changeStatus(userId, id, mappedStatus); 
   }
 
-  // ✅ ADDED: New method for completion status
-  markAsComplete(userId: string, id: string, status: 'sold' | 'adopted') {
-    return this._repo.changeStatus(userId, id, 'closed');
+  markAsComplete(userId: string, id: string, status: "sold" | "adopted"): Promise<MarketplaceItem> {
+    return this._repo.changeStatus(userId, id, "closed");
   }
 
-  remove(userId: string, id: string) {
+  remove(userId: string, id: string): Promise<boolean> {
     return this._repo.remove(userId, id);
   }
 }

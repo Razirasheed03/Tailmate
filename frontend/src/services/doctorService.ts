@@ -42,6 +42,7 @@ export const doctorService = {
       verification: { status: "pending" | "verified" | "rejected"; rejectionReasons?: string[] };
     };
   },
+  
 
   getVerification: async () => {
     const { data } = await httpClient.get("/doctor/verification");
@@ -116,4 +117,19 @@ export const doctorService = {
     const { data } = await httpClient.get<{ success: boolean; data: SessionDetail }>(`/doctor/sessions/${id}`);
     return data.data;
   },
+   async getMyUserId(): Promise<{ userId: string }> {
+    const { data } = await httpClient.get<{ success: boolean; data: { userId: string } }>("/doctor/me-user-id");
+    return data.data;
+  },
 };
+
+export const doctorIdService = {
+  async getMyId(): Promise<{ _id: string }> {
+    const { data } = await httpClient.get<{ success: boolean; data: { _id: string } }>(
+      "/doctor/me-id"
+    );
+    return data.data;
+  },
+};
+
+

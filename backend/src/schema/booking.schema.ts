@@ -70,6 +70,9 @@ const BookingSchema = new Schema<BookingAttrs>(
   { timestamps: true }
 );
 
-BookingSchema.index({ patientId: 1, doctorId: 1, date: 1, time: 1, status: 1 });
+BookingSchema.index(
+  { doctorId: 1, date: 1, time: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: ["pending", "paid"] } } }
+);
 
 export const Booking = model<BookingAttrs>("Booking", BookingSchema);

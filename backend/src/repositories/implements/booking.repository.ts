@@ -17,7 +17,7 @@ export class BookingRepository {
     currency: string;
     petName: string;
     notes?: string;
-    paymentMethod: "upi" | "card" | "netbanking" | "wallet";
+    paymentMethod: "card" | "wallet";
     paymentProvider?: string;
     paymentSessionId?: string;
     paymentRedirectUrl?: string;

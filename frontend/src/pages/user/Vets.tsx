@@ -72,7 +72,6 @@ export default function Vets() {
               <option value="Cats">Cats</option>
               <option value="Exotic Pets">Exotic Pets</option>
               <option value="Emergency Care">Emergency Care</option>
-              {/* add more as needed */}
             </select>
             <button
               type="submit"
@@ -83,7 +82,6 @@ export default function Vets() {
           </form>
         </header>
 
-        {/* Grid */}
         {items.length === 0 && !loading ? (
           <div className="text-sm text-gray-600">No doctors found.</div>
         ) : (
@@ -107,15 +105,6 @@ export default function Vets() {
                       {d.experienceYears ?? 0} years experience
                     </div>
                   </div>
-                  {/* <span
-                    className={`ml-auto text-xs px-2 py-1 rounded ${
-                      d.isOnline
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {d.isOnline ? "Online" : "Offline"}
-                  </span> */}
                 </div>
 
                 <div className="mt-3">
@@ -158,10 +147,8 @@ export default function Vets() {
                     <span className="text-gray-500"> per session</span>
                   </div>
                   <div className="flex gap-2">
-                <div className="flex gap-2">
-<Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm border rounded">Profile</Link>
-<Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">Book</Link>
-</div>
+                    <Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm border rounded">Profile</Link>
+                    <Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">Book</Link>
                   </div>
                 </div>
               </article>
