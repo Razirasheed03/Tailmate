@@ -16,10 +16,11 @@ const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID!,
 });
 export class AuthService implements IAuthService {
-  constructor(private _userRepo: IUserRepository) { }
+  constructor(private _userRepo: IUserRepository) {}
 
-
-  signup = async (user: Omit<SignupInput, "confirmPassword">): Promise<{ success: boolean, message: string }> => {
+  signup = async (
+    user: Omit<SignupInput, "confirmPassword">
+  ): Promise<{ success: boolean; message: string }> => {
     const existing = await this._userRepo.findByEmail(user.email);
     if (existing) throw new Error("User already exists");
 
@@ -32,17 +33,27 @@ export class AuthService implements IAuthService {
       key,
       300,
       JSON.stringify({
-        ...user, password: hashedPassword,
-        isBlocked: false, otp, createdAt
+        ...user,
+        password: hashedPassword,
+        isBlocked: false,
+        otp,
+        createdAt,
       })
     );
-    console.log(result, otp)
+    console.log(result, otp);
     await sendOtpEmail(user.email, otp);
 
     return { success: true, message: "OTP sent to email" };
   };
 
-  verifyOtp = async (email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
+  verifyOtp = async (
+    email: string,
+    otp: string
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: IUserModel;
+  }> => {
     const key = `signup:${email}`;
     const redisData = await redisClient.get(key);
     if (!redisData) throw new Error("OTP expired or not found");
@@ -52,13 +63,16 @@ export class AuthService implements IAuthService {
     }
     if (parsed.otp !== otp) throw new Error("Invalid OTP");
 
-
     const { otp: _, ...userData } = parsed;
     const createdUser = await this._userRepo.createUser(userData);
-    console.log("VALUES for verification:",
-      "Submitted OTP:", otp,
-      "Redis object:", parsed,
-      "CreatedAt diff (ms):", Date.now() - parsed.createdAt
+    console.log(
+      "VALUES for verification:",
+      "Submitted OTP:",
+      otp,
+      "Redis object:",
+      parsed,
+      "CreatedAt diff (ms):",
+      Date.now() - parsed.createdAt
     );
 
     const accessToken = generateAccessToken(createdUser.id.toString());
@@ -84,12 +98,14 @@ export class AuthService implements IAuthService {
     parsed.otp = otp;
     parsed.createdAt = Date.now();
     await redisClient.setEx(key, 300, JSON.stringify(parsed)); //5 min for resended otp set aavan.
-    console.log("parsed.createdAT", parsed.createdAt)
-    console.log(otp)
+    console.log("parsed.createdAT", parsed.createdAt);
+    console.log(otp);
 
     await sendOtpEmail(email, otp);
   };
-  refreshToken = async (refreshToken: string): Promise<{ accessToken: string }> => {
+  refreshToken = async (
+    refreshToken: string
+  ): Promise<{ accessToken: string }> => {
     if (!refreshToken) throw new Error("No refresh token provided");
 
     let payload: string | JwtPayload;
@@ -109,13 +125,21 @@ export class AuthService implements IAuthService {
 
     // Check against Redis
     const storedToken = await redisClient.get(`refresh:${userId}`);
-    if (storedToken !== refreshToken) throw new Error("Refresh token is revoked or does not match");
+    if (storedToken !== refreshToken)
+      throw new Error("Refresh token is revoked or does not match");
 
     // Generate new access token
     const accessToken = generateAccessToken(userId);
     return { accessToken };
   };
-  login = async (email: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
+  login = async (
+    email: string,
+    password: string
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: IUserModel;
+  }> => {
     const user = await this._userRepo.findByEmail(email);
     if (!user) throw new Error("Invalid email or password");
 
@@ -128,11 +152,21 @@ export class AuthService implements IAuthService {
     const accessToken = generateAccessToken(userId);
     const refreshToken = generateRefreshToken(userId);
 
-    await redisClient.setEx(`refresh:${userId}`, 7 * 24 * 60 * 60, refreshToken);
+    await redisClient.setEx(
+      `refresh:${userId}`,
+      7 * 24 * 60 * 60,
+      refreshToken
+    );
 
     return { accessToken, refreshToken, user };
   };
-  googleLogin = async (idToken: string): Promise<{ accessToken: string; refreshToken: string; user: IUserModel }> => {
+  googleLogin = async (
+    idToken: string
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: IUserModel;
+  }> => {
     if (!idToken) throw new Error("Missing Google ID token");
 
     // Verify Google ID token
@@ -173,11 +207,14 @@ export class AuthService implements IAuthService {
     const accessToken = generateAccessToken(userId);
     const refreshToken = generateRefreshToken(userId);
 
-    await redisClient.setEx(`refresh:${userId}`, 7 * 24 * 60 * 60, refreshToken);
+    await redisClient.setEx(
+      `refresh:${userId}`,
+      7 * 24 * 60 * 60,
+      refreshToken
+    );
 
     return { accessToken, refreshToken, user };
   };
-
 
   forgotPassword = async (email: string): Promise<void> => {
     const user = await this._userRepo.findByEmail(email);
@@ -185,7 +222,10 @@ export class AuthService implements IAuthService {
 
     // Generate token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
     const expires = new Date(Date.now() + 3600000); // 1 hour
 
     // Save to user
@@ -203,13 +243,13 @@ export class AuthService implements IAuthService {
     // NOTE: sendOtpEmail could be renamed for generic mail
   };
 
-  resetPassword = async (userId: string, token: string, newPassword: string): Promise<void> => {
+  resetPassword = async (
+    userId: string,
+    token: string,
+    newPassword: string
+  ): Promise<void> => {
     const user = await this._userRepo.findById(userId);
-    if (
-      !user ||
-      !user.resetPasswordToken ||
-      !user.resetPasswordExpires
-    )
+    if (!user || !user.resetPasswordToken || !user.resetPasswordExpires)
       throw new Error("Invalid or expired reset link");
 
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -225,6 +265,4 @@ export class AuthService implements IAuthService {
     user.resetPasswordExpires = undefined;
     await (user as any).save();
   };
-
-
 }
