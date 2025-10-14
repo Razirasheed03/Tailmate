@@ -76,7 +76,12 @@ export class AdminService implements IAdminService {
     return { totalUsers, totalDoctors, blockedUsers };
   }
 
-  async listDoctors(page = 1, limit = 10, status = "", search = ""): Promise<any>{
+  async listDoctors(
+    page = 1,
+    limit = 10,
+    status = "",
+    search = ""
+  ): Promise<any> {
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
     return this._adminRepo.listDoctors({
@@ -97,7 +102,11 @@ export class AdminService implements IAdminService {
     };
   }
 
-  async rejectDoctor(userId: string, reviewerId: string, reasons: string[]) : Promise<DoctorRejected>{
+  async rejectDoctor(
+    userId: string,
+    reviewerId: string,
+    reasons: string[]
+  ): Promise<DoctorRejected> {
     if (!userId) throw new Error("userId required");
     if (!reviewerId) throw new Error("reviewerId required");
     if (!Array.isArray(reasons) || reasons.length === 0)
@@ -112,7 +121,7 @@ export class AdminService implements IAdminService {
       rejectionReasons: updated.verification?.rejectionReasons || [],
     };
   }
-  async getDoctorDetail(userId: string)  :Promise<any>{
+  async getDoctorDetail(userId: string): Promise<any> {
     if (!userId) throw new Error("userId required");
     return this._adminRepo.getDoctorDetail(userId);
   }
@@ -149,7 +158,7 @@ export class AdminService implements IAdminService {
   ) {
     return this._adminRepo.updatePetCategory(id, payload);
   }
-  deletePetCategory(id: string):  Promise<boolean> {
+  deletePetCategory(id: string): Promise<boolean> {
     return this._adminRepo.deletePetCategory(id);
   }
 }
