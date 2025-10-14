@@ -1,11 +1,20 @@
 // src/services/adminApiServices.ts
-import httpClient from './httpClient';
-import type { UserListResponse, UserStats } from '@/types/user';
-import type { AdminPetCategory, AdminCategoryListResponse } from '../types/adminCategory.types';
+import httpClient from "./httpClient";
+import type { UserListResponse, UserStats } from "@/types/user";
+import type {
+  AdminPetCategory,
+  AdminCategoryListResponse,
+} from "../types/adminCategory.types";
 
 export const adminService = {
-  getUsers: async (page = 1, limit = 10, search = ''): Promise<UserListResponse> => {
-    const response = await httpClient.get(`/admin/users`, { params: { page, limit, search } });
+  getUsers: async (
+    page = 1,
+    limit = 10,
+    search = ""
+  ): Promise<UserListResponse> => {
+    const response = await httpClient.get(`/admin/users`, {
+      params: { page, limit, search },
+    });
     const payload = response.data?.data || response.data;
     return payload as UserListResponse;
   },
@@ -26,26 +35,46 @@ export const adminService = {
   },
 
   getUserStats: async (): Promise<UserStats> => {
-    const response = await httpClient.get('/admin/stats');
+    const response = await httpClient.get("/admin/stats");
     const payload = response.data?.data || response.data;
     return payload as UserStats;
   },
 };
 
 export const adminCategoryService = {
-  list: async (page = 1, limit = 10, search = '', active?: boolean): Promise<AdminCategoryListResponse> => {
+  list: async (
+    page = 1,
+    limit = 10,
+    search = "",
+    active?: boolean
+  ): Promise<AdminCategoryListResponse> => {
     const params: any = { page, limit, search };
-    if (typeof active === 'boolean') params.active = String(active);
-    const res = await httpClient.get('/admin/pet-categories', { params });
+    if (typeof active === "boolean") params.active = String(active);
+    const res = await httpClient.get("/admin/pet-categories", { params });
     return res.data?.data as AdminCategoryListResponse;
   },
 
-  create: async (payload: { name: string; iconKey?: string; description?: string; isActive?: boolean; sortOrder?: number }): Promise<AdminPetCategory> => {
-    const res = await httpClient.post('/admin/pet-categories', payload);
+  create: async (payload: {
+    name: string;
+    iconKey?: string;
+    description?: string;
+    isActive?: boolean;
+    sortOrder?: number;
+  }): Promise<AdminPetCategory> => {
+    const res = await httpClient.post("/admin/pet-categories", payload);
     return res.data?.data as AdminPetCategory;
   },
 
-  update: async (id: string, payload: Partial<{ name: string; iconKey: string; description: string; isActive: boolean; sortOrder: number }>): Promise<AdminPetCategory> => {
+  update: async (
+    id: string,
+    payload: Partial<{
+      name: string;
+      iconKey: string;
+      description: string;
+      isActive: boolean;
+      sortOrder: number;
+    }>
+  ): Promise<AdminPetCategory> => {
     const res = await httpClient.patch(`/admin/pet-categories/${id}`, payload);
     return res.data?.data as AdminPetCategory;
   },
