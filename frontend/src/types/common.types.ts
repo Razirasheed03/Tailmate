@@ -1,5 +1,13 @@
-// Base response interface
-export interface ApiResponse<T = any> {
+// src/types/common.types.ts
+
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: any;
+  field?: string;
+}
+
+export interface CommonApiResponse<T = any> {
   success: boolean;
   message: string;
   data?: T;
@@ -8,14 +16,7 @@ export interface ApiResponse<T = any> {
   requestId?: string;
 }
 
-// Error details interface
-export interface ApiError {
-  code: string;
-  message: string;
-  details?: any;
-  field?: string;
-}
-export interface PaginatedResponse<T> {
+export interface CommonPaginatedResponse<T> {
   items: T[];
   pagination: {
     page: number;
@@ -27,7 +28,6 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// Success response helper type
 export type SuccessResponse<T> = {
   success: true;
   message: string;
@@ -36,7 +36,6 @@ export type SuccessResponse<T> = {
   requestId?: string;
 };
 
-// Error response helper type
 export type ErrorResponse = {
   success: false;
   message: string;

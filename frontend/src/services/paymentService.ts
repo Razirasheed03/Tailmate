@@ -1,8 +1,7 @@
 // src/services/paymentService.ts
 import httpClient from "./httpClient";
 
-export type CreatePaymentSessionReq = { bookingId: string };
-export type CreatePaymentSessionRes = { url: string };
+import type {  CreatePaymentSessionRes } from "@/types/payment.types";
 
 export const paymentService = {
   async createCheckoutSession(bookingId: string): Promise<CreatePaymentSessionRes> {
