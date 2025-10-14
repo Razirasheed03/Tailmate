@@ -1,21 +1,4 @@
 
-// // src/types/domain.types.ts - Domain layer models
-// export interface DomainListing {
-//   id: string;
-//   title: string;
-//   description: string;
-//   photos: string[];
-//   price: number | null;
-//   type: 'sell' | 'adopt';
-//   status: 'active' | 'inactive' | 'sold' | 'adopted';
-//   ageText?: number; // Domain uses camelCase
-//   location: string;
-//   contactInfo: string;
-//   ownerId: string;
-//   createdAt: Date; // Domain uses Date objects
-//   updatedAt: Date;
-// }
-
 // // src/types/ui.types.ts - UI layer models
 // export interface UIListing {
 //   id: string;
