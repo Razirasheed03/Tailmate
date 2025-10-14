@@ -16,12 +16,19 @@ export class AuthController {
       return ResponseHelper.badRequest(
         res,
         parsed.error.issues[0]?.message || HttpResponse.VALIDATION_FAILED,
-        parsed.error.issues.map((i) => ({ message: i.message, path: i.path?.join(".") }))
+        parsed.error.issues.map((i) => ({
+          message: i.message,
+          path: i.path?.join("."),
+        }))
       );
     }
     try {
       const result = await this._authService.signup(parsed.data);
-      return ResponseHelper.created(res, result, HttpResponse.USER_CREATION_SUCCESS);
+      return ResponseHelper.created(
+        res,
+        result,
+        HttpResponse.USER_CREATION_SUCCESS
+      );
     } catch (err) {
       next(err);
     }
@@ -30,9 +37,14 @@ export class AuthController {
   verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, otp } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.verifyOtp(email, otp);
+      const { accessToken, refreshToken, user } =
+        await this._authService.verifyOtp(email, otp);
       CookieHelper.setRefreshToken(res, refreshToken);
-      return ResponseHelper.ok(res, { accessToken, user }, HttpResponse.RESOURCE_FOUND);
+      return ResponseHelper.ok(
+        res,
+        { accessToken, user },
+        HttpResponse.RESOURCE_FOUND
+      );
     } catch (err) {
       next(err);
     }
@@ -55,7 +67,11 @@ export class AuthController {
         return ResponseHelper.unauthorized(res, HttpResponse.NO_TOKEN);
       }
       const { accessToken } = await this._authService.refreshToken(token);
-      return ResponseHelper.ok(res, { accessToken }, HttpResponse.RESOURCE_FOUND);
+      return ResponseHelper.ok(
+        res,
+        { accessToken },
+        HttpResponse.RESOURCE_FOUND
+      );
     } catch (err) {
       next(err);
     }
@@ -64,20 +80,36 @@ export class AuthController {
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.login(email, password);
+      const { accessToken, refreshToken, user } = await this._authService.login(
+        email,
+        password
+      );
       CookieHelper.setRefreshToken(res, refreshToken);
-      return ResponseHelper.ok(res, { accessToken, user }, HttpResponse.RESOURCE_FOUND);
+      return ResponseHelper.ok(
+        res,
+        { accessToken, user },
+        HttpResponse.RESOURCE_FOUND
+      );
     } catch (err) {
       next(err);
     }
   };
 
-  googleLoginWithToken = async (req: Request, res: Response, next: NextFunction) => {
+  googleLoginWithToken = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { idToken } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.googleLogin(idToken);
+      const { accessToken, refreshToken, user } =
+        await this._authService.googleLogin(idToken);
       CookieHelper.setRefreshToken(res, refreshToken);
-      return ResponseHelper.ok(res, { accessToken, user }, HttpResponse.GOOGLE_LOGIN_SUCCESS);
+      return ResponseHelper.ok(
+        res,
+        { accessToken, user },
+        HttpResponse.GOOGLE_LOGIN_SUCCESS
+      );
     } catch (err) {
       next(err);
     }
@@ -121,7 +153,8 @@ export class AuthController {
         return ResponseHelper.badRequest(res, "No id_token from Google");
       }
 
-      const { accessToken, refreshToken, user } = await this._authService.googleLogin(idToken);
+      const { accessToken, refreshToken, user } =
+        await this._authService.googleLogin(idToken);
       CookieHelper.setRefreshToken(res, refreshToken);
 
       const frontendUrl = `${
