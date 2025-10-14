@@ -2,34 +2,40 @@
 import { Request, Response } from 'express';
 import { PetService } from '../../services/implements/pet.service';
 import { HttpStatus } from '../../constants/httpStatus';
+import { ResponseHelper } from '../../http/ResponseHelper';
+import { HttpResponse } from '../../constants/messageConstant';
 
 export const PetController = {
   async listCategories(req: Request, res: Response) {
     const active = req.query.active === 'true';
-    const data = await PetService.listCategories(active);
-    return res.json({ data });
+    const cats = await PetService.listCategories(active);
+    return ResponseHelper.ok(res, cats, HttpResponse.RESOURCE_FOUND);
   },
-
-  async createCategory(req: Request, res: Response) {
+ async createCategory(req: Request, res: Response) {
     try {
       const cat = await PetService.createCategory(req.body || {});
-      return res.status(HttpStatus.CREATED).json(cat);
+        return ResponseHelper.created(res, cat, HttpResponse.RESOURCE_FOUND);
     } catch (e: any) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Create failed' });
+      if (e?.status === 409 || e?.code === 11000 || String(e?.message || '').includes('duplicate key')) {
+        return ResponseHelper.conflict(res, 'Category name already exists (case-insensitive)');
+      }
+      return ResponseHelper.badRequest(res, e?.message || 'Create failed');
     }
   },
 
   async updateCategory(req: Request, res: Response) {
     try {
       const cat = await PetService.updateCategory(req.params.id, req.body || {});
-      if (!cat) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
-      return res.json(cat);
+      if (!cat) return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+      return ResponseHelper.ok(res, cat, HttpResponse.RESOURCE_UPDATED);
     } catch (e: any) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Update failed' });
+      if (e?.status === 409 || e?.code === 11000 || String(e?.message || '').includes('duplicate key')) {
+        return ResponseHelper.conflict(res, 'Category name already exists (case-insensitive)');
+      }
+      return ResponseHelper.badRequest(res, e?.message || 'Update failed');
     }
   },
 
-  // Pets
   async listPets(req: Request, res: Response) {
     const owner = (req.query.owner as string) || 'me';
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
@@ -37,13 +43,13 @@ export const PetController = {
     const isAdmin = (req as any).user?.role === 'admin';
     const userId = owner === 'me' || !isAdmin ? (req as any).user._id : owner;
     const result = await PetService.listPetsByOwner(userId, page, limit);
-    return res.json(result);
+      return res.status(HttpStatus.OK).json(result);
   },
 
   async getPet(req: Request, res: Response) {
     const pet = await PetService.getPetScoped(req.params.id, (req as any).user);
     if (!pet) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
-    return res.json(pet);
+    return res.status(HttpStatus.OK).json(pet);
   },
 
   async createPet(req: Request, res: Response) {
@@ -63,7 +69,7 @@ export const PetController = {
       });
       return res.status(HttpStatus.CREATED).json(pet);
     } catch (e: any) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Create failed' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e?.message || 'Create failed' });
     }
   },
 
@@ -71,9 +77,9 @@ export const PetController = {
     try {
       const pet = await PetService.updatePetScoped(req.params.id, (req as any).user, req.body || {});
       if (!pet) return res.status(HttpStatus.NOT_FOUND).json({ message: 'Not found' });
-      return res.json(pet);
+      return res.status(HttpStatus.OK).json(pet);
     } catch (e: any) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Update failed' });
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e?.message || 'Update failed' });
     }
   },
 
@@ -84,20 +90,18 @@ export const PetController = {
   },
 
   async uploadPetPhoto(req: Request, res: Response) {
-  try {
-    const directUrl = (req as any).fileUrl || (req as any).upload?.secure_url;
-    if (typeof directUrl === 'string' && directUrl) {
-      return res.json({ url: directUrl });
+    try {
+      const directUrl = (req as any).fileUrl || (req as any).upload?.secure_url;
+      if (typeof directUrl === 'string' && directUrl) {
+        return res.status(HttpStatus.OK).json({ url: directUrl });
+      }
+      const file = (req as any).file; // provided by upload/multer
+      if (!file?.buffer) return res.status(HttpStatus.BAD_REQUEST).json({ message: 'file is required' });
+
+      const { url } = await PetService.uploadPetPhotoFromBuffer(file.buffer, file.originalname || 'pet.jpg');
+      return res.status(HttpStatus.OK).json({ url });
+    } catch (e: any) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: e?.message || 'Upload failed' });
     }
-
-    // Otherwise, if uploadImage just gives a buffer, upload via service:
-    const file = (req as any).file; // provided by uploadImage/multer
-    if (!file?.buffer) return res.status(HttpStatus.BAD_REQUEST).json({ message: 'file is required' });
-
-    const { url } = await PetService.uploadPetPhotoFromBuffer(file.buffer, file.originalname || 'pet.jpg');
-    return res.json({ url });
-  } catch (e: any) {
-    return res.status(HttpStatus.BAD_REQUEST).json({ message: e.message || 'Upload failed' });
-  }
-},
+  },
 };

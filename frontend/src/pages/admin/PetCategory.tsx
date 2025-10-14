@@ -1,5 +1,5 @@
 // src/pages/PetCategory.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { adminCategoryService, type AdminPetCategory } from '@/services/adminApiServices';
 
@@ -34,24 +34,32 @@ const PetCategory = () => {
     sortOrder: 0,
   });
 
-  const fetchCategories = async (page = 1, search = '') => {
+  const normalizeListResponse = (resp: any) => {
+    // Expecting { data: Category[], page, totalPages, total }
+    if (resp?.data?.data) return resp.data; // when wrapped by ApiResponse
+    return resp;
+  };
+
+  const fetchCategories = useCallback(async (page = 1, search = '') => {
     try {
       setLoading(true);
       const response = await adminCategoryService.list(page, ITEMS_PER_PAGE, search);
-      setCategories(response.data);
-      setCurrentPage(response.page);
-      setTotalPages(response.totalPages);
-      setTotal(response.total);
+      const payload = normalizeListResponse(response);
+      const rows = Array.isArray(payload?.data) ? payload.data : [];
+      setCategories(rows);
+      setCurrentPage(Number(payload?.page) || page);
+      setTotalPages(Number(payload?.totalPages) || 1);
+      setTotal(Number(payload?.total) || rows.length);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to fetch categories');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   const handleSearchApply = () => {
     setCurrentPage(1);
@@ -94,20 +102,58 @@ const PetCategory = () => {
     setShowForm(true);
   };
 
+  // Lightweight client-side validation and duplicate guard
+  const validateForm = () => {
+    const errors: string[] = [];
+    const name = form.name.trim();
+    if (name.length < 2) errors.push('Name must be at least 2 characters');
+    if (name.length > 60) errors.push('Name must be at most 60 characters');
+    if (form.iconKey && form.iconKey.length > 120) errors.push('Icon key too long');
+    if (form.description && form.description.length > 500) errors.push('Description too long');
+    if (!Number.isInteger(form.sortOrder) || form.sortOrder < 0) {
+      errors.push('Sort order must be a non-negative integer');
+    }
+    // Local duplicate check among currently loaded categories (case-insensitive)
+    const localDup = categories.some(
+      (c) => c._id !== editing?._id && c.name.toLowerCase() === name.toLowerCase()
+    );
+    if (localDup) errors.push('Category name already exists (case-insensitive)');
+
+    return { valid: errors.length === 0, errors, clean: { ...form, name } };
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { valid, errors, clean } = validateForm();
+    if (!valid) {
+      errors.forEach((m) => toast.error(m));
+      return;
+    }
+
     try {
       if (editing) {
-        await adminCategoryService.update(editing._id, form);
+        await adminCategoryService.update(editing._id, {
+          ...clean,
+          iconKey: clean.iconKey?.trim() || undefined,
+          description: clean.description?.trim() || undefined,
+        });
         toast.success('Category updated successfully');
       } else {
-        await adminCategoryService.create(form);
+        await adminCategoryService.create({
+          ...clean,
+          iconKey: clean.iconKey?.trim() || undefined,
+          description: clean.description?.trim() || undefined,
+        });
         toast.success('Category created successfully');
       }
       setShowForm(false);
       fetchCategories(currentPage, searchQuery);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to save category');
+      const msg =
+        error?.response?.status === 409
+          ? 'Category name already exists (case-insensitive)'
+          : error?.response?.data?.message || 'Failed to save category';
+      toast.error(msg);
     }
   };
 
@@ -121,9 +167,11 @@ const PetCategory = () => {
       id: 'active',
       header: 'Active',
       cell: (cat) => (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          cat.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            cat.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}
+        >
           {cat.isActive ? 'Yes' : 'No'}
         </span>
       ),
@@ -158,12 +206,14 @@ const PetCategory = () => {
         </div>
       ),
     },
-  ], []);
+  ], [categories, editing]);
 
   const leftText = `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1} to ${Math.min(
     currentPage * ITEMS_PER_PAGE,
     total
   )} of ${total} categories`;
+
+  const isSubmitDisabled = form.name.trim().length < 2 || !Number.isInteger(form.sortOrder) || form.sortOrder < 0;
 
   return (
     <div className="space-y-6">
@@ -184,11 +234,11 @@ const PetCategory = () => {
         <div className="overflow-x-auto">
           <Table<AdminPetCategory>
             columns={columns}
-            data={categories}
+            data={Array.isArray(categories) ? categories : []}
             loading={loading}
             emptyText="No categories found"
             ariaColCount={columns.length}
-            ariaRowCount={categories.length}
+            ariaRowCount={Array.isArray(categories) ? categories.length : 0}
             getRowKey={(c) => c._id}
             renderLoadingRow={() => (
               <div className="flex items-center justify-center py-12">
@@ -217,33 +267,63 @@ const PetCategory = () => {
             <form onSubmit={save} className="space-y-3">
               <div>
                 <label className="block text-sm text-gray-600">Name</label>
-                <input className="border rounded px-3 py-2 w-full" value={form.name} required
-                       onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input
+                  className="border rounded px-3 py-2 w/full"
+                  value={form.name}
+                  required
+                  minLength={2}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-600">Icon Key (optional)</label>
-                <input className="border rounded px-3 py-2 w-full" value={form.iconKey}
-                       onChange={(e) => setForm({ ...form, iconKey: e.target.value })} />
+                <input
+                  className="border rounded px-3 py-2 w/full"
+                  value={form.iconKey}
+                  maxLength={120}
+                  onChange={(e) => setForm({ ...form, iconKey: e.target.value })}
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-600">Description (optional)</label>
-                <textarea className="border rounded px-3 py-2 w-full" rows={3} value={form.description}
-                          onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <textarea
+                  className="border rounded px-3 py-2 w/full"
+                  rows={3}
+                  value={form.description}
+                  maxLength={500}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-sm">Active</label>
-                <input type="checkbox" checked={form.isActive}
-                       onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-600">Sort Order</label>
-                <input type="number" className="border rounded px-3 py-2 w-full" value={form.sortOrder}
-                       onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) || 0 })} />
+                <input
+                  type="number"
+                  className="border rounded px-3 py-2 w/full"
+                  value={form.sortOrder}
+                  min={0}
+                  step={1}
+                  onChange={(e) =>
+                    setForm({ ...form, sortOrder: Math.max(0, parseInt(e.target.value || '0', 10)) })
+                  }
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
-                <Button type="submit">{editing ? 'Save' : 'Create'}</Button>
+                <Button variant="outline" type="button" onClick={() => setShowForm(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitDisabled}>
+                  {editing ? 'Save' : 'Create'}
+                </Button>
               </div>
             </form>
           </div>
@@ -256,7 +336,9 @@ const PetCategory = () => {
         title="Delete Category"
         description={
           selectedCategory ? (
-            <>Are you sure you want to delete category <strong>{selectedCategory.name}</strong>? This action cannot be undone.</>
+            <>
+              Are you sure you want to delete category <strong>{selectedCategory.name}</strong>? This action cannot be undone.
+            </>
           ) : null
         }
         onClose={() => {

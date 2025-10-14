@@ -2,7 +2,7 @@
 import { Types } from 'mongoose';
 import { PetModel } from '../../models/implements/pet.model';
 import { PetCategoryModel } from '../../models/implements/petCategory.model';
-import { uploadPetImageBufferToCloudinary } from '../../utils/uploadToCloudinary'; // expects (buffer|base64, options) -> { secure_url }
+import { uploadPetImageBufferToCloudinary } from '../../utils/uploadToCloudinary';
 
 export type PetSex = 'male' | 'female' | 'unknown';
 
@@ -30,24 +30,62 @@ export const PetService = {
     isActive?: boolean;
     sortOrder?: number;
   }): Promise<PetCategory> {
-    if (!payload.name) throw new Error('name is required');
+    const name = (payload.name || '').trim();
+    if (!name) throw new Error('name is required');
+
+    // Pre-check for duplicate (case-insensitive) for friendly error
+    const existing = await PetCategoryModel.findOne({ name })
+      .collation({ locale: 'en', strength: 2 })
+      .lean();
+    if (existing) {
+      const err: any = new Error('Category name already exists (case-insensitive)');
+      err.status = 409;
+      throw err;
+    }
+
     return PetCategoryModel.create({
-      name: payload.name,
-      iconKey: payload.iconKey,
-      description: payload.description,
+      name,
+      iconKey: payload.iconKey?.trim() || '',
+      description: payload.description?.trim() || '',
       isActive: payload.isActive ?? true,
-      sortOrder: payload.sortOrder ?? 0,
+      sortOrder: Number.isFinite(payload.sortOrder) ? Number(payload.sortOrder) : 0,
     });
   },
 
   async updateCategory(id: string, payload: any): Promise<PetCategory | null> {
     const cat = await PetCategoryModel.findById(id);
     if (!cat) return null;
-    if (typeof payload.name === 'string') cat.name = payload.name;
-    if (typeof payload.iconKey === 'string') cat.iconKey = payload.iconKey;
-    if (typeof payload.description === 'string') cat.description = payload.description;
+
+    // If renaming, check for duplicates with collation
+    if (typeof payload.name === 'string') {
+      const newName = payload.name.trim();
+      if (!newName) {
+        const e: any = new Error('name is required');
+        e.status = 400;
+        throw e;
+      }
+      const dup = await PetCategoryModel.findOne({ name: newName })
+        .collation({ locale: 'en', strength: 2 })
+        .lean();
+      if (dup && String((dup as any)._id) !== String(id)) {
+        const e: any = new Error('Category name already exists (case-insensitive)');
+        e.status = 409;
+        throw e;
+      }
+      cat.name = newName;
+    }
+
+    if (typeof payload.iconKey === 'string') cat.iconKey = payload.iconKey.trim();
+    if (typeof payload.description === 'string') cat.description = payload.description.trim();
     if (typeof payload.isActive === 'boolean') cat.isActive = payload.isActive;
-    if (typeof payload.sortOrder === 'number') cat.sortOrder = payload.sortOrder;
+    if (typeof payload.sortOrder === 'number') {
+      if (!Number.isInteger(payload.sortOrder) || payload.sortOrder < 0) {
+        const e: any = new Error('sortOrder must be a non-negative integer');
+        e.status = 400;
+        throw e;
+      }
+      cat.sortOrder = payload.sortOrder;
+    }
     await cat.save();
     return cat.toObject();
   },

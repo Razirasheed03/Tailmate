@@ -223,19 +223,19 @@ export class CheckoutService {
     }
   }
 
-  async mockPay(userId: string, bookingId: string): Promise<MockPayResponse> {
-    const updated = await Booking.findOneAndUpdate(
-      {
-        _id: new Types.ObjectId(bookingId),
-        patientId: new Types.ObjectId(userId),
-      },
-      { $set: { status: "paid" } },
-      { new: true }
-    ).lean();
+  // async mockPay(userId: string, bookingId: string): Promise<MockPayResponse> {
+  //   const updated = await Booking.findOneAndUpdate(
+  //     {
+  //       _id: new Types.ObjectId(bookingId),
+  //       patientId: new Types.ObjectId(userId),
+  //     },
+  //     { $set: { status: "paid" } },
+  //     { new: true }
+  //   ).lean();
 
-    if (!updated)
-      throw Object.assign(new Error("Booking not found"), { status: 404 });
+  //   if (!updated)
+  //     throw Object.assign(new Error("Booking not found"), { status: 404 });
 
-    return { bookingId: String(updated._id), status: updated.status as MockPayResponse["status"] };
-  }
+  //   return { bookingId: String(updated._id), status: updated.status as MockPayResponse["status"] };
+  // }
 }

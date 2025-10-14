@@ -32,24 +32,24 @@ const Signup = () => {
   const passwordValue = watch("password");
 
 const onSubmit = async (data: SignupFormInputs) => {
-try {
-const payload: SignupPayload = {
-username: data.username,
-email: data.email,
-password: data.password,
-confirmPassword: data.confirmPassword,
-role: data.role,
-};
-      const response = await userService.signup(payload);
-      toast.success(response.data.message);
-      if (response.data.success) {
-        navigate("/verify-otp", { state: { email: data.email } });
-      }
-    } catch (error: any) {
-      console.log(error?.response);
-      toast.error(error?.response?.data?.message || "Signup failed");
+  try {
+    const payload: SignupPayload = {
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      role: data.role,
+    };
+    const response = await userService.signup(payload);
+    if (response.message) toast.success(response.message);
+    if (response.success) {
+      navigate("/verify-otp", { state: { email: data.email } });
     }
-  };
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || "Signup failed");
+  }
+};
+
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">

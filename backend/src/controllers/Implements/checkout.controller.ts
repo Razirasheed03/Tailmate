@@ -1,7 +1,8 @@
 // backend/src/controllers/Implements/checkout.controller.ts
 import { Request, Response, NextFunction } from "express";
-import { HttpStatus } from "../../constants/httpStatus";
 import { CheckoutService } from "../../services/implements/checkout.service";
+import { ResponseHelper } from "../../http/ResponseHelper";
+import { HttpResponse } from "../../constants/messageConstant";
 
 export class CheckoutController {
   constructor(private readonly svc: CheckoutService) {}
@@ -9,10 +10,13 @@ export class CheckoutController {
   getQuote = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const uid = (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!uid) return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: "Unauthorized" });
+      if (!uid) {
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
       const payload = req.body || {};
       const data = await this.svc.getQuote(uid, payload);
-      return res.status(HttpStatus.OK).json({ success: true, data });
+      // Frontend expects { success, data: QuoteResponse }
+      return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
     }
@@ -21,24 +25,17 @@ export class CheckoutController {
   createCheckout = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const uid = (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!uid) return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: "Unauthorized" });
+      if (!uid) {
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
       const payload = req.body || {};
       const data = await this.svc.createCheckout(uid, payload);
-      return res.status(HttpStatus.CREATED).json({ success: true, data });
+      // Frontend expects { success, data: { bookingId, redirectUrl? } }
+      return ResponseHelper.created(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
     }
   };
-  mockPay = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const uid = (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!uid) return res.status(HttpStatus.UNAUTHORIZED).json({ success: false, message: "Unauthorized" });
-      const bookingId = String(req.body?.bookingId || "").trim();
-      if (!bookingId) return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: "bookingId is required" });
-      const data = await this.svc.mockPay(uid, bookingId);
-      return res.status(HttpStatus.OK).json({ success: true, data });
-    } catch (err) {
-      next(err);
-    }
-  };
+
+
 }
