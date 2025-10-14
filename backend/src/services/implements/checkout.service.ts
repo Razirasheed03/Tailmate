@@ -12,29 +12,29 @@ function toUTCDate(date: string, time: string) {
   d.setUTCHours(h || 0, m || 0, 0, 0);
   return d;
 }
- type QuoteRequest = {
+type QuoteRequest = {
   doctorId: string;
-  date: string;         // ISO-YYYY-MM-DD
-  time: string;         // HH:mm
+  date: string; // ISO-YYYY-MM-DD
+  time: string; // HH:mm
   durationMins: number;
   mode: UIMode;
   baseFee?: number;
 };
 type QuoteResponse = {
-  amount: number;      
-  tax: number;         
-  discount: number; 
+  amount: number;
+  tax: number;
+  discount: number;
   totalAmount: number;
   currency: "INR";
 };
 type CreateCheckoutRequest = {
   doctorId: string;
-  date: string;         // ISO-YYYY-MM-DD
-  time: string;         // HH:mm
+  date: string; // ISO-YYYY-MM-DD
+  time: string; // HH:mm
   durationMins: number;
   mode: UIMode;
-  amount: number;       // expected fee
-  currency: string;     // e.g., 'INR'
+  amount: number; // expected fee
+  currency: string; // e.g., 'INR'
   petName: string;
   notes?: string;
   paymentMethod: string;
@@ -42,19 +42,19 @@ type CreateCheckoutRequest = {
 };
 type CreateCheckoutResponse = {
   bookingId: string;
-  redirectUrl: string | null; 
+  redirectUrl: string | null;
 };
 type MockPayResponse = {
   bookingId: string;
   status: "pending" | "paid" | "canceled" | "expired";
-}
+};
 type GeneratedSlot = {
   date: string;
   time: string;
   durationMins: number;
   modes: UIMode[];
   fee?: number;
-}
+};
 export class CheckoutService {
   constructor(private readonly pub = new DoctorPublicRepository()) {}
 
@@ -71,10 +71,13 @@ export class CheckoutService {
       if (diffMin < opts.minLeadMinutes) return null;
     }
 
-    const gen: GeneratedSlot[] = await this.pub.listGeneratedAvailability(doctorId, {
-      from: sel.date,
-      to: sel.date,
-    });
+    const gen: GeneratedSlot[] = await this.pub.listGeneratedAvailability(
+      doctorId,
+      {
+        from: sel.date,
+        to: sel.date,
+      }
+    );
 
     const match = gen.find(
       (s) =>
@@ -96,10 +99,16 @@ export class CheckoutService {
     return conflict ? null : match;
   }
 
-  async getQuote(userId: string, payload: QuoteRequest): Promise<QuoteResponse> {
-    const { doctorId, date, time, durationMins, mode, baseFee } = payload || ({} as QuoteRequest);
+  async getQuote(
+    userId: string,
+    payload: QuoteRequest
+  ): Promise<QuoteResponse> {
+    const { doctorId, date, time, durationMins, mode, baseFee } =
+      payload || ({} as QuoteRequest);
     if (!doctorId || !date || !time || !durationMins || !mode) {
-      throw Object.assign(new Error("Missing required fields"), { status: 400 });
+      throw Object.assign(new Error("Missing required fields"), {
+        status: 400,
+      });
     }
 
     const match = await this.verifyGeneratedSlot(
@@ -108,7 +117,9 @@ export class CheckoutService {
       { minLeadMinutes: 30 }
     );
     if (!match) {
-      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
+      throw Object.assign(new Error("Selected slot is not available"), {
+        status: 400,
+      });
     }
 
     const fee = Number(match.fee ?? baseFee ?? 0);
@@ -119,7 +130,10 @@ export class CheckoutService {
     return { amount: fee, tax, discount, totalAmount, currency: "INR" };
   }
 
-  async createCheckout(userId: string, payload: CreateCheckoutRequest): Promise<CreateCheckoutResponse> {
+  async createCheckout(
+    userId: string,
+    payload: CreateCheckoutRequest
+  ): Promise<CreateCheckoutResponse> {
     const {
       doctorId,
       date,
@@ -145,7 +159,9 @@ export class CheckoutService {
       !petName ||
       !paymentMethod
     ) {
-      throw Object.assign(new Error("Missing required fields"), { status: 400 });
+      throw Object.assign(new Error("Missing required fields"), {
+        status: 400,
+      });
     }
 
     const match = await this.verifyGeneratedSlot(
@@ -154,7 +170,9 @@ export class CheckoutService {
       { minLeadMinutes: 30 }
     );
     if (!match) {
-      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
+      throw Object.assign(new Error("Selected slot is not available"), {
+        status: 400,
+      });
     }
 
     const fee = Number(match.fee ?? amount ?? 0);
@@ -216,10 +234,15 @@ export class CheckoutService {
       );
 
       // 4) Return hosted Checkout URL
-      return { bookingId: String(booking._id), redirectUrl: session.url ?? null };
+      return {
+        bookingId: String(booking._id),
+        redirectUrl: session.url ?? null,
+      };
     } catch (err) {
       await Booking.deleteOne({ _id: booking._id });
-      throw Object.assign(new Error("Failed to create payment session"), { status: 502 });
+      throw Object.assign(new Error("Failed to create payment session"), {
+        status: 502,
+      });
     }
   }
 
