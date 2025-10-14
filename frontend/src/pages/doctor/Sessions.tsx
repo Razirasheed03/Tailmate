@@ -56,7 +56,7 @@ export default function DoctorSessions() {
   return (
     <div className="min-h-screen w-full bg-gray-50">
       <div className="flex h-screen">
-        <DoctorSidebar isVerified={true} /> {/* reuse existing component as in landing page */} 
+        <DoctorSidebar isVerified={true} />
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <header className="flex items-center gap-3 mb-4">

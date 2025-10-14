@@ -15,7 +15,6 @@ const OtpVerify = () => {
   // Email passed from Signup page
   const email = (location.state as any)?.email || "";
 
-  // If already logged in, redirect based on role
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("auth_user");
@@ -119,9 +118,8 @@ const OtpVerify = () => {
         otp: otpString,
       });
 
-      // Expecting: { success: true, accessToken, user }, refreshToken is httpOnly cookie
-      const accessToken = res?.data?.accessToken;
-      const user = res?.data?.user;
+     const accessToken = res?.data?.data?.accessToken;
+const user = res?.data?.data?.user;
 
       if (!accessToken || !user) {
         toast.error("Unexpected response from server.");

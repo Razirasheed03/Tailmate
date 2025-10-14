@@ -1,128 +1,214 @@
 // src/controllers/implements/admin.controller.ts
 import { Request, Response, NextFunction } from "express";
 import { IAdminService } from "../../services/interfaces/admin.service.interface";
-import { HttpStatus } from "../../constants/httpStatus";
 import { ResponseHelper } from "../../http/ResponseHelper";
+import { HttpResponse } from "../../constants/messageConstant";
 
 export class AdminController {
   constructor(private readonly _adminService: IAdminService) {}
 
-  // Existing user endpoints
   getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const search = (req.query.search as string) || "";
       const result = await this._adminService.getAllUsers(page, limit, search);
-      ResponseHelper.ok(res,result)
-    } catch (err) { next(err); }
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
   };
 
   blockUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
       const result = await this._adminService.blockUser(userId);
-      ResponseHelper.ok(res, result, 'User blocked');
-    } catch (err) { next(err); }
+      // result is { message: "User blocked successfully" } per service
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
+    }
   };
 
   unblockUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
       const result = await this._adminService.unblockUser(userId);
-      res.status(HttpStatus.OK).json({ success: true, message: result.message });
-    } catch (err) { next(err); }
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
+    }
   };
 
   deleteUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
       const result = await this._adminService.deleteUser(userId);
-      res.status(HttpStatus.OK).json({ success: true, message: result.message });
-    } catch (err) { next(err); }
+      // Consistent 200 with message payload; alternatively could return 204
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
+    }
   };
 
-  getUserStats = async (req: Request, res: Response, next: NextFunction) => {
+  getUserStats = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const stats = await this._adminService.getUserStats();
-      res.status(HttpStatus.OK).json({ success: true, data: stats });
-    } catch (err) { next(err); }
+      return ResponseHelper.ok(res, stats, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
   };
 
-  // NEW: doctors listing
+  // Doctors
   listDoctors = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const status = (req.query.status as string) || "";
       const search = (req.query.search as string) || "";
-      const result = await this._adminService.listDoctors(page, limit, status, search);
-      res.status(HttpStatus.OK).json({ success: true, data: result });
-    } catch (err) { next(err); }
+      const result = await this._adminService.listDoctors(
+        page,
+        limit,
+        status,
+        search
+      );
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
   };
 
-  // NEW: verify doctor
   verifyDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const reviewerId = (req as any).user?._id?.toString();
+      if (!reviewerId)
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
       const { userId } = req.params;
       const result = await this._adminService.verifyDoctor(userId, reviewerId);
-      res.status(HttpStatus.OK).json({ success: true, data: result });
-    } catch (err) { next(err); }
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
+    }
   };
 
-  // NEW: reject doctor
   rejectDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const reviewerId = (req as any).user?._id?.toString();
+      if (!reviewerId)
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
       const { userId } = req.params;
       const { reasons } = req.body as { reasons: string[] };
-      const result = await this._adminService.rejectDoctor(userId, reviewerId, reasons || []);
-      res.status(HttpStatus.OK).json({ success: true, data: result });
-    } catch (err) { next(err); }
+      const result = await this._adminService.rejectDoctor(
+        userId,
+        reviewerId,
+        reasons || []
+      );
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
+    }
   };
+
   getDoctorDetail = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { userId } = req.params as any;
-    const data = await this._adminService.getDoctorDetail(userId);
-    res.status(HttpStatus.OK).json({ success: true, data });
-  } catch (err) { next(err); }
-};
- listPetCategories = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params as any;
+      const data = await this._adminService.getDoctorDetail(userId);
+      if (!data)
+        return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+      return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // Pet Categories
+  listPetCategories = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const search = (req.query.search as string) || '';
-      const active = (req.query.active as string) || '';
-      const result = await this._adminService.listPetCategories(page, limit, search, active);
-      res.status(HttpStatus.OK).json({ success: true, data: result });
-    } catch (err) { next(err); }
+      const search = (req.query.search as string) || "";
+      const active = (req.query.active as string) || "";
+      const result = await this._adminService.listPetCategories(
+        page,
+        limit,
+        search,
+        active
+      );
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
   };
 
-  createPetCategory = async (req: Request, res: Response, next: NextFunction) => {
+  createPetCategory = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const payload = req.body || {};
       const cat = await this._adminService.createPetCategory(payload);
-      res.status(HttpStatus.CREATED).json({ success: true, data: cat });
-    } catch (err) { next(err); }
+      return ResponseHelper.created(res, cat, HttpResponse.RESOURCE_FOUND);
+    } catch (err: any) {
+      // Duplicate name handled by service or DB; map to 409
+      if (
+        err?.status === 409 ||
+        err?.code === 11000 ||
+        String(err?.message || "").includes("duplicate key")
+      ) {
+        return ResponseHelper.conflict(
+          res,
+          "Category name already exists (case-insensitive)"
+        );
+      }
+      return next(err);
+    }
   };
 
-  updatePetCategory = async (req: Request, res: Response, next: NextFunction) => {
+  updatePetCategory = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const id = req.params.id;
       const payload = req.body || {};
       const cat = await this._adminService.updatePetCategory(id, payload);
-      if (!cat) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
-      res.status(HttpStatus.OK).json({ success: true, data: cat });
-    } catch (err) { next(err); }
+      if (!cat)
+        return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+      return ResponseHelper.ok(res, cat, HttpResponse.RESOURCE_UPDATED);
+    } catch (err: any) {
+      if (
+        err?.status === 409 ||
+        err?.code === 11000 ||
+        String(err?.message || "").includes("duplicate key")
+      ) {
+        return ResponseHelper.conflict(
+          res,
+          "Category name already exists (case-insensitive)"
+        );
+      }
+      return next(err);
+    }
   };
-  deletePetCategory = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const id = req.params.id;
-    const ok = await this._adminService.deletePetCategory(id);
-    if (!ok) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
-    return res.status(HttpStatus.NO_CONTENT).send();
-  } catch (err) { next(err); }
-};
 
+  deletePetCategory = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const id = req.params.id;
+      const ok = await this._adminService.deletePetCategory(id);
+      if (!ok) return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+      return ResponseHelper.noContent(res);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

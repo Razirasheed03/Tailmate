@@ -77,34 +77,39 @@ const Login = () => {
     }
   }, [navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data } = await userService.login(email, password);
-      // Expecting data: { success, accessToken, user: { role, isBlocked, ... } }
-      if (data?.user?.isBlocked) {
-        toast.error("Account is blocked");
-        return;
-      }
-      login(data.accessToken, data.user);
-      toast.success("Login successful!");
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const res = await userService.login(email, password);
+    const accessToken = res?.data?.accessToken;
+    const user = res?.data?.user;
 
-      const role = data?.user?.role;
-      if (role === "admin") {
-        navigate(APP_ROUTES.ADMIN_DASHBOARD);
-      } else if (role === "doctor") {
-        navigate(APP_ROUTES.DOCTOR_DASHBOARD);
-      } else {
-        navigate(APP_ROUTES.USER_HOME);
-      }
-    } catch (error: any) {
-      const msg =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        "Login failed. Please check your credentials.";
-      toast.error(msg);
+    if (!accessToken || !user) {
+      toast.error(res?.message || "Unexpected response from server.");
+      return;
     }
-  };
+    if (user?.isBlocked) {
+      toast.error("Account is blocked");
+      return;
+    }
+
+    login(accessToken, user);
+    toast.success("Login successful!");
+
+    const role = user?.role;
+    if (role === "admin") {
+      navigate(APP_ROUTES.ADMIN_DASHBOARD);
+    } else if (role === "doctor") {
+      navigate(APP_ROUTES.DOCTOR_DASHBOARD);
+    } else {
+      navigate(APP_ROUTES.USER_HOME);
+    }
+  } catch (error: any) {
+    const msg = error?.response?.data?.message || error?.response?.data?.error || "Login failed. Please check your credentials.";
+    toast.error(msg);
+  }
+};
+
 const handleGoogleLogin = () => {
   window.location.href = AUTH_ROUTES.GOOGLE;
 };

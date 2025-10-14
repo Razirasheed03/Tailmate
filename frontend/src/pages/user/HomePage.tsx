@@ -4,18 +4,9 @@ import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
-import {
-  Calendar,
-  User,
-  Users,
-  Stethoscope,
-  Heart,
-  PawPrint,
-  Plus,
-  ChevronDown,
-} from "lucide-react";
+import { Calendar, User, Users, Stethoscope, Heart, PawPrint, Plus, ChevronDown } from "lucide-react";
 import { APP_ROUTES } from "@/constants/routes";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PetAddModal } from "../pets/PetAddModal";
 import { listMyPets } from "@/services/petsApiService";
 
@@ -37,28 +28,30 @@ export default function HomePage() {
       setPetLoading(true);
       try {
         const res = await listMyPets(1, 6);
-        setPetList(res.data || []);
-      } catch (e) {
+        // Normalize shapes:
+        // - If service returns { data: [...] } directly
+        // - If wrapped: { success, data: { data: [...], total, ... } }
+        // - If array directly
+        const payload = res?.data?.data ? res.data : res;
+        const rows = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+          ? payload
+          : [];
+        setPetList(rows);
+      } catch {
         // ignore or toast
+        setPetList([]);
       } finally {
         setPetLoading(false);
       }
     })();
   }, []);
 
-  // const wellnessTips = [
-  //   { id: 1, title: "Routine Checkups", desc: "Schedule annual wellness exams to monitor weight, dental health, and vaccinations." },
-  //   { id: 2, title: "Balanced Nutrition", desc: "Choose age-appropriate food and follow portion guidelines to prevent obesity." },
-  //   { id: 3, title: "Mental Enrichment", desc: "Use puzzle feeders and short play sessions to keep pets mentally stimulated." },
-  //   { id: 4, title: "Hydration & Hygiene", desc: "Ensure fresh water daily and maintain grooming, nail trims, and dental care." },
-  // ];
-
-  // const faqs = [
-  //   { id: 1, q: "How do I book a vet session?", a: "Open Vets, select a specialist, choose a time slot, and confirm your booking. You’ll receive a confirmation instantly." },
-  //   { id: 2, q: "Can I manage multiple pets?", a: "Yes. Go to Profile to add, edit, or remove pet profiles, and manage their records independently." },
-  //   { id: 3, q: "Are veterinarians verified?", a: "We verify licenses and credentials before listing a vet on TailMate to maintain quality and trust." },
-  //   { id: 4, q: "Is there a community code of conduct?", a: "Yes. Our community is moderated and follows clear guidelines to ensure respectful, helpful conversations." },
-  // ];
+  const rows = useMemo(
+    () => (Array.isArray(petList) ? petList : Array.isArray((petList as any)?.data) ? (petList as any).data : []),
+    [petList]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
@@ -159,11 +152,11 @@ export default function HomePage() {
 
           {petLoading ? (
             <p className="text-sm text-gray-600">Loading pets…</p>
-          ) : petList.length === 0 ? (
+          ) : rows.length === 0 ? (
             <p className="text-sm text-gray-600">No pets yet. Add one to get started.</p>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {petList.map((p) => (
+              {rows.map((p) => (
                 <Card
                   key={p._id || p.id}
                   className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-0.5"
@@ -180,7 +173,8 @@ export default function HomePage() {
                       <div>
                         <p className="font-semibold">{p.name}</p>
                         <p className="text-sm text-[#6B7280]">
-                          {p.speciesCategoryName || p.type || 'Pet'}{p.ageDisplay ? ` · ${p.ageDisplay}` : ''}
+                          {p.speciesCategoryName || p.type || 'Pet'}
+                          {p.ageDisplay ? ` · ${p.ageDisplay}` : ''}
                         </p>
                       </div>
                     </div>
@@ -211,7 +205,10 @@ export default function HomePage() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((id) => (
-              <Card key={id} className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-1">
+              <Card
+                key={id}
+                className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-1"
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E6F7FF] to-[#F0F9FF] flex items-center justify-center">
@@ -297,7 +294,7 @@ export default function HomePage() {
       <PetAddModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        onCreated={(pet:any) => setPetList((prev) => [pet, ...prev])}
+        onCreated={(pet: any) => setPetList((prev) => [pet, ...prev])}
       />
 
       {/* Footer */}
