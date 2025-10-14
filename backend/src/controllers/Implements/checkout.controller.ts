@@ -36,6 +36,4 @@ export class CheckoutController {
       next(err);
     }
   };
-
-
 }
