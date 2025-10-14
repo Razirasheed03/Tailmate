@@ -1,4 +1,4 @@
-// src/types/marketplace.types.ts
+//types/marketplace.types.ts
 export interface ListingResponse {
   _id: string;
   title: string;

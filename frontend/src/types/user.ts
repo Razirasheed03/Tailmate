@@ -1,3 +1,4 @@
+//types/user.ts
 export type Role = "admin" | "doctor" | "user";
 
 export interface User {
