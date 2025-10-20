@@ -13,12 +13,12 @@ export async function listMyPets(page = 1, limit = 6) {
   const { data } = await httpClient.get("/pets", {
     params: { owner: "me", page, limit },
   });
-  return data; // expected: { data, total, page, totalPages }
+  return data; 
 }
 
 export async function getPetHistory(petId: string) {
   const { data } = await httpClient.get(`/pets/${petId}/history`);
-  return data?.data || data; // Return the pet with populated history
+  return data?.data || data; 
 }
 
 export async function createPet(body: CreatePetBody) {
