@@ -15,7 +15,7 @@ interface Listing {
   ageText?: string;
   place: string;
   contact: string;
-  userId?: string; // seller's user ID
+  userId?: string; 
 }
 
 export default function ListingDetail() {
@@ -28,11 +28,9 @@ export default function ListingDetail() {
   const [setCurrentUser] = useState<any>(null);
   const [isOwnListing, setIsOwnListing] = useState(false);
 
-  // Check ownership using localStorage (no API call needed)
   useEffect(() => {
     const checkOwnership = () => {
       try {
-        // Get user from localStorage (stored during login)
         const storedUser = localStorage.getItem("auth_user");
 
         if (storedUser && listing) {
