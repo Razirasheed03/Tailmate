@@ -109,16 +109,15 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
       // ensure images.length > 0 before proceeding.
 
       const listingData: any = {
-        petId: pickedPet._id,
-        title: title.trim(),
-        description: desc.trim(),
-        photos,
-        price: type === 'sell' && price.trim() ? Number(price) : null,
-        age_text: age.trim() ? Number(age.trim()) : undefined,
-        place: place.trim(),
-        contact: contact.trim(),
-        type,
-      };
+  petId: pickedPet._id,
+  title: title.trim(),
+  description: desc.trim(),
+  photos,
+  price: type === 'sell' && price.trim() ? Number(price) : null, // null => adopt
+  ageText: age.trim() ? age.trim() : '',
+  place: place.trim(),
+  contact: contact.trim(),
+};
 
       const createdListing = await marketplaceService.create(listingData);
 

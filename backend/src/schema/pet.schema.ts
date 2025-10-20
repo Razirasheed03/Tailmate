@@ -1,10 +1,26 @@
-//schema/pet.schema.ts
-import { Schema, model } from "mongoose";
+// backend/src/schema/pet.schema.ts
+import { Schema, model, Types } from "mongoose";
 import { IPetModel } from "../models/interfaces/pet.model.interface";
+
+const PetEventSchema = new Schema(
+  {
+    at: { type: Date, default: Date.now },
+    action: { type: String, required: true },
+    by: { type: Types.ObjectId, ref: "User", required: true },
+    meta: { type: Schema.Types.Mixed, default: null },
+  },
+  { _id: false }
+);
 
 const PetSchema = new Schema<IPetModel>(
   {
     userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    currentOwnerId: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -29,14 +45,13 @@ const PetSchema = new Schema<IPetModel>(
     notes: { type: String, maxlength: 1000, default: null },
     photoUrl: { type: String, default: null },
     deletedAt: { type: Date, default: null },
+    history: { type: [PetEventSchema], default: [] },
   },
   { timestamps: true }
 );
 
-// Compound index optimizes owner lists and recent ordering
 PetSchema.index({ userId: 1, createdAt: -1 });
-
-// Optional text index for searching by name
-// PetSchema.index({ name: "text" });
+PetSchema.index({ currentOwnerId: 1, createdAt: -1 });
+PetSchema.index({ userId: 1, currentOwnerId: 1 });
 
 export const Pet = model<IPetModel>("Pet", PetSchema);

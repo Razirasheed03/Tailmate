@@ -5,6 +5,7 @@ import { authJwt } from '../middlewares/authJwt';
 import { asyncHandler } from '../utils/asyncHandler';
 import { MarketplaceController } from '../controllers/Implements/marketplace.controller';
 import { uploadMarketplaceImageBufferToCloudinary } from '../utils/uploadToCloudinary';
+import { MarketOrder } from '../schema/marketOrder.schema';
 
 const router = Router();
 const c = new MarketplaceController();
@@ -35,5 +36,18 @@ router.post(
     return res.json({ success: true, url: secure_url });
   })
 );
+router.get('/orders/:id', asyncHandler(async (req, res) => {
+  const row = await MarketOrder.findById(req.params.id).lean();
+  if (!row) return res.status(404).json({ success: false, message: 'Not found' });
+  res.json({ success: true, data: row });
+}));
+
+router.get('/listings/:id', asyncHandler(async (req, res) => {
+  const row = await (require('../schema/marketplaceListing.schema').MarketplaceListing)
+    .findById(req.params.id).lean();
+  if (!row) return res.status(404).json({ success: false, message: 'Not found' });
+  res.json({ success: true, data: row });
+}));
+
 
 export default router;

@@ -1,4 +1,3 @@
-// src/pages/payments/Success.tsx
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import httpClient from "@/services/httpClient";
@@ -6,8 +5,13 @@ import httpClient from "@/services/httpClient";
 type SessionView = {
   id: string;
   payment_status: "paid" | "unpaid" | "no_payment_required" | string;
-  bookingId?: string;
-  payment_intent?: string;
+  payment_intent?: string | null;
+  // doctor
+  bookingId?: string | null;
+  // marketplace
+  kind?: string | null;
+  orderId?: string | null;
+  listingId?: string | null;
 };
 
 type PaymentView = {
@@ -23,17 +27,73 @@ type PaymentView = {
 
 export default function Success() {
   const [sp] = useSearchParams();
-  const sessionId = sp.get("session_id");
+  const sessionId = sp.get("session_id") || "";
+  const qOrderId = sp.get("orderId") || "";
+  const qListingId = sp.get("listingId") || "";
 
   const [state, setState] = useState<{
     loading: boolean;
     msg: string;
     session?: SessionView;
     payment?: PaymentView;
+    confirmed?: boolean;
   }>({ loading: true, msg: "Verifying payment..." });
 
   useEffect(() => {
     let active = true;
+
+    async function pollMarketplace(orderId?: string | null, listingId?: string | null) {
+      const started = Date.now();
+      async function tick() {
+        if (!active) return;
+        try {
+          // Prefer order polling for explicit paid status
+          if (orderId) {
+            const o = await httpClient.get<{ success: boolean; data: any }>(
+              `/marketplace/orders/${orderId}`
+            );
+            const od = o?.data?.data;
+            if (od?.status === "paid") {
+              setState((s) => ({
+                ...s,
+                loading: false,
+                msg: "Payment confirmed",
+                confirmed: true,
+              }));
+              return;
+            }
+          }
+          // Fallback: listing closed means ownership flip done
+          if (listingId) {
+            const l = await httpClient.get<{ success: boolean; data: any }>(
+              `/marketplace/listings/${listingId}`
+            );
+            const ld = l?.data?.data;
+            if (ld?.status === "closed") {
+              setState((s) => ({
+                ...s,
+                loading: false,
+                msg: "Payment confirmed",
+                confirmed: true,
+              }));
+              return;
+            }
+          }
+        } catch {
+          // ignore and retry within window
+        }
+        if (Date.now() - started < 30000) {
+          setTimeout(tick, 2000);
+        } else {
+          setState((s) => ({
+            ...s,
+            loading: false,
+            msg: "Processing… still waiting on webhook",
+          }));
+        }
+      }
+      tick();
+    }
 
     async function load() {
       if (!sessionId) {
@@ -42,46 +102,54 @@ export default function Success() {
       }
 
       try {
-        // 1) Read Checkout Session (server endpoint that proxies Stripe)
+        // 1) Read Checkout Session (server proxies Stripe and returns metadata)
         const ses = await httpClient.get<{ success: boolean; data: SessionView }>(
           `/checkout/session/${sessionId}`
         );
         const session = ses?.data?.data;
+        if (!active) return;
 
-        // ✅ Added log for debugging
         console.log("Success page session:", session);
 
-        const bookingId = session?.bookingId;
+        // Detect marketplace by metadata or URL hints
+        const isMarketplace =
+          session?.kind === "marketplace" || !!qOrderId || !!qListingId;
+        const orderId = session?.orderId || qOrderId || null;
+        const listingId = session?.listingId || qListingId || null;
 
-        // 2) If webhook already handled it, read Payment by bookingId (optional for UX)
+        if (isMarketplace) {
+          // If already paid, we still poll to ensure backend fulfillment is done
+          setState({ loading: true, msg: "Completing marketplace order…", session });
+          await pollMarketplace(orderId, listingId);
+          return;
+        }
+
+        // Doctor flow (existing)
+        const bookingId = session?.bookingId || "";
         if (bookingId) {
           try {
             const pay = await httpClient.get<{ success: boolean; data: PaymentView }>(
               `/payments/by-booking/${bookingId}`
             );
-
-            // ✅ Added log for debugging
             console.log("Success page payment by booking:", pay?.data?.data);
-
             if (!active) return;
             const payment = pay?.data?.data;
-
-            // If payment succeeded, render confirmation
             if (payment?.paymentStatus === "success") {
               setState({
                 loading: false,
                 msg: "Payment confirmed",
                 session,
                 payment,
+                confirmed: true,
               });
               return;
             }
           } catch {
-            // Not found yet -> webhook might not have updated; fall through to message
+            // fall through
           }
         }
 
-        // 3) If Session says paid but Payment not yet visible, show processing message
+        // Generic fallback
         const paid = session?.payment_status === "paid";
         setState({
           loading: false,
@@ -102,13 +170,13 @@ export default function Success() {
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, qOrderId, qListingId]);
 
   if (state.loading) {
     return <div className="p-6">{state.msg}</div>;
   }
 
-  // If we have a confirmed Payment row
+  // Doctor success UI
   if (state.payment && state.payment.paymentStatus === "success") {
     const p = state.payment;
     return (
@@ -129,15 +197,17 @@ export default function Success() {
     );
   }
 
-  // Fallback UI if webhook still in-flight
+  // Generic success/processing UI for marketplace or fallback
   const paid = state.session?.payment_status === "paid";
+  const marketplaceConfirmed = state.confirmed;
+
   return (
     <div className="p-6 max-w-xl mx-auto">
       <h2 className="text-lg font-semibold mb-2">Payment Status</h2>
       <div className="text-sm text-gray-700 space-y-1">
         <div>Session: {state.session?.id || "—"}</div>
         <div>Stripe Status: {state.session?.payment_status || "unknown"}</div>
-        <div className="mt-2">{state.msg}</div>
+        <div className="mt-2">{marketplaceConfirmed ? "Payment confirmed" : state.msg}</div>
       </div>
       <div className="mt-4 flex gap-3">
         <button
@@ -146,11 +216,11 @@ export default function Success() {
         >
           Refresh
         </button>
-        <Link to="/vets" className="px-3 py-2 rounded border bg-white">
-          Back to Vets
+        <Link to="/" className="px-3 py-2 rounded border bg-white">
+          Home
         </Link>
       </div>
-      {paid && (
+      {!marketplaceConfirmed && paid && (
         <div className="mt-3 text-xs text-gray-500">
           If this stays here, the webhook may be delayed; try again in a few seconds.
         </div>

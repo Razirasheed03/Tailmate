@@ -195,23 +195,19 @@ const getErrorMessage = (error: AxiosError): string | null => {
   return error.message || null;
 };
 
-// Helper function to check if we're in development
 const isDevelopment = (): boolean => {
   return import.meta.env.MODE === 'development';
 };
 
-// Optional: Add request/response logging in development
 if (isDevelopment()) {
   httpClient.interceptors.request.use(
     (config) => {
-      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`, config);
       return config;
     }
   );
 
   httpClient.interceptors.response.use(
     (response) => {
-      console.log(`✅ ${response.status} ${response.config.url}`, response);
       return response;
     }
   );

@@ -1,3 +1,4 @@
+//pet.model.ts
 import { Model } from "mongoose";
 import { Pet } from "../../schema/pet.schema";
 import { IPetModel } from "../interfaces/pet.model.interface";

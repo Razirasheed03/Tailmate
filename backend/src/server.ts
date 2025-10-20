@@ -20,7 +20,7 @@ import checkoutSessionRoutes from "./routes/checkout.session.route";
 import bookingReadRoutes from "./routes/booking.read.route";
 import paymentReadRoutes from "./routes/payment.read.route";
 import paymentRoutes from "./routes/payment.route";
-
+import marketplacePaymentRoutes from "./routes/marketplace.payment.route";
 // Webhook controller
 import { paymentsWebhook } from "./controllers/Implements/payment-webhook.controller";
 
@@ -57,8 +57,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api", userRoutes);
-app.use("/api", petRoutes);
 app.use("/api", bookingReadRoutes);
+app.use('/api', petRoutes);
 
 // Booking/session helpers
 app.use("/api/checkout", checkoutRoutes);
@@ -67,6 +67,7 @@ app.use("/api", checkoutSessionRoutes);
 // Payments (JSON body)
 app.use("/api/payments", paymentRoutes);
 app.use("/api", paymentReadRoutes);
+app.use("/api/marketplace-payments", marketplacePaymentRoutes);
 
 // 5) Centralized error handler
 app.use((err: any, _req: any, res: any, _next: any) => {

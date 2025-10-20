@@ -1,8 +1,8 @@
-// src/services/implements/marketplace.service.ts
+// backend/src/services/implements/marketplace.service.ts
 import { MarketplaceRepository } from "../../repositories/implements/marketplace.repository";
 
-// Small shared types for clarity
 export type MarketplaceCreatePayload = {
+  petId: string;
   title: string;
   description: string;
   photos: string[];
@@ -12,9 +12,8 @@ export type MarketplaceCreatePayload = {
   contact: string;
 };
 
-export type MarketplaceItem = any; // TODO: replace with concrete entity/DTO from repository
+export type MarketplaceItem = any;
 
-// Frontend expects `data`, not `items`
 export type Paginated<T> = {
   data: T[];
   total: number;
@@ -45,24 +44,26 @@ export type MarketStatus =
 export class MarketplaceService {
   constructor(private readonly _repo = new MarketplaceRepository()) {}
 
-  async create(userId: string, payload: MarketplaceCreatePayload): Promise<MarketplaceItem> {
-    if (!payload.title?.trim()) throw new Error("Title is required");
-    if (!payload.description?.trim()) throw new Error("Description is required");
-    if (!payload.place?.trim()) throw new Error("Place is required");
-    if (!payload.contact?.trim()) throw new Error("Contact is required");
-    if (!Array.isArray(payload.photos)) payload.photos = [];
-    if (payload.photos.length > 6) throw new Error("Max 6 photos");
+async create(userId: string, payload: MarketplaceCreatePayload): Promise<any> {
+  if (!payload.petId) throw Object.assign(new Error("petId is required"), { status: 400 });
+  if (!payload.title?.trim()) throw Object.assign(new Error("Title is required"), { status: 400 });
+  if (!payload.description?.trim()) throw Object.assign(new Error("Description is required"), { status: 400 });
+  if (!payload.place?.trim()) throw Object.assign(new Error("Place is required"), { status: 400 });
+  if (!payload.contact?.trim()) throw Object.assign(new Error("Contact is required"), { status: 400 });
+  if (!Array.isArray(payload.photos)) payload.photos = [];
+  if (payload.photos.length > 6) throw Object.assign(new Error("Max 6 photos"), { status: 400 });
 
-    return this._repo.create(userId, {
-      title: payload.title.trim(),
-      description: payload.description.trim(),
-      photos: payload.photos,
-      price: payload.price ?? null,
-      ageText: payload.ageText?.trim() || "",
-      place: payload.place.trim(),
-      contact: payload.contact.trim(),
-    });
-  }
+  return this._repo.create(userId, {
+    petId: payload.petId,
+    title: payload.title.trim(),
+    description: payload.description.trim(),
+    photos: payload.photos,
+    price: payload.price ?? null,
+    ageText: payload.ageText?.trim() || "",
+    place: payload.place.trim(),
+    contact: payload.contact.trim(),
+  });
+}
 
   async listPublic(
     page: number,
@@ -92,7 +93,6 @@ export class MarketplaceService {
       sortBy: priceOptions?.sortBy,
     } as ListPublicParams);
 
-    // Normalize to `data` for frontend compatibility
     return {
       data: res.data,
       total: res.total,
@@ -105,7 +105,6 @@ export class MarketplaceService {
     page = Math.max(1, Number(page) || 1);
     limit = Math.min(50, Math.max(1, Number(limit) || 10));
     const res = await this._repo.listMine(userId, page, limit);
-    // Normalize to `data`
     return {
       data: res.data,
       total: res.total,
@@ -115,32 +114,28 @@ export class MarketplaceService {
   }
 
   update(userId: string, id: string, patch: Partial<MarketplaceCreatePayload>): Promise<MarketplaceItem> {
-    if (patch?.title && String(patch.title).trim().length < 3) throw new Error("Title too short");
+    if (patch?.title && String(patch.title).trim().length < 3) throw Object.assign(new Error("Title too short"), { status: 400 });
     if (patch?.description && String(patch.description).trim().length < 10)
-      throw new Error("Description too short");
+      throw Object.assign(new Error("Description too short"), { status: 400 });
     if ("photos" in patch && Array.isArray(patch.photos) && patch.photos.length > 6)
-      throw new Error("Max 6 photos");
+      throw Object.assign(new Error("Max 6 photos"), { status: 400 });
     return this._repo.update(userId, id, patch);
   }
 
-  // Supports both old and new status values; maps to backend values
   changeStatus(userId: string, id: string, status: MarketStatus): Promise<MarketplaceItem> {
     const statusMap: Record<MarketStatus, "active" | "reserved" | "closed"> = {
       active: "active",
-      inactive: "reserved", // inactive maps to reserved
+      inactive: "reserved",
       sold: "closed",
       adopted: "closed",
       reserved: "reserved",
       closed: "closed",
     };
-
     const mappedStatus = statusMap[status] ?? "active";
     return this._repo.changeStatus(userId, id, mappedStatus);
   }
 
-  // New method for completion status
   markAsComplete(userId: string, id: string, status: "sold" | "adopted"): Promise<MarketplaceItem> {
-    // Domain rule: completion always closes the listing
     return this._repo.changeStatus(userId, id, "closed");
   }
 

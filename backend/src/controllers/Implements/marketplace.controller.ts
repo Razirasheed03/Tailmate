@@ -7,18 +7,18 @@ import { HttpResponse } from "../../constants/messageConstant";
 const svc = new MarketplaceService();
 
 export class MarketplaceController {
-  create = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = (req as any).user?._id?.toString();
-      if (!userId) {
-        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
-      }
-      const listing = await svc.create(userId, req.body || {});
-      return ResponseHelper.created(res, listing, HttpResponse.RESOURCE_FOUND);
-    } catch (err) {
-      next(err);
-    }
-  };
+create = async (req:Request, res:Response, next:NextFunction) => {
+  try {
+    const userId = (req as any).user?._id?.toString();
+    if (!userId) return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+    const listing = await svc.create(userId, req.body || {});
+    return ResponseHelper.created(res, listing, HttpResponse.RESOURCE_FOUND);
+  } catch (err: any) {
+    if (err?.status === 400) return ResponseHelper.badRequest(res, err.message || "Bad Request");
+    next(err);
+  }
+};
+
 
   listPublic = async (req: Request, res: Response, next: NextFunction) => {
     try {
