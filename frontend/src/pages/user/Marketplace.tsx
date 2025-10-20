@@ -32,7 +32,6 @@ export default function Marketplace() {
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const navigate = useNavigate();
 
-  // Search filters state
   const [filters, setFilters] = useState<SearchFilters>({
     q: searchParams.get("q") || "",
     place: searchParams.get("place") || "",
@@ -43,10 +42,8 @@ export default function Marketplace() {
     includeFree: searchParams.get("includeFree") !== "false",
   });
 
-  // Temporary filters for modal (only applied when "Apply" is clicked)
   const [tempFilters, setTempFilters] = useState<SearchFilters>(filters);
 
-  // Sort options
   const sortOptions = [
     { value: "newest", label: "Newest First" },
     { value: "oldest", label: "Oldest First" },
@@ -70,7 +67,6 @@ export default function Marketplace() {
           limit: 12,
         };
 
-        // Add search parameters (keep this part same)
         if (searchFilters.q.trim()) params.q = searchFilters.q.trim();
         if (searchFilters.place.trim())
           params.place = searchFilters.place.trim();
@@ -82,10 +78,8 @@ export default function Marketplace() {
         if (!searchFilters.includeFree) params.excludeFree = true;
         if (searchFilters.sortBy) params.sortBy = searchFilters.sortBy;
 
-        // Get raw data from service
         const paginatedData = await marketplaceService.list(params);
 
-        // Use raw data directly - no mapping!
         setListings(paginatedData.data);
 
         setPage(paginatedData.page || pageNumber);
@@ -113,7 +107,7 @@ export default function Marketplace() {
         setSearchParams(newSearchParams);
       } catch (err) {
         console.error("Failed to fetch listings:", err);
-        setListings([]); // Single array instead of two
+        setListings([]);
         setTotal(0);
       } finally {
         setLoading(false);
@@ -122,7 +116,6 @@ export default function Marketplace() {
     [filters, setSearchParams]
   );
 
-  // Handle search with debouncing (only for search input)
   const handleSearchInput = useCallback(
     (searchQuery: string) => {
       const newFilters = { ...filters, q: searchQuery };
@@ -162,7 +155,6 @@ export default function Marketplace() {
   };
 
   const handleCardClick = (listing: any) => {
-    // Use raw listing data directly
     const listingId = listing._id || listing.id;
     navigate(`/marketplace/${listingId}`, { state: { listing } });
   };
