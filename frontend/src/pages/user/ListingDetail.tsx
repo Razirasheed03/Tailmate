@@ -36,15 +36,12 @@ export default function ListingDetail() {
         if (storedUser && listing) {
           const user = JSON.parse(storedUser);
           setCurrentUser(user);
-
-          // Check if current user is the listing owner
           const isOwner =
             String(listing.userId) === String(user._id || user.id);
           setIsOwnListing(isOwner);
         }
       } catch (error) {
         console.error("Failed to check ownership:", error);
-        // Silently fail - user can still view listing
       }
     };
 
