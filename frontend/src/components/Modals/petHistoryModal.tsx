@@ -1,9 +1,9 @@
 // src/components/Modals/PetHistoryModal.tsx
-import { useEffect, useState } from 'react';
-import { getPetHistory } from '@/services/petsApiService';
-import { Button } from '@/components/UiComponents/button';
-import { X, Calendar, User, Clock, Package } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { getPetHistory } from "@/services/petsApiService";
+import { Button } from "@/components/UiComponents/button";
+import { X, Calendar, User, Clock, Package } from "lucide-react";
+import { toast } from "sonner";
 
 interface PetHistoryModalProps {
   petId: string;
@@ -47,7 +47,12 @@ interface PetData {
   createdAt: string;
 }
 
-export default function PetHistoryModal({ petId, petName, open, onClose }: PetHistoryModalProps) {
+export default function PetHistoryModal({
+  petId,
+  petName,
+  open,
+  onClose,
+}: PetHistoryModalProps) {
   const [loading, setLoading] = useState(false);
   const [pet, setPet] = useState<PetData | null>(null);
 
@@ -63,8 +68,8 @@ export default function PetHistoryModal({ petId, petName, open, onClose }: PetHi
       const data = await getPetHistory(petId);
       setPet(data);
     } catch (error: any) {
-      console.error('Failed to load pet history:', error);
-      toast.error('Failed to load pet history');
+      console.error("Failed to load pet history:", error);
+      toast.error("Failed to load pet history");
     } finally {
       setLoading(false);
     }
@@ -72,49 +77,51 @@ export default function PetHistoryModal({ petId, petName, open, onClose }: PetHi
 
   const getActionIcon = (action: string) => {
     switch (action) {
-      case 'created':
-        return '🎉';
-      case 'updated':
-        return '✏️';
-      case 'listed':
-        return '📢';
-      case 'ownership_transferred':
-        return '🔄';
-      case 'deleted':
-        return '🗑️';
+      case "created":
+        return "🎉";
+      case "updated":
+        return "✏️";
+      case "listed":
+        return "📢";
+      case "ownership_transferred":
+        return "🔄";
+      case "deleted":
+        return "🗑️";
       default:
-        return '📝';
+        return "📝";
     }
   };
 
   const getActionLabel = (action: string) => {
     switch (action) {
-      case 'created':
-        return 'Created';
-      case 'updated':
-        return 'Updated';
-      case 'listed':
-        return 'Listed on Marketplace';
-      case 'ownership_transferred':
-        return 'Ownership Transferred';
-      case 'deleted':
-        return 'Deleted';
+      case "created":
+        return "Created";
+      case "updated":
+        return "Updated";
+      case "listed":
+        return "Listed on Marketplace";
+      case "ownership_transferred":
+        return "Ownership Transferred";
+      case "deleted":
+        return "Deleted";
       default:
-        return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return action
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase());
     }
   };
 
   const calculateAge = (birthDate?: string) => {
-    if (!birthDate) return 'Unknown';
+    if (!birthDate) return "Unknown";
     const birth = new Date(birthDate);
     const today = new Date();
     const years = today.getFullYear() - birth.getFullYear();
     const months = today.getMonth() - birth.getMonth();
-    
+
     if (years === 0) {
-      return `${Math.max(1, months)} month${months !== 1 ? 's' : ''}`;
+      return `${Math.max(1, months)} month${months !== 1 ? "s" : ""}`;
     }
-    return `${years} year${years !== 1 ? 's' : ''}`;
+    return `${years} year${years !== 1 ? "s" : ""}`;
   };
 
   if (!open) return null;
@@ -157,29 +164,42 @@ export default function PetHistoryModal({ petId, petName, open, onClose }: PetHi
                 <div className="flex items-start gap-6">
                   <div className="w-24 h-24 rounded-xl overflow-hidden bg-white shadow-md flex-shrink-0">
                     {pet.photoUrl ? (
-                      <img src={pet.photoUrl} alt={pet.name} className="w-full h-full object-cover" />
+                      <img
+                        src={pet.photoUrl}
+                        alt={pet.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-4xl">
                         🐾
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex-1 space-y-3">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">{pet.name}</h3>
-                      <p className="text-gray-600">{pet.speciesCategoryName} · {pet.sex}</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {pet.name}
+                      </h3>
+                      <p className="text-gray-600">
+                        {pet.speciesCategoryName} · {pet.sex}
+                      </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="w-4 h-4 text-orange-600" />
-                        <span className="text-gray-700">Age: {calculateAge(pet.birthDate)}</span>
+                        <span className="text-gray-700">
+                          Age: {calculateAge(pet.birthDate)}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="w-4 h-4 text-orange-600" />
                         <span className="text-gray-700">
-                          Born: {pet.birthDate ? new Date(pet.birthDate).toLocaleDateString() : 'Unknown'}
+                          Born:{" "}
+                          {pet.birthDate
+                            ? new Date(pet.birthDate).toLocaleDateString()
+                            : "Unknown"}
                         </span>
                       </div>
                     </div>
@@ -192,15 +212,21 @@ export default function PetHistoryModal({ petId, petName, open, onClose }: PetHi
                 <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                   <div className="flex items-center gap-2 mb-2">
                     <User className="w-4 h-4 text-blue-600" />
-                    <h4 className="font-semibold text-blue-900">Original Owner</h4>
+                    <h4 className="font-semibold text-blue-900">
+                      Original Owner
+                    </h4>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-semibold">
-                      {pet.userId.name?.charAt(0).toUpperCase() || 'U'}
+                      {pet.userId.name?.charAt(0).toUpperCase() || "U"}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{pet.userId.name}</p>
-                      <p className="text-xs text-gray-600">{pet.userId.email}</p>
+                      <p className="font-medium text-gray-900">
+                        {pet.userId.name}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {pet.userId.email}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -208,67 +234,80 @@ export default function PetHistoryModal({ petId, petName, open, onClose }: PetHi
                 <div className="bg-green-50 rounded-xl p-4 border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
                     <User className="w-4 h-4 text-green-600" />
-                    <h4 className="font-semibold text-green-900">Current Owner</h4>
+                    <h4 className="font-semibold text-green-900">
+                      Current Owner
+                    </h4>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-green-700 font-semibold">
-                      {pet.currentOwnerId.name?.charAt(0).toUpperCase() || 'U'}
+                      {pet.currentOwnerId.name?.charAt(0).toUpperCase() || "U"}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{pet.currentOwnerId.name}</p>
-                      <p className="text-xs text-gray-600">{pet.currentOwnerId.email}</p>
+                      <p className="font-medium text-gray-900">
+                        {pet.currentOwnerId.name}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {pet.currentOwnerId.email}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Timeline */}
-          <div>
-  <div className="flex items-center gap-2 mb-4">
-    <Package className="w-5 h-5 text-gray-700" />
-    <h4 className="text-lg font-semibold text-gray-900">History Timeline</h4>
-  </div>
-  
-  <div className="relative">
-    {/* Timeline line */}
-    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-300 to-gray-200"></div>
-    
-    <div className="space-y-4">
-      {pet.history && pet.history.length > 0 ? (
-        pet.history.map((event, index) => (
-          <div key={index} className="relative pl-16 pb-6">
-            {/* Timeline dot */}
-            <div className="absolute left-3 top-1 w-6 h-6 rounded-full bg-white border-2 border-orange-500 flex items-center justify-center text-sm">
-              {getActionIcon(event.action)}
-            </div>
-            
-            {/* Event card */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h5 className="font-semibold text-gray-900">
-                    {getActionLabel(event.action)}
-                  </h5>
-                  <p className="text-sm text-gray-600">
-                    {new Date(event.at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Package className="w-5 h-5 text-gray-700" />
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    History Timeline
+                  </h4>
+                </div>
+
+                <div className="relative">
+                  {/* Timeline line */}
+                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-300 to-gray-200"></div>
+
+                  <div className="space-y-4">
+                    {pet.history && pet.history.length > 0 ? (
+                      pet.history.map((event, index) => (
+                        <div key={index} className="relative pl-16 pb-6">
+                          {/* Timeline dot */}
+                          <div className="absolute left-3 top-1 w-6 h-6 rounded-full bg-white border-2 border-orange-500 flex items-center justify-center text-sm">
+                            {getActionIcon(event.action)}
+                          </div>
+
+                          {/* Event card */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h5 className="font-semibold text-gray-900">
+                                  {getActionLabel(event.action)}
+                                </h5>
+                                <p className="text-sm text-gray-600">
+                                  {new Date(event.at).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      year: "numeric",
+                                      month: "long",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-500 py-8">
+                        No history available
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p className="text-center text-gray-500 py-8">No history available</p>
-      )}
-    </div>
-  </div>
-</div>
             </div>
           ) : (
             <div className="p-12 text-center text-gray-500">
