@@ -2,7 +2,7 @@
 import { Schema, model, Types } from "mongoose";
 
 export const WalletSchema = new Schema({
-  ownerType: { type: String, enum: ["admin", "doctor"], required: true },
+  ownerType: { type: String, enum: ["admin", "doctor","user"], required: true },
   ownerId: { type: Types.ObjectId, required: false }, // null/absent for admin
   currency: { type: String, required: true },         // e.g., "INR"
   balanceMinor: { type: Number, required: true, default: 0 }, // integer

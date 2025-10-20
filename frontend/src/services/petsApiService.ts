@@ -12,6 +12,11 @@ export async function listMyPets(page = 1, limit = 6) {
   return data; // expected: { data, total, page, totalPages }
 }
 
+export async function getPetHistory(petId: string) {
+  const { data } = await httpClient.get(`/pets/${petId}/history`);
+  return data?.data || data; // Return the pet with populated history
+}
+
 export async function createPet(body: CreatePetBody) {
   const { data } = await httpClient.post('/pets', body, { headers: { 'Content-Type': 'application/json' } });
   return data; // created pet
@@ -36,12 +41,10 @@ export async function presignPetPhoto(contentType: string, ext?: string) {
   return data; // { uploadUrl, publicUrl, key, expiresIn }
 }
 
-export async function updatePet(id: string, patch: Partial<CreatePetBody>) {
-  const { data } = await httpClient.patch(`/pets/${id}`, patch, { headers: { 'Content-Type': 'application/json' } });
-  return data; // updated pet
+export async function updatePet(id: string, patch: any) {
+  return httpClient.patch(`/pets/${id}`, patch);
 }
 
 export async function deletePet(id: string) {
-  const { data, status } = await httpClient.delete(`/pets/${id}`);
-  return status === 204 ? { success: true } : (data ?? { success: true });
+  return httpClient.delete(`/pets/${id}`);
 }

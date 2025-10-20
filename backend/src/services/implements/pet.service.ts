@@ -90,21 +90,48 @@ export const PetService = {
     return cat.toObject();
   },
 
-  // Pets
-  async listPetsByOwner(ownerId: string, page: number, limit: number): Promise<Paginated<Pet>> {
-    const owner = new Types.ObjectId(ownerId);
-    const filter = { userId: owner, deletedAt: null as any };
-    const safePage = Math.max(1, Number(page) || 1);
-    const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
-    const skip = (safePage - 1) * safeLimit;
+async listPetsByOwner(ownerId: string, page: number, limit: number): Promise<any> {
+  const owner = new Types.ObjectId(ownerId);
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
+  const skip = (safePage - 1) * safeLimit;
 
-    const [data, total] = await Promise.all([
-      PetModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(),
-      PetModel.countDocuments(filter),
-    ]);
+  // Pets that user currently owns (includes bought ones)
+  const currentPets = await PetModel.find({
+    currentOwnerId: owner,
+    deletedAt: null as any,
+  })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(safeLimit)
+    .lean();
 
-    return { data, total, page: safePage, totalPages: Math.max(1, Math.ceil(total / safeLimit)) };
-  },
+  // Pets user originally created (seller) but no longer owns
+  const pastPets = await PetModel.find({
+    userId: owner,
+    currentOwnerId: { $ne: owner },
+    deletedAt: null as any,
+  })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  const total = await PetModel.countDocuments({
+    currentOwnerId: owner,
+    deletedAt: null as any,
+  });
+
+  const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
+  // Buyer: will just see "data". Seller: can also view "past"
+  return {
+    data: currentPets,
+    past: pastPets,
+    total,
+    page: safePage,
+    totalPages,
+  };
+}
+,
 
   async getPetScoped(petId: string, user: any): Promise<Pet | null> {
     const pet = await PetModel.findById(petId).lean();
@@ -115,65 +142,87 @@ export const PetService = {
     return pet;
   },
 
-  async createPet(payload: {
-    user: any;
-    name: string;
-    speciesCategoryId: string;
-    sex?: PetSex;
-    birthDate?: string;
-    notes?: string;
-    photoUrl?: string;
-  }): Promise<Pet> {
-    const cat = await PetCategoryModel.findById(payload.speciesCategoryId).lean();
-    if (!cat || !cat.isActive) throw new Error('Invalid or inactive category');
+ async createPet(payload: {
+  user: any;
+  name: string;
+  speciesCategoryId: string;
+  sex?: PetSex;
+  birthDate?: string;
+  notes?: string;
+  photoUrl?: string;
+}): Promise<Pet> {
+  const cat = await PetCategoryModel.findById(payload.speciesCategoryId).lean();
+  if (!cat || !cat.isActive) throw new Error('Invalid or inactive category');
 
-    const doc = await PetModel.create({
-      userId: payload.user._id,
-      name: payload.name,
-      speciesCategoryId: cat._id,
-      speciesCategoryName: cat.name,
-      sex: payload.sex ?? 'unknown',
-      birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
-      notes: payload.notes ?? null,
-      photoUrl: payload.photoUrl ?? null,
-    });
-    return doc.toObject();
-  },
+  const creatorId = payload.user._id;
 
-  async updatePetScoped(petId: string, user: any, body: any): Promise<Pet | null> {
-    const pet = await PetModel.findById(petId);
-    if (!pet || pet.deletedAt) return null;
-    const isOwner = String(pet.userId) === String(user._id);
-    const isAdmin = user?.role === 'admin';
-    if (!isOwner && !isAdmin) return null;
+  const doc = await PetModel.create({
+    userId: creatorId,
+    currentOwnerId: creatorId,
+    name: payload.name,
+    speciesCategoryId: cat._id,
+    speciesCategoryName: cat.name,
+    sex: payload.sex ?? 'unknown',
+    birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
+    notes: payload.notes ?? null,
+    photoUrl: payload.photoUrl ?? null,
+    history: [
+      {
+        action: "created",
+        by: creatorId,
+        meta: null,
+      },
+    ],
+  });
+  return doc.toObject();
+},
 
-    if (body.speciesCategoryId) {
-      const cat = await PetCategoryModel.findById(body.speciesCategoryId).lean();
-      if (!cat || !cat.isActive) throw new Error('Invalid category');
-      pet.speciesCategoryId = cat._id as any;
-      pet.speciesCategoryName = cat.name;
-    }
-    if (typeof body.name === 'string') pet.name = body.name;
-    if (typeof body.sex === 'string') pet.sex = body.sex;
-    if (typeof body.birthDate === 'string') pet.birthDate = new Date(body.birthDate);
-    if (typeof body.notes === 'string') pet.notes = body.notes;
-    if (typeof body.photoUrl === 'string') pet.photoUrl = body.photoUrl;
+async updatePetScoped(petId: string, user: any, body: any): Promise<Pet | null> {
+  const pet = await PetModel.findById(petId);
+  if (!pet || pet.deletedAt) return null;
 
-    await pet.save();
-    return pet.toObject();
-  },
+  // Allow either the original creator OR the current owner
+  const isOwner =
+    String(pet.userId) === String(user._id) ||
+    String(pet.currentOwnerId) === String(user._id);
+  const isAdmin = user?.role === 'admin';
 
-  async softDeletePetScoped(petId: string, user: any): Promise<boolean> {
-    const pet = await PetModel.findById(petId);
-    if (!pet || pet.deletedAt) return false;
-    const isOwner = String(pet.userId) === String(user._id);
-    const isAdmin = user?.role === 'admin';
-    if (!isOwner && !isAdmin) return false;
+  if (!isOwner && !isAdmin) return null;
 
-    pet.deletedAt = new Date();
-    await pet.save();
-    return true;
-  },
+  // Apply updates
+  if (body.speciesCategoryId) {
+    const cat = await PetCategoryModel.findById(body.speciesCategoryId).lean();
+    if (!cat || !cat.isActive) throw new Error('Invalid category');
+    pet.speciesCategoryId = cat._id as any;
+    pet.speciesCategoryName = cat.name;
+  }
+  if (typeof body.name === 'string') pet.name = body.name;
+  if (typeof body.sex === 'string') pet.sex = body.sex;
+  if (typeof body.birthDate === 'string') pet.birthDate = new Date(body.birthDate);
+  if (typeof body.notes === 'string') pet.notes = body.notes;
+  if (typeof body.photoUrl === 'string') pet.photoUrl = body.photoUrl;
+
+  await pet.save();
+  return pet.toObject();
+},
+
+async softDeletePetScoped(petId: string, user: any): Promise<boolean> {
+  const pet = await PetModel.findById(petId);
+  if (!pet || pet.deletedAt) return false;
+
+  // Allow either original creator or current owner
+  const isOwner =
+    String(pet.userId) === String(user._id) ||
+    String(pet.currentOwnerId) === String(user._id);
+  const isAdmin = user?.role === 'admin';
+
+  if (!isOwner && !isAdmin) return false;
+
+  pet.deletedAt = new Date();
+  await pet.save();
+  return true;
+}
+,
 
   async uploadPetPhotoFromBuffer(
     fileBuffer: Buffer,
@@ -183,4 +232,24 @@ export const PetService = {
     const result = await uploadPetImageBufferToCloudinary(fileBuffer, safeName);
     return { url: result.secure_url, public_id: result.public_id };
   },
+  async getPetHistory(petId: string, user: any): Promise<Pet | null> {
+  const pet = await PetModel.findById(petId)
+    .populate('userId', 'name email profilePhoto')
+    .populate('currentOwnerId', 'name email profilePhoto')
+    .populate('history.by', 'name email profilePhoto')
+    .lean();
+  
+  if (!pet || pet.deletedAt) return null;
+  
+  // Check permissions: owner, current owner, or admin
+  const isOriginalOwner = String(pet.userId._id) === String(user._id);
+  const isCurrentOwner = String(pet.currentOwnerId._id) === String(user._id);
+  const isAdmin = user?.role === 'admin';
+  
+  if (!isOriginalOwner && !isCurrentOwner && !isAdmin) {
+    return null;
+  }
+  
+  return pet;
+}
 };

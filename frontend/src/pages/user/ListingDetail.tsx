@@ -1,7 +1,9 @@
 // src/pages/user/ListingDetail.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/UiComponents/UserNavbar';
+import httpClient from '@/services/httpClient';
+import { toast } from 'sonner';
 
 interface Listing {
   _id: string;
@@ -13,6 +15,7 @@ interface Listing {
   ageText?: string;
   place: string;
   contact: string;
+  userId?: string; // seller's user ID
 }
 
 export default function ListingDetail() {
@@ -22,6 +25,32 @@ export default function ListingDetail() {
   
   const [showContact, setShowContact] = useState(false); 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isOwnListing, setIsOwnListing] = useState(false);
+
+  // Check ownership using localStorage (no API call needed)
+  useEffect(() => {
+    const checkOwnership = () => {
+      try {
+        // Get user from localStorage (stored during login)
+        const storedUser = localStorage.getItem('auth_user');
+        
+        if (storedUser && listing) {
+          const user = JSON.parse(storedUser);
+          setCurrentUser(user);
+          
+          // Check if current user is the listing owner
+          const isOwner = String(listing.userId) === String(user._id || user.id);
+          setIsOwnListing(isOwner);
+        }
+      } catch (error) {
+        console.error('Failed to check ownership:', error);
+        // Silently fail - user can still view listing
+      }
+    };
+
+    checkOwnership();
+  }, [listing]);
 
   if (!listing) {
     return (
@@ -46,6 +75,23 @@ export default function ListingDetail() {
 
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + listing.photos.length) % listing.photos.length);
+  };
+
+  const handleBuyNow = async () => {
+    try {
+      const res = await httpClient.post('/marketplace-payments/create-checkout-session', { 
+        listingId: listing._id 
+      });
+      const url = res?.data?.data?.url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        toast.error('Failed to create checkout session');
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to initiate purchase');
+    }
   };
 
   return (
@@ -180,8 +226,30 @@ export default function ListingDetail() {
               </p>
             </div>
 
+            {/* Buy Now Button - Hidden for Own Listings */}
+            {isOwnListing ? (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                  </svg>
+                  <div>
+                    <p className="font-medium text-blue-900">This is your listing</p>
+                    <p className="text-sm text-blue-700">You cannot purchase your own listing. Manage it from your dashboard.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleBuyNow}
+                className="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors shadow-md hover:shadow-lg"
+              >
+                Buy Now
+              </button>
+            )}
+
             {/* Contact Section */}
-  <div className="border-t pt-6">
+            <div className="border-t pt-6 mt-6">
               <h2 className="text-lg font-semibold mb-4">Contact Seller</h2>
               
               <div 
@@ -215,7 +283,6 @@ export default function ListingDetail() {
                 </div>
               )}
             </div>
-      
           </div>
         </div>
       </main>

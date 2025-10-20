@@ -1,3 +1,4 @@
+//repositories/implements/marketplace.repository.ts
 import { Model, Types } from 'mongoose';
 import { MarketplaceListing } from '../../schema/marketplaceListing.schema';
 
@@ -5,9 +6,13 @@ export class MarketplaceRepository {
   constructor(private readonly model: Model<any> = MarketplaceListing) {}
 
   async create(userId: string, body: any) {
+    if (!body.petId) throw Object.assign(new Error("petId is required"), { status: 400 });
+
     const doc = await this.model.create({
       ...body,
       userId: new Types.ObjectId(userId),
+      sellerId: new Types.ObjectId(userId),
+      petId: new Types.ObjectId(body.petId),
       type: body.price === null || body.price === undefined ? 'adopt' : 'sell',
       history: [
         {
@@ -19,7 +24,6 @@ export class MarketplaceRepository {
     });
     return doc.toObject();
   }
-
  async listPublic(params: { 
   page: number; 
   limit: number; 

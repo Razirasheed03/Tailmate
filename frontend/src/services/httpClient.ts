@@ -204,14 +204,12 @@ const isDevelopment = (): boolean => {
 if (isDevelopment()) {
   httpClient.interceptors.request.use(
     (config) => {
-      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`, config);
       return config;
     }
   );
 
   httpClient.interceptors.response.use(
     (response) => {
-      console.log(`✅ ${response.status} ${response.config.url}`, response);
       return response;
     }
   );

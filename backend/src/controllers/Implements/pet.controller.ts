@@ -149,4 +149,26 @@ export const PetController = {
         .json({ message: e?.message || "Upload failed" });
     }
   },
+  async getPetHistory(req: Request, res: Response) {
+  try {
+    const pet = await PetService.getPetHistory(
+      req.params.id,
+      (req as any).user
+    );
+    
+    if (!pet) {
+      return ResponseHelper.notFound(
+        res,
+        "Pet not found or you don't have permission to view its history"
+      );
+    }
+    
+    return ResponseHelper.ok(res, pet, "Pet history retrieved successfully");
+  } catch (e: any) {
+    return ResponseHelper.badRequest(
+      res,
+      e?.message || "Failed to retrieve pet history"
+    );
+  }
+}
 };

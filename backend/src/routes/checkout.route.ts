@@ -14,7 +14,6 @@ router.post("/quote", asyncHandler(checkoutController.getQuote));
 
 // POST /api/checkout/create -> create booking + payment session (pending)
 router.post("/create", asyncHandler(checkoutController.createCheckout));
-// backend/src/routes/checkout.routes.ts
-router.post("/mock-pay", asyncHandler(checkoutController.mockPay));
+
 
 export default router;

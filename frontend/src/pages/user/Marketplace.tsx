@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/UiComponents/UserNavbar';
 import SellAdoptModal from '@/components/Modals/SellAdoptModal';
 import { marketplaceService } from '@/services/marketplaceService';
-// import { ListingMapper } from '@/mappers/listingMapper';
 
 interface SearchFilters {
   q: string;
