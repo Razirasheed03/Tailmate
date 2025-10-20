@@ -25,7 +25,7 @@ export default function ListingDetail() {
 
   const [showContact, setShowContact] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [ setCurrentUser] = useState<any>(null);
+  const [setCurrentUser] = useState<any>(null);
   const [isOwnListing, setIsOwnListing] = useState(false);
 
   // Check ownership using localStorage (no API call needed)

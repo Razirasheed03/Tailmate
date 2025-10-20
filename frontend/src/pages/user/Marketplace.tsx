@@ -1,23 +1,29 @@
 // src/pages/user/Marketplace.tsx
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import Navbar from '@/components/UiComponents/UserNavbar';
-import SellAdoptModal from '@/components/Modals/SellAdoptModal';
-import { marketplaceService } from '@/services/marketplaceService';
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import Navbar from "@/components/UiComponents/UserNavbar";
+import SellAdoptModal from "@/components/Modals/SellAdoptModal";
+import { marketplaceService } from "@/services/marketplaceService";
 
 interface SearchFilters {
   q: string;
   place: string;
-  type: 'all' | 'sell' | 'adopt';
+  type: "all" | "sell" | "adopt";
   minPrice: string;
   maxPrice: string;
-  sortBy: 'newest' | 'oldest' | 'price_low' | 'price_high' | 'title_az' | 'title_za';
+  sortBy:
+    | "newest"
+    | "oldest"
+    | "price_low"
+    | "price_high"
+    | "title_az"
+    | "title_za";
   includeFree: boolean;
 }
 
 export default function Marketplace() {
   const [open, setOpen] = useState(false);
-const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -28,99 +34,116 @@ const [listings, setListings] = useState<any[]>([]);
 
   // Search filters state
   const [filters, setFilters] = useState<SearchFilters>({
-    q: searchParams.get('q') || '',
-    place: searchParams.get('place') || '',
-    type: (searchParams.get('type') as 'all' | 'sell' | 'adopt') || 'all',
-    minPrice: searchParams.get('minPrice') || '',
-    maxPrice: searchParams.get('maxPrice') || '',
-    sortBy: (searchParams.get('sortBy') as any) || 'newest',
-    includeFree: searchParams.get('includeFree') !== 'false'
+    q: searchParams.get("q") || "",
+    place: searchParams.get("place") || "",
+    type: (searchParams.get("type") as "all" | "sell" | "adopt") || "all",
+    minPrice: searchParams.get("minPrice") || "",
+    maxPrice: searchParams.get("maxPrice") || "",
+    sortBy: (searchParams.get("sortBy") as any) || "newest",
+    includeFree: searchParams.get("includeFree") !== "false",
   });
 
   // Temporary filters for modal (only applied when "Apply" is clicked)
   const [tempFilters, setTempFilters] = useState<SearchFilters>(filters);
 
-
   // Sort options
   const sortOptions = [
-    { value: 'newest', label: 'Newest First' },
-    { value: 'oldest', label: 'Oldest First' },
-    { value: 'price_low', label: 'Price: Low to High' },
-    { value: 'price_high', label: 'Price: High to Low' },
-    { value: 'title_az', label: 'Title: A to Z' },
-    { value: 'title_za', label: 'Title: Z to A' }
+    { value: "newest", label: "Newest First" },
+    { value: "oldest", label: "Oldest First" },
+    { value: "price_low", label: "Price: Low to High" },
+    { value: "price_high", label: "Price: High to Low" },
+    { value: "title_az", label: "Title: A to Z" },
+    { value: "title_za", label: "Title: Z to A" },
   ];
 
-  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
-const fetchListings = useCallback(async (pageNumber = 1, searchFilters = filters) => {
-  try {
-    setLoading(true);
-    
-    const params: any = {
-      page: pageNumber,
-      limit: 12
-    };
+  const fetchListings = useCallback(
+    async (pageNumber = 1, searchFilters = filters) => {
+      try {
+        setLoading(true);
 
-    // Add search parameters (keep this part same)
-    if (searchFilters.q.trim()) params.q = searchFilters.q.trim();
-    if (searchFilters.place.trim()) params.place = searchFilters.place.trim();
-    if (searchFilters.type !== 'all') params.type = searchFilters.type;
-    if (searchFilters.minPrice.trim()) params.minPrice = parseInt(searchFilters.minPrice);
-    if (searchFilters.maxPrice.trim()) params.maxPrice = parseInt(searchFilters.maxPrice);
-    if (!searchFilters.includeFree) params.excludeFree = true;
-    if (searchFilters.sortBy) params.sortBy = searchFilters.sortBy;
+        const params: any = {
+          page: pageNumber,
+          limit: 12,
+        };
 
-    // Get raw data from service
-    const paginatedData = await marketplaceService.list(params);
-    
-    // Use raw data directly - no mapping!
-    setListings(paginatedData.data);
-    
-    setPage(paginatedData.page || pageNumber);
-    setTotalPages(paginatedData.totalPages || 1);
-    setTotal(paginatedData.total || 0);
+        // Add search parameters (keep this part same)
+        if (searchFilters.q.trim()) params.q = searchFilters.q.trim();
+        if (searchFilters.place.trim())
+          params.place = searchFilters.place.trim();
+        if (searchFilters.type !== "all") params.type = searchFilters.type;
+        if (searchFilters.minPrice.trim())
+          params.minPrice = parseInt(searchFilters.minPrice);
+        if (searchFilters.maxPrice.trim())
+          params.maxPrice = parseInt(searchFilters.maxPrice);
+        if (!searchFilters.includeFree) params.excludeFree = true;
+        if (searchFilters.sortBy) params.sortBy = searchFilters.sortBy;
 
-    // Update URL parameters (keep this part same)
-    const newSearchParams = new URLSearchParams();
-    if (searchFilters.q.trim()) newSearchParams.set('q', searchFilters.q.trim());
-    if (searchFilters.place.trim()) newSearchParams.set('place', searchFilters.place.trim());
-    if (searchFilters.type !== 'all') newSearchParams.set('type', searchFilters.type);
-    if (searchFilters.minPrice.trim()) newSearchParams.set('minPrice', searchFilters.minPrice.trim());
-    if (searchFilters.maxPrice.trim()) newSearchParams.set('maxPrice', searchFilters.maxPrice.trim());
-    if (searchFilters.sortBy !== 'newest') newSearchParams.set('sortBy', searchFilters.sortBy);
-    if (!searchFilters.includeFree) newSearchParams.set('includeFree', 'false');
-    if (pageNumber > 1) newSearchParams.set('page', pageNumber.toString());
-    
-    setSearchParams(newSearchParams);
-  } catch (err) {
-    console.error('Failed to fetch listings:', err);
-    setListings([]); // Single array instead of two
-    setTotal(0);
-  } finally {
-    setLoading(false);
-  }
-}, [filters, setSearchParams]);
+        // Get raw data from service
+        const paginatedData = await marketplaceService.list(params);
+
+        // Use raw data directly - no mapping!
+        setListings(paginatedData.data);
+
+        setPage(paginatedData.page || pageNumber);
+        setTotalPages(paginatedData.totalPages || 1);
+        setTotal(paginatedData.total || 0);
+
+        // Update URL parameters (keep this part same)
+        const newSearchParams = new URLSearchParams();
+        if (searchFilters.q.trim())
+          newSearchParams.set("q", searchFilters.q.trim());
+        if (searchFilters.place.trim())
+          newSearchParams.set("place", searchFilters.place.trim());
+        if (searchFilters.type !== "all")
+          newSearchParams.set("type", searchFilters.type);
+        if (searchFilters.minPrice.trim())
+          newSearchParams.set("minPrice", searchFilters.minPrice.trim());
+        if (searchFilters.maxPrice.trim())
+          newSearchParams.set("maxPrice", searchFilters.maxPrice.trim());
+        if (searchFilters.sortBy !== "newest")
+          newSearchParams.set("sortBy", searchFilters.sortBy);
+        if (!searchFilters.includeFree)
+          newSearchParams.set("includeFree", "false");
+        if (pageNumber > 1) newSearchParams.set("page", pageNumber.toString());
+
+        setSearchParams(newSearchParams);
+      } catch (err) {
+        console.error("Failed to fetch listings:", err);
+        setListings([]); // Single array instead of two
+        setTotal(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters, setSearchParams]
+  );
 
   // Handle search with debouncing (only for search input)
-  const handleSearchInput = useCallback((searchQuery: string) => {
-    const newFilters = { ...filters, q: searchQuery };
-    setFilters(newFilters);
-    
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
+  const handleSearchInput = useCallback(
+    (searchQuery: string) => {
+      const newFilters = { ...filters, q: searchQuery };
+      setFilters(newFilters);
 
-    const timeout = setTimeout(() => {
-      setPage(1);
-      fetchListings(1, newFilters);
-    }, 500);
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
 
-    setSearchTimeout(timeout);
-  }, [searchTimeout, filters, fetchListings]);
+      const timeout = setTimeout(() => {
+        setPage(1);
+        fetchListings(1, newFilters);
+      }, 500);
+
+      setSearchTimeout(timeout);
+    },
+    [searchTimeout, filters, fetchListings]
+  );
 
   useEffect(() => {
-    const initialPage = parseInt(searchParams.get('page') || '1');
+    const initialPage = parseInt(searchParams.get("page") || "1");
     setPage(initialPage);
     fetchListings(initialPage);
   }, []);
@@ -138,22 +161,21 @@ const fetchListings = useCallback(async (pageNumber = 1, searchFilters = filters
     setPage(1);
   };
 
-const handleCardClick = (listing: any) => {
-  // Use raw listing data directly
-  const listingId = listing._id || listing.id;
-  navigate(`/marketplace/${listingId}`, { state: { listing } });
-};
-
+  const handleCardClick = (listing: any) => {
+    // Use raw listing data directly
+    const listingId = listing._id || listing.id;
+    navigate(`/marketplace/${listingId}`, { state: { listing } });
+  };
 
   const clearFilters = () => {
     const resetFilters: SearchFilters = {
-      q: '',
-      place: '',
-      type: 'all',
-      minPrice: '',
-      maxPrice: '',
-      sortBy: 'newest',
-      includeFree: true
+      q: "",
+      place: "",
+      type: "all",
+      minPrice: "",
+      maxPrice: "",
+      sortBy: "newest",
+      includeFree: true,
     };
     setFilters(resetFilters);
     setTempFilters(resetFilters);
@@ -164,25 +186,29 @@ const handleCardClick = (listing: any) => {
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     fetchListings(newPage, filters);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
 
   const resetTempFilters = () => {
     setTempFilters(filters);
   };
 
-  const hasActiveFilters = filters.q || filters.place || filters.type !== 'all' || 
-                          filters.minPrice || filters.maxPrice || !filters.includeFree || 
-                          filters.sortBy !== 'newest';
+  const hasActiveFilters =
+    filters.q ||
+    filters.place ||
+    filters.type !== "all" ||
+    filters.minPrice ||
+    filters.maxPrice ||
+    !filters.includeFree ||
+    filters.sortBy !== "newest";
 
   const activeFilterCount = [
     filters.place,
-    filters.type !== 'all' ? filters.type : '',
+    filters.type !== "all" ? filters.type : "",
     filters.minPrice,
     filters.maxPrice,
-    !filters.includeFree ? 'excludeFree' : '',
-    filters.sortBy !== 'newest' ? filters.sortBy : ''
+    !filters.includeFree ? "excludeFree" : "",
+    filters.sortBy !== "newest" ? filters.sortBy : "",
   ].filter(Boolean).length;
 
   return (
@@ -198,7 +224,7 @@ const handleCardClick = (listing: any) => {
               {total > 0 && (
                 <p className="text-sm text-gray-600 mt-1">
                   {total} listings found
-                  {hasActiveFilters && ' (filtered)'}
+                  {hasActiveFilters && " (filtered)"}
                 </p>
               )}
             </div>
@@ -210,8 +236,18 @@ const handleCardClick = (listing: any) => {
               {/* Search Input */}
               <div className="flex-1">
                 <div className="relative">
-                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
                   </svg>
                   <input
                     type="text"
@@ -231,8 +267,18 @@ const handleCardClick = (listing: any) => {
                 }}
                 className="relative bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"
+                  />
                 </svg>
                 <span>Filters</span>
                 {activeFilterCount > 0 && (
@@ -246,14 +292,17 @@ const handleCardClick = (listing: any) => {
               <select
                 value={filters.sortBy}
                 onChange={(e) => {
-                  const newFilters = { ...filters, sortBy: e.target.value as any };
+                  const newFilters = {
+                    ...filters,
+                    sortBy: e.target.value as any,
+                  };
                   setFilters(newFilters);
                   setPage(1);
                   fetchListings(1, newFilters);
                 }}
                 className="bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                {sortOptions.map(option => (
+                {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -274,9 +323,10 @@ const handleCardClick = (listing: any) => {
             {/* Active Filter Tags */}
             {hasActiveFilters && (
               <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
-                {filters.type !== 'all' && (
+                {filters.type !== "all" && (
                   <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
-                    Type: {filters.type === 'sell' ? 'For Sale' : 'For Adoption'}
+                    Type:{" "}
+                    {filters.type === "sell" ? "For Sale" : "For Adoption"}
                   </span>
                 )}
                 {filters.place && (
@@ -286,7 +336,7 @@ const handleCardClick = (listing: any) => {
                 )}
                 {(filters.minPrice || filters.maxPrice) && (
                   <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                    ₹{filters.minPrice || '0'} - ₹{filters.maxPrice || '∞'}
+                    ₹{filters.minPrice || "0"} - ₹{filters.maxPrice || "∞"}
                   </span>
                 )}
                 {!filters.includeFree && (
@@ -307,101 +357,114 @@ const handleCardClick = (listing: any) => {
           </div>
         ) : (
           <>
-           {/* Listings Grid - Direct Raw Data Usage */}
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-  {listings.length === 0 ? (
-    <div className="col-span-full text-center py-12">
-      <div className="text-gray-400 mb-4">
-        <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <p className="text-gray-500 text-lg">No listings found</p>
-      <p className="text-gray-400 text-sm mt-2">
-        {hasActiveFilters
-          ? 'Try adjusting your search filters'
-          : 'Be the first to post a listing!'}
-      </p>
-    </div>
-  ) : (
-    listings.map((listing) => (
-      <div
-        key={listing._id || listing.id}
-        onClick={() => handleCardClick(listing)}
-        className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-      >
-        <div className="relative">
-          <div className="aspect-square bg-gray-100 overflow-hidden">
-            {listing.photos?.[0] ? (
-              <img
-                src={listing.photos[0]}
-                alt={listing.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
-                </svg>
-              </div>
-            )}
-          </div>
-          
-          {/* Type Badge - Inline Logic */}
-          <div className="absolute top-2 left-2">
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-              listing.type === 'sell' 
-                ? 'bg-orange-100 text-orange-800' 
-                : 'bg-green-100 text-green-800'
-            }`}>
-              {listing.type === 'sell' ? 'For Sale' : 'For Adoption'}
-            </span>
-          </div>
-        </div>
-        
-        {/* Content - Raw Data with Inline Formatting */}
-        <div className="p-3">
-          <h3 className="font-semibold text-sm text-gray-900 truncate mb-1">
-            {listing.title}
-          </h3>
-          
-          {/* Inline Price Formatting */}
-          <p className="text-lg font-bold mb-1 text-orange-600">
-            {listing.type === 'adopt' || !listing.price 
-              ? 'Free' 
-              : `₹${listing.price.toLocaleString('en-IN')}`
-            }
-          </p>
-          
-          {/* Inline Age Display */}
-          {listing.age_text && (
-            <p className="text-xs text-gray-500 truncate mb-1">
-              Age: {listing.age_text} years
-            </p>
-          )}
-          
-          {/* Location */}
-          <p className="text-xs text-gray-500 truncate mb-1">
-            📍 {listing.place || listing.location}
-          </p>
-          
-          {/* Inline Date Formatting */}
-          <p className="text-xs text-gray-400">
-            {new Date(listing.created_at || listing.createdAt).toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-    ))
-  )}
-</div>
+            {/* Listings Grid - Direct Raw Data Usage */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {listings.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <div className="text-gray-400 mb-4">
+                    <svg
+                      className="w-16 h-16 mx-auto"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 text-lg">No listings found</p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    {hasActiveFilters
+                      ? "Try adjusting your search filters"
+                      : "Be the first to post a listing!"}
+                  </p>
+                </div>
+              ) : (
+                listings.map((listing) => (
+                  <div
+                    key={listing._id || listing.id}
+                    onClick={() => handleCardClick(listing)}
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+                  >
+                    <div className="relative">
+                      <div className="aspect-square bg-gray-100 overflow-hidden">
+                        {listing.photos?.[0] ? (
+                          <img
+                            src={listing.photos[0]}
+                            alt={listing.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-gray-400">
+                            <svg
+                              className="w-8 h-8"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
 
+                      {/* Type Badge - Inline Logic */}
+                      <div className="absolute top-2 left-2">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            listing.type === "sell"
+                              ? "bg-orange-100 text-orange-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {listing.type === "sell"
+                            ? "For Sale"
+                            : "For Adoption"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content - Raw Data with Inline Formatting */}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm text-gray-900 truncate mb-1">
+                        {listing.title}
+                      </h3>
+
+                      {/* Inline Price Formatting */}
+                      <p className="text-lg font-bold mb-1 text-orange-600">
+                        {listing.type === "adopt" || !listing.price
+                          ? "Free"
+                          : `₹${listing.price.toLocaleString("en-IN")}`}
+                      </p>
+
+                      {/* Inline Age Display */}
+                      {listing.age_text && (
+                        <p className="text-xs text-gray-500 truncate mb-1">
+                          Age: {listing.age_text} years
+                        </p>
+                      )}
+
+                      {/* Location */}
+                      <p className="text-xs text-gray-500 truncate mb-1">
+                        📍 {listing.place || listing.location}
+                      </p>
+
+                      {/* Inline Date Formatting */}
+                      <p className="text-xs text-gray-400">
+                        {new Date(
+                          listing.created_at || listing.createdAt
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
 
             {/* Enhanced Pagination */}
             {totalPages > 1 && (
               <div className="flex flex-col items-center gap-4 mt-8">
                 <div className="text-sm text-gray-600">
-                  Showing {((page - 1) * 12) + 1} to {Math.min(page * 12, total)} of {total} results
+                  Showing {(page - 1) * 12 + 1} to {Math.min(page * 12, total)}{" "}
+                  of {total} results
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -413,7 +476,9 @@ const handleCardClick = (listing: any) => {
                       >
                         1
                       </button>
-                      {page > 3 && <span className="px-2 text-gray-400">...</span>}
+                      {page > 3 && (
+                        <span className="px-2 text-gray-400">...</span>
+                      )}
                     </>
                   )}
 
@@ -439,7 +504,9 @@ const handleCardClick = (listing: any) => {
 
                   {page < totalPages - 1 && (
                     <>
-                      {page < totalPages - 2 && <span className="px-2 text-gray-400">...</span>}
+                      {page < totalPages - 2 && (
+                        <span className="px-2 text-gray-400">...</span>
+                      )}
                       <button
                         onClick={() => handlePageChange(totalPages)}
                         className="px-3 py-2 text-sm border rounded hover:bg-gray-50"
@@ -466,184 +533,222 @@ const handleCardClick = (listing: any) => {
         </svg>
       </button>
 
-{showFiltersModal && (
-  <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-    <div 
-      className="absolute inset-0 bg-opacity-20 backdrop-blur-sm"
-      onClick={() => {
-        setShowFiltersModal(false);
-        resetTempFilters();
-      }}
-    />
-    <div 
-      className="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-      onClick={(e) => e.stopPropagation()} 
-    >
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Filter Listings</h3>
-          <button
+      {showFiltersModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-opacity-20 backdrop-blur-sm"
             onClick={() => {
               setShowFiltersModal(false);
               resetTempFilters();
             }}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Modal Body */}
-      <div className="px-6 py-4 space-y-6">
-        {/* Location Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location
-          </label>
-          <input
-            type="text"
-            placeholder="Enter location..."
-            value={tempFilters.place}
-            onChange={(e) => setTempFilters({ ...tempFilters, place: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
-        </div>
-
-        {/* Type Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Type
-          </label>
-          <select
-            value={tempFilters.type}
-            onChange={(e) => setTempFilters({ ...tempFilters, type: e.target.value as 'all' | 'sell' | 'adopt' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+          <div
+            className="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <option value="all">All Types</option>
-            <option value="sell">For Sale</option>
-            <option value="adopt">For Adoption</option>
-          </select>
-        </div>
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Filter Listings
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowFiltersModal(false);
+                    resetTempFilters();
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-        {/* Price Range */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Price Range
-          </label>
-          <div className="flex gap-2 items-center mb-3">
-            <input
-              type="number"
-              placeholder="Min"
-              value={tempFilters.minPrice}
-              onChange={(e) => setTempFilters({ ...tempFilters, minPrice: e.target.value })}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-            <span className="text-gray-500">to</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={tempFilters.maxPrice}
-              onChange={(e) => setTempFilters({ ...tempFilters, maxPrice: e.target.value })}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
+            {/* Modal Body */}
+            <div className="px-6 py-4 space-y-6">
+              {/* Location Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter location..."
+                  value={tempFilters.place}
+                  onChange={(e) =>
+                    setTempFilters({ ...tempFilters, place: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
 
-          {/* Quick Price Ranges */}
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'Under ₹1,000', min: '', max: '1000' },
-              { label: '₹1,000 - ₹5,000', min: '1000', max: '5000' },
-              { label: '₹5,000 - ₹10,000', min: '5000', max: '10000' },
-              { label: '₹10,000 - ₹25,000', min: '10000', max: '25000' },
-              { label: '₹25,000 - ₹50,000', min: '25000', max: '50000' },
-              { label: 'Above ₹50,000', min: '50000', max: '' }
-            ].map((range, index) => (
+              {/* Type Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type
+                </label>
+                <select
+                  value={tempFilters.type}
+                  onChange={(e) =>
+                    setTempFilters({
+                      ...tempFilters,
+                      type: e.target.value as "all" | "sell" | "adopt",
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="all">All Types</option>
+                  <option value="sell">For Sale</option>
+                  <option value="adopt">For Adoption</option>
+                </select>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Price Range
+                </label>
+                <div className="flex gap-2 items-center mb-3">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={tempFilters.minPrice}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        minPrice: e.target.value,
+                      })
+                    }
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  <span className="text-gray-500">to</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={tempFilters.maxPrice}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        maxPrice: e.target.value,
+                      })
+                    }
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                {/* Quick Price Ranges */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Under ₹1,000", min: "", max: "1000" },
+                    { label: "₹1,000 - ₹5,000", min: "1000", max: "5000" },
+                    { label: "₹5,000 - ₹10,000", min: "5000", max: "10000" },
+                    { label: "₹10,000 - ₹25,000", min: "10000", max: "25000" },
+                    { label: "₹25,000 - ₹50,000", min: "25000", max: "50000" },
+                    { label: "Above ₹50,000", min: "50000", max: "" },
+                  ].map((range, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() =>
+                        setTempFilters({
+                          ...tempFilters,
+                          minPrice: range.min,
+                          maxPrice: range.max,
+                        })
+                      }
+                      className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+                        tempFilters.minPrice === range.min &&
+                        tempFilters.maxPrice === range.max
+                          ? "bg-orange-100 border-orange-300 text-orange-800"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {range.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Options */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Options
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={tempFilters.includeFree}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        includeFree: e.target.checked,
+                      })
+                    }
+                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Include free items
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3">
               <button
-                key={index}
                 type="button"
-                onClick={() => setTempFilters({
-                  ...tempFilters,
-                  minPrice: range.min,
-                  maxPrice: range.max
-                })}
-                className={`px-3 py-2 text-sm rounded-md border transition-colors ${
-                  tempFilters.minPrice === range.min && tempFilters.maxPrice === range.max
-                    ? 'bg-orange-100 border-orange-300 text-orange-800'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => {
+                  setShowFiltersModal(false);
+                  resetTempFilters();
+                }}
+                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
-                {range.label}
+                Cancel
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setTempFilters({
+                    q: filters.q,
+                    place: "",
+                    type: "all",
+                    minPrice: "",
+                    maxPrice: "",
+                    sortBy: "newest",
+                    includeFree: true,
+                  });
+                }}
+                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilters(tempFilters);
+                  setPage(1);
+                  fetchListings(1, tempFilters);
+                  setShowFiltersModal(false);
+                }}
+                className="w-full sm:w-auto px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700 transition-colors"
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Options */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Options
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={tempFilters.includeFree}
-              onChange={(e) => setTempFilters({ ...tempFilters, includeFree: e.target.checked })}
-              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-            />
-            <span className="ml-2 text-sm text-gray-700">Include free items</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Modal Footer */}
-      <div className="px-6 py-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            setShowFiltersModal(false);
-            resetTempFilters();
-          }}
-          className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setTempFilters({
-              q: filters.q,
-              place: '',
-              type: 'all',
-              minPrice: '',
-              maxPrice: '',
-              sortBy: 'newest',
-              includeFree: true
-            });
-          }}
-          className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-        >
-          Reset
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setFilters(tempFilters);
-            setPage(1);
-            fetchListings(1, tempFilters);
-            setShowFiltersModal(false);
-          }}
-          className="w-full sm:w-auto px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700 transition-colors"
-        >
-          Apply Filters
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+      )}
 
       {/* Create Listing Modal */}
       {open && (
