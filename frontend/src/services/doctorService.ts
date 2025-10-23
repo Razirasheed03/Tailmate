@@ -18,8 +18,6 @@ export const doctorService = {
       } 
     };
   },
-
-  // NEW: Submit for admin review
   submitForReview: async () => {
     const { data } = await httpClient.post("/doctor/submit-review");
     return data.data;

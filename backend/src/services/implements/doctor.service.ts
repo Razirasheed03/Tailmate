@@ -52,15 +52,6 @@ export class DoctorService {
     return this._doctorRepo.getVerification(userId);
   }
 
-  // private async ensureVerified(userId: string): Promise<void> {
-  //   const v = await this._doctorRepo.getVerification(userId);
-  //   if (!v || v.status !== "verified") {
-  //     const err: any = new Error("Profile is available after verification");
-  //     err.status = 403;
-  //     throw err;
-  //   }
-  // }
-
  async uploadCertificate(userId: string, certificateUrl: string): Promise<any> {
     await this.ensureDoctor(userId);
     if (!certificateUrl) throw new Error("certificateUrl is required");

@@ -11,7 +11,6 @@ export class DoctorRepository implements IDoctorRepository {
  async createIfMissing(userId: string) {
     let doc = await this.model.findOne({ userId });
     if (!doc) {
-      // NEW: Don't set status to "pending" - leave undefined or "not_submitted"
       doc = await this.model.create({ 
         userId, 
         verification: { 
