@@ -8,19 +8,27 @@ import { UserModel } from "../../models/implements/user.model";
 export class DoctorRepository implements IDoctorRepository {
   constructor(private readonly model: Model<any> = DoctorModel) {}
 
-  async createIfMissing(userId: string) {
+ async createIfMissing(userId: string) {
     let doc = await this.model.findOne({ userId });
     if (!doc) {
-      doc = await this.model.create({ userId, verification: { status: "pending" } });
+      // NEW: Don't set status to "pending" - leave undefined or "not_submitted"
+      doc = await this.model.create({ 
+        userId, 
+        verification: { 
+          status: "not_submitted", // Changed from "pending"
+          certificateUrl: null,
+          submittedAt: null,
+          rejectionReasons: []
+        } 
+      });
     }
     return doc;
-  } // basic ensure doc row [web:507]
-
-  async getVerification(userId: string) {
+  }
+ async getVerification(userId: string) {
     const doc = await this.model.findOne({ userId }).select("verification");
-    if (!doc) return { status: "pending", rejectionReasons: [] };
-    return doc.verification;
-  } // simple read [web:507]
+    if (!doc) return { status: "not_submitted", certificateUrl: null, rejectionReasons: [] };
+    return doc.verification || { status: "not_submitted", certificateUrl: null, rejectionReasons: [] };
+  }
 
   async submitCertificate(userId: string, certificateUrl: string) {
     const now = new Date();
@@ -40,14 +48,12 @@ export class DoctorRepository implements IDoctorRepository {
       .select("verification");
     if (!updated) throw new Error("Doctor not found");
     return updated;
-  } // state transition to pending [web:507]
-
-  async getProfile(userId: string) {
+  }
+   async getProfile(userId: string) {
     const doc = await this.model.findOne({ userId }).select("profile");
     if (!doc) return {};
     return doc.profile || {};
-  } // profile fetch [web:507]
-
+  }
   async updateProfile(userId: string, profile: Partial<any>) {
     const $set: Record<string, any> = {};
     if (typeof profile.displayName === "string") $set["profile.displayName"] = profile.displayName;
@@ -66,8 +72,29 @@ export class DoctorRepository implements IDoctorRepository {
     const updated = await this.model.findOneAndUpdate({ userId }, { $set }, { new: true, upsert: true }).select("profile");
     if (!updated) throw new Error("Doctor not found");
     return updated.profile || {};
-  } // profile update with selective $set [web:507]
-
+  }
+  async saveCertificateUrl(userId: string, certificateUrl: string): Promise<any> {
+    const doc = await this.model.findOne({ userId });
+    if (!doc) throw new Error("Doctor not found");
+    
+    // Just save the certificate URL, don't change status
+    doc.verification.certificateUrl = certificateUrl;
+    await doc.save();
+    
+    return doc.verification;
+  }
+  async submitForReview(userId: string): Promise<any> {
+    const doc = await this.model.findOne({ userId });
+    if (!doc) throw new Error("Doctor not found");
+    
+    // Change status to "pending" and set submission date
+    doc.verification.status = "pending";
+    doc.verification.submittedAt = new Date();
+    doc.verification.rejectionReasons = []; // Clear any previous rejection reasons
+    await doc.save();
+    
+    return doc;
+  }
   // ===== NEW: Sessions (bookings) aggregation =====
 
   async listSessions(

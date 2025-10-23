@@ -11,7 +11,7 @@ import { HttpResponse } from "../../constants/messageConstant";
 export class DoctorController {
   constructor(private readonly svc: DoctorService) {}
 
-  getVerification = async (req: Request, res: Response, next: NextFunction) => {
+ getVerification = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId =
         (req as any).user?._id?.toString() || (req as any).user?.id;
@@ -23,8 +23,7 @@ export class DoctorController {
       next(err);
     }
   };
-
-  uploadCertificate = async (
+uploadCertificate = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -42,18 +41,45 @@ export class DoctorController {
         file.buffer,
         file.originalname
       );
-      const updated = await this.svc.submitCertificate(userId, secure_url);
+      const updated = await this.svc.uploadCertificate(userId, secure_url);
       return ResponseHelper.ok(
         res,
-        { certificateUrl: secure_url, verification: updated.verification },
-        "Certificate uploaded and submitted for review"
+        { certificateUrl: secure_url, verification: updated },
+        "Certificate uploaded successfully"
       );
     } catch (err) {
       next(err);
     }
   };
+submitForReview = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const userId =
+        (req as any).user?._id?.toString() || (req as any).user?.id;
+      if (!userId)
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
 
-  getProfile = async (req: Request, res: Response, next: NextFunction) => {
+      const data = await this.svc.submitForReview(userId);
+      return ResponseHelper.ok(
+        res,
+        data,
+        "Submitted for admin review"
+      );
+    } catch (err: any) {
+      const status = (err && err.status) || 400;
+      return ResponseHelper.error(
+        res,
+        status,
+        "SUBMIT_ERROR",
+        err?.message || "Failed to submit for review"
+      );
+    }
+  };
+
+ getProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId =
         (req as any).user?._id?.toString() || (req as any).user?.id;
@@ -72,7 +98,7 @@ export class DoctorController {
     }
   };
 
-  updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+ updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId =
         (req as any).user?._id?.toString() || (req as any).user?.id;
@@ -91,8 +117,7 @@ export class DoctorController {
       );
     }
   };
-
-  uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId =
         (req as any).user?._id?.toString() || (req as any).user?.id;

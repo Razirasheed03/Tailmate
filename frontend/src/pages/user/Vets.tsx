@@ -1,7 +1,8 @@
 // src/pages/user/Vets.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/UiComponents/UserNavbar";
-import { vetsService, type DoctorCard } from "@/services/vetsService";
+import { vetsService } from "@/services/vetsService";
+import { type DoctorCard } from "@/types/doctor.types";
 import { Link } from "react-router-dom";
 
 export default function Vets() {
@@ -18,28 +19,35 @@ export default function Vets() {
     [items.length, total]
   );
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data, total } = await vetsService.listDoctors({
-          page,
-          limit,
-          search: query || undefined,
-          specialty: specialty || undefined,
-        });
-        if (!mounted) return;
-        setItems((prev) => (page === 1 ? data : [...prev, ...data]));
-        setTotal(total);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [page, limit, query, specialty]);
+useEffect(() => {
+  let mounted = true;
+  (async () => {
+    setLoading(true);
+    try {
+      const { data } = await vetsService.listDoctors({
+        page,
+        limit,
+        search: query || undefined,
+        specialty: specialty || undefined,
+      });
+
+      if (!mounted) return;
+
+      // Filter: only verified + have available slot
+      const filtered = data.filter(
+        (doc) => doc.nextSlot
+      );
+
+      setItems((prev) => (page === 1 ? filtered : [...prev, ...filtered]));
+      setTotal(filtered.length);
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  })();
+  return () => {
+    mounted = false;
+  };
+}, [page, limit, query, specialty]);
 
   function onSearchSubmit(e: React.FormEvent) {
     e.preventDefault();

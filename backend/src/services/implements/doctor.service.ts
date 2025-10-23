@@ -47,36 +47,59 @@ export class DoctorService {
   }
 
   async getVerification(userId: string): Promise<any> {
-    // Replace any with concrete verification type from repo if available
     await this.ensureDoctor(userId);
     await this._doctorRepo.createIfMissing(userId);
     return this._doctorRepo.getVerification(userId);
   }
 
-  private async ensureVerified(userId: string): Promise<void> {
-    const v = await this._doctorRepo.getVerification(userId);
-    if (!v || v.status !== "verified") {
-      const err: any = new Error("Profile is available after verification");
-      err.status = 403;
-      throw err;
-    }
-  }
+  // private async ensureVerified(userId: string): Promise<void> {
+  //   const v = await this._doctorRepo.getVerification(userId);
+  //   if (!v || v.status !== "verified") {
+  //     const err: any = new Error("Profile is available after verification");
+  //     err.status = 403;
+  //     throw err;
+  //   }
+  // }
 
-  async submitCertificate(userId: string, certificateUrl: string): Promise<any> {
-    // Replace any with the repo’s return type (e.g., { ok: true } or updated entity)
+ async uploadCertificate(userId: string, certificateUrl: string): Promise<any> {
     await this.ensureDoctor(userId);
     if (!certificateUrl) throw new Error("certificateUrl is required");
-    return this._doctorRepo.submitCertificate(userId, certificateUrl);
+    return this._doctorRepo.saveCertificateUrl(userId, certificateUrl);
+  }
+    private isProfileComplete(profile: any): boolean {
+    return !!(
+      profile?.displayName?.trim() &&
+      profile?.bio?.trim() &&
+      profile?.specialties?.length > 0 &&
+      typeof profile?.experienceYears === "number" &&
+      profile?.licenseNumber?.trim() &&
+      typeof profile?.consultationFee === "number"
+    );
+  }
+  async submitForReview(userId: string): Promise<any> {
+    await this.ensureDoctor(userId);
+    
+    const doc = await this._doctorRepo.getVerification(userId);
+    if (!doc?.certificateUrl) {
+      throw new Error("Please upload a certificate first");
+    }
+
+    const profile = await this._doctorRepo.getProfile(userId).catch(() => ({}));
+    
+    if (!this.isProfileComplete(profile)) {
+      throw new Error("Please complete all required profile fields (name, bio, specialties, experience, license, fee)");
+    }
+
+    // Now submit for review (sets status to pending and submittedAt)
+    return this._doctorRepo.submitForReview(userId);
   }
 
-  async getProfile(userId: string): Promise<any> {
-    // Replace any with concrete profile type
+ async getProfile(userId: string): Promise<any> {
     await this.ensureDoctor(userId);
-    await this.ensureVerified(userId);
     return this._doctorRepo.getProfile(userId);
   }
 
-  async updateProfile(
+async updateProfile(
     userId: string,
     payload: Partial<{
       displayName: string;
@@ -88,9 +111,8 @@ export class DoctorService {
       consultationFee: number;
     }>
   ): Promise<any> {
-    // Replace any with concrete updated profile type
     await this.ensureDoctor(userId);
-    await this.ensureVerified(userId);
+
     const profile: any = {};
     if (typeof payload.displayName === "string") profile.displayName = payload.displayName.trim();
     if (typeof payload.bio === "string") {
@@ -103,7 +125,7 @@ export class DoctorService {
         new Set(payload.specialties.map((s) => String(s).trim()).filter(Boolean))
       );
     if (typeof payload.experienceYears === "number") {
-      if (payload.experienceYears < 0 || payload.experienceYears > 80) throw new Error("Experience out of range");
+       if (payload.experienceYears < 0 || payload.experienceYears > 80) throw new Error("Experience out of range");
       profile.experienceYears = payload.experienceYears;
     }
     if (typeof payload.licenseNumber === "string") profile.licenseNumber = payload.licenseNumber.trim();
@@ -114,6 +136,7 @@ export class DoctorService {
     }
     return this._doctorRepo.updateProfile(userId, profile);
   }
+
 
   // ===== Legacy per-day availability kept (unchanged) =====
   private toMinutes(hhmm: string): number {

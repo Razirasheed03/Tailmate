@@ -4,7 +4,7 @@ import { Button } from "@/components/UiComponents/button";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { doctorService } from "@/services/doctorService";
 import { useAuth } from "@/context/AuthContext";
-import { Info, Loader2, Camera, Pencil } from "lucide-react";
+import { Info, Loader2, Camera, Pencil, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 type VerificationStatus = "pending" | "verified" | "rejected";
@@ -26,6 +26,7 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hasSubmitted, setHasSubmitted] = useState(false);
 
     const [form, setForm] = useState<ProfileForm>({
         displayName: "",
@@ -37,12 +38,12 @@ export default function Profile() {
         consultationFee: "",
     });
 
-    const [specialtyInput, setSpecialtyInput] = useState(""); // NEW
-
+    const [specialtyInput, setSpecialtyInput] = useState("");
     const [editOpen, setEditOpen] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
 
     const isVerified = verificationStatus === "verified";
+    const canEdit = verificationStatus !== "pending" || !hasSubmitted;
 
     const statusBadge = useMemo(() => {
         if (verificationStatus === "verified")
@@ -54,7 +55,7 @@ export default function Profile() {
         if (verificationStatus === "pending")
             return (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                    Pending
+                    {hasSubmitted ? "Under Review" : "Draft"}
                 </span>
             );
         return (
@@ -62,7 +63,7 @@ export default function Profile() {
                 Rejected
             </span>
         );
-    }, [verificationStatus]);
+    }, [verificationStatus, hasSubmitted]);
 
     useEffect(() => {
         let mounted = true;
@@ -73,6 +74,8 @@ export default function Profile() {
                 const v = await doctorService.getVerification();
                 if (!mounted) return;
                 setVerificationStatus(v.status as VerificationStatus);
+                
+                setHasSubmitted(v.status === "pending" && !!v.certificateUrl);
 
                 try {
                     const p = await doctorService.getProfile();
@@ -87,7 +90,7 @@ export default function Profile() {
                         consultationFee: typeof p?.consultationFee === "number" ? p.consultationFee : "",
                     });
                 } catch {
-                    // not verified or no profile yet
+                    // profile not available yet
                 }
             } catch (e: any) {
                 setError(e?.response?.data?.message || "Failed to load profile");
@@ -103,7 +106,6 @@ export default function Profile() {
     const setField = <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) =>
         setForm((prev) => ({ ...prev, [key]: value }));
 
-    // ---------------- NEW Specialty handlers ----------------
     const onAddSpecialty = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" && specialtyInput.trim()) {
             e.preventDefault();
@@ -115,10 +117,11 @@ export default function Profile() {
     const onRemoveSpecialty = (s: string) => {
         setField("specialties", form.specialties.filter((item) => item !== s));
     };
-    // ---------------------------------------------------------
 
     const validate = (): string | null => {
-        if (!isVerified) return "Profile can be edited after verification";
+        if (hasSubmitted && verificationStatus === "pending") {
+            return "Cannot edit profile while under admin review";
+        }
         if (form.displayName.trim().length === 0) return "Display name is required";
         if (form.bio.trim().length > 5000) return "Bio is too long (max 5000)";
         if (form.experienceYears !== "" && Number(form.experienceYears) < 0) return "Experience cannot be negative";
@@ -147,6 +150,7 @@ export default function Profile() {
             };
             await doctorService.updateProfile(payload);
             setEditOpen(false);
+            toast("Profile saved successfully");
         } catch (e: any) {
             setError(e?.response?.data?.message || "Failed to save profile");
         } finally {
@@ -168,8 +172,9 @@ export default function Profile() {
             try {
                 setAvatarUploading(true);
                 const url = await doctorService.uploadAvatar(file);
-                await doctorService.updateProfile({ avatarUrl: url }); // persist immediately
+                await doctorService.updateProfile({ avatarUrl: url });
                 setField("avatarUrl", url);
+                toast("Avatar updated");
             } catch (e: any) {
                 toast(e?.response?.data?.message || "Avatar upload failed");
             } finally {
@@ -182,13 +187,25 @@ export default function Profile() {
         form.avatarUrl ||
         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(form.displayName || user?.username || "Dr")}`;
 
+    const profileCompletionPercent = useMemo(() => {
+        const fields = [
+            form.displayName.trim(),
+            form.bio.trim(),
+            form.specialties.length > 0,
+            form.experienceYears !== "",
+            form.licenseNumber.trim(),
+            form.consultationFee !== "",
+        ];
+        const completed = fields.filter(Boolean).length;
+        return Math.round((completed / fields.length) * 100);
+    }, [form]);
+
     return (
         <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
             <div className="flex">
                 <DoctorSidebar isVerified={isVerified} />
 
                 <div className="flex-1 min-h-screen">
-                    {/* Header */}
                     <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur">
                         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
                             <h1 className="text-lg font-semibold">Profile</h1>
@@ -208,21 +225,53 @@ export default function Profile() {
                         ) : (
                             <>
                                 {!isVerified && (
-                                    <Card className="border-0 bg-amber-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
-                                        <CardContent className="p-4 text-amber-800 text-sm flex items-start gap-2">
+                                    <Card className="border-0 bg-blue-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
+                                        <CardContent className="p-4 text-blue-800 text-sm flex items-start gap-2">
                                             <Info className="w-4 h-4 mt-0.5" />
-                                            Profile editing is enabled after verification. Review and upload certificate in the Doctor page if pending or rejected.
+                                            <div>
+                                                {hasSubmitted ? (
+                                                    <p>Your profile is under admin review. You cannot edit until a decision is made.</p>
+                                                ) : verificationStatus === "rejected" ? (
+                                                    <p>Your submission was rejected. Please update your profile and certificate, then resubmit from the Dashboard.</p>
+                                                ) : (
+                                                    <p>Complete all required fields (marked with *) and upload a certificate on the Dashboard to submit for verification.</p>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {!isVerified && !hasSubmitted && (
+                                    <Card className="border-0 bg-white/80 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium">Profile Completion</span>
+                                                <span className="text-sm font-semibold text-[#0EA5E9]">{profileCompletionPercent}%</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-[#0EA5E9] h-2 rounded-full transition-all"
+                                                    style={{ width: `${profileCompletionPercent}%` }}
+                                                />
+                                            </div>
+                                            {profileCompletionPercent < 100 && (
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    Complete all required fields to enable submission for review
+                                                </p>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 )}
 
                                 {error && (
                                     <Card className="border-0 bg-rose-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
-                                        <CardContent className="p-4 text-rose-700 text-sm">{error}</CardContent>
+                                        <CardContent className="p-4 text-rose-700 text-sm flex items-start gap-2">
+                                            <AlertCircle className="w-4 h-4 mt-0.5" />
+                                            {error}
+                                        </CardContent>
                                     </Card>
                                 )}
 
-                                {/* View card */}
                                 <Card className="border-0 bg-white/80 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                                     <CardContent className="p-8">
                                         <div className="flex flex-col items-center">
@@ -237,9 +286,9 @@ export default function Profile() {
                                                         "absolute bottom-2 right-2 inline-flex items-center gap-1",
                                                         "px-3 py-1.5 rounded-full bg-[#0EA5E9] text-white text-xs",
                                                         "cursor-pointer hover:bg-[#0284C7] transition",
-                                                        (!isVerified || avatarUploading) ? "opacity-60 cursor-not-allowed" : "",
+                                                        (!canEdit || avatarUploading) ? "opacity-60 cursor-not-allowed" : "",
                                                     ].join(" ")}
-                                                    title={isVerified ? "Change photo" : "Available after verification"}
+                                                    title={canEdit ? "Change photo" : "Not available during review"}
                                                 >
                                                     <Camera className="w-3.5 h-3.5" />
                                                     {avatarUploading ? "Uploading..." : "Change"}
@@ -247,7 +296,7 @@ export default function Profile() {
                                                         type="file"
                                                         accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
                                                         className="hidden"
-                                                        disabled={!isVerified || avatarUploading}
+                                                        disabled={!canEdit || avatarUploading}
                                                         onChange={(e) => onPickAvatar(e.target.files?.[0] ?? null)}
                                                     />
                                                 </label>
@@ -256,31 +305,35 @@ export default function Profile() {
                                             <div className="mt-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <h2 className="text-xl font-semibold">
-                                                        {form.displayName || user?.username || "Doctor"}
+                                                        {form.displayName || user?.username || "Doctor"} {!form.displayName && <span className="text-rose-500">*</span>}
                                                     </h2>
-                                                    {isVerified && (
+                                                    {canEdit && (
                                                         <button
                                                             onClick={() => setEditOpen(true)}
                                                             className="p-1.5 rounded-full hover:bg-gray-100 transition"
                                                             title="Edit profile"
-                                                            disabled={!isVerified}
                                                         >
                                                             <Pencil className="w-4 h-4 text-gray-600" />
                                                         </button>
                                                     )}
                                                 </div>
-                                                <p className="text-sm text-gray-500 mt-0.5">{form.licenseNumber || "License: —"}</p>
+                                                <p className="text-sm text-gray-500 mt-0.5">
+                                                    {form.licenseNumber || <span className="text-rose-500">License: Required *</span>}
+                                                </p>
                                             </div>
 
-                                            {/* Details grid under the avatar */}
                                             <div className="mt-6 w-full max-w-3xl grid sm:grid-cols-2 gap-4 text-sm">
                                                 <div className="p-4 rounded-xl bg-gray-50">
                                                     <p className="text-gray-500">Experience</p>
-                                                    <p className="font-medium">{form.experienceYears || 0} years</p>
+                                                    <p className="font-medium">
+                                                        {form.experienceYears !== "" ? `${form.experienceYears} years` : <span className="text-rose-500">Required *</span>}
+                                                    </p>
                                                 </div>
                                                 <div className="p-4 rounded-xl bg-gray-50">
                                                     <p className="text-gray-500">Consultation fee</p>
-                                                    <p className="font-medium">{form.consultationFee ? `₹${form.consultationFee}` : "—"}</p>
+                                                    <p className="font-medium">
+                                                        {form.consultationFee !== "" ? `₹${form.consultationFee}` : <span className="text-rose-500">Required *</span>}
+                                                    </p>
                                                 </div>
                                                 <div className="p-4 rounded-xl bg-gray-50 sm:col-span-2">
                                                     <p className="text-gray-500">Specialties</p>
@@ -293,23 +346,24 @@ export default function Profile() {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p className="font-medium">—</p>
+                                                        <p className="font-medium text-rose-500">Required * (Add at least one)</p>
                                                     )}
                                                 </div>
                                                 <div className="p-4 rounded-xl bg-gray-50 sm:col-span-2">
                                                     <p className="text-gray-500">Bio</p>
-                                                    <p className="font-medium whitespace-pre-wrap">{form.bio || "—"}</p>
+                                                    <p className="font-medium whitespace-pre-wrap">
+                                                        {form.bio || <span className="text-rose-500">Required *</span>}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                {/* Edit modal */}
                                 {editOpen && (
                                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-3">
-                                        <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl">
-                                            <div className="flex items-center justify-between px-5 py-4 border-b">
+                                        <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+                                            <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
                                                 <h3 className="text-lg font-semibold">Edit profile</h3>
                                                 <button
                                                     onClick={() => setEditOpen(false)}
@@ -322,44 +376,43 @@ export default function Profile() {
                                             <div className="p-5">
                                                 <div className="grid md:grid-cols-2 gap-5">
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium">Display name</label>
+                                                        <label className="text-sm font-medium">Display name <span className="text-rose-500">*</span></label>
                                                         <input
                                                             type="text"
                                                             value={form.displayName}
                                                             onChange={(e) => setField("displayName", e.target.value)}
-                                                            disabled={!isVerified || saving}
+                                                            disabled={!canEdit || saving}
                                                             className="w-full border rounded-lg px-3 py-2 text-sm"
                                                             placeholder="Dr. Jane Doe"
                                                         />
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium">License number</label>
+                                                        <label className="text-sm font-medium">License number <span className="text-rose-500">*</span></label>
                                                         <input
                                                             type="text"
                                                             value={form.licenseNumber}
                                                             onChange={(e) => setField("licenseNumber", e.target.value)}
-                                                            disabled={!isVerified || saving}
+                                                            disabled={!canEdit || saving}
                                                             className="w-full border rounded-lg px-3 py-2 text-sm"
                                                             placeholder="e.g., TCMC/123456"
                                                         />
                                                     </div>
 
                                                     <div className="md:col-span-2 space-y-2">
-                                                        <label className="text-sm font-medium">Bio</label>
+                                                        <label className="text-sm font-medium">Bio <span className="text-rose-500">*</span></label>
                                                         <textarea
                                                             rows={5}
                                                             value={form.bio}
                                                             onChange={(e) => setField("bio", e.target.value)}
-                                                            disabled={!isVerified || saving}
+                                                            disabled={!canEdit || saving}
                                                             className="w-full border rounded-lg px-3 py-2 text-sm"
                                                             placeholder="Describe experience, approach, and areas of interest..."
                                                         />
                                                     </div>
 
-                                                    {/* Specialties tag input */}
                                                     <div className="space-y-2 md:col-span-2">
-                                                        <label className="text-sm font-medium">Specialties</label>
+                                                        <label className="text-sm font-medium">Specialties <span className="text-rose-500">*</span></label>
                                                         <div className="flex flex-wrap gap-2 border rounded-lg px-3 py-2">
                                                             {form.specialties.map((s) => (
                                                                 <span
@@ -371,6 +424,7 @@ export default function Profile() {
                                                                         type="button"
                                                                         onClick={() => onRemoveSpecialty(s)}
                                                                         className="text-gray-500 hover:text-red-500"
+                                                                        disabled={!canEdit || saving}
                                                                     >
                                                                         ✕
                                                                     </button>
@@ -381,7 +435,7 @@ export default function Profile() {
                                                                 value={specialtyInput}
                                                                 onChange={(e) => setSpecialtyInput(e.target.value)}
                                                                 onKeyDown={onAddSpecialty}
-                                                                disabled={!isVerified || saving}
+                                                                disabled={!canEdit || saving}
                                                                 className="flex-1 min-w-[120px] border-0 focus:ring-0 text-sm"
                                                                 placeholder="Type & press Enter"
                                                             />
@@ -389,7 +443,7 @@ export default function Profile() {
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium">Experience (years)</label>
+                                                        <label className="text-sm font-medium">Experience (years) <span className="text-rose-500">*</span></label>
                                                         <input
                                                             type="number"
                                                             min={0}
@@ -397,14 +451,14 @@ export default function Profile() {
                                                             onChange={(e) =>
                                                                 setField("experienceYears", e.target.value === "" ? "" : Number(e.target.value))
                                                             }
-                                                            disabled={!isVerified || saving}
+                                                            disabled={!canEdit || saving}
                                                             className="w-full border rounded-lg px-3 py-2 text-sm"
                                                             placeholder="e.g., 8"
                                                         />
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium">Consultation fee (per hour)</label>
+                                                        <label className="text-sm font-medium">Consultation fee <span className="text-rose-500">*</span></label>
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-sm text-gray-500">₹</span>
                                                             <input
@@ -414,7 +468,7 @@ export default function Profile() {
                                                                 onChange={(e) =>
                                                                     setField("consultationFee", e.target.value === "" ? "" : Number(e.target.value))
                                                                 }
-                                                                disabled={!isVerified || saving}
+                                                                disabled={!canEdit || saving}
                                                                 className="w-full border rounded-lg px-3 py-2 text-sm"
                                                                 placeholder="e.g., 1200"
                                                             />
@@ -427,14 +481,14 @@ export default function Profile() {
                                                             type="url"
                                                             value={form.avatarUrl}
                                                             onChange={(e) => setField("avatarUrl", e.target.value)}
-                                                            disabled={!isVerified || saving}
+                                                            disabled={!canEdit || saving}
                                                             className="w-full border rounded-lg px-3 py-2 text-sm"
                                                             placeholder="https://..."
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex justify-end gap-3 px-5 py-4 border-t">
+                                            <div className="flex justify-end gap-3 px-5 py-4 border-t sticky bottom-0 bg-white z-10">
                                                 <Button
                                                     onClick={() => setEditOpen(false)}
                                                     variant="outline"
@@ -442,7 +496,7 @@ export default function Profile() {
                                                 >
                                                     Cancel
                                                 </Button>
-                                                <Button onClick={onSave} disabled={!isVerified || saving}>
+                                                <Button onClick={onSave} disabled={!canEdit || saving}>
                                                     {saving ? (
                                                         <span className="flex items-center gap-1">
                                                             <Loader2 className="w-4 h-4 animate-spin" /> Saving...

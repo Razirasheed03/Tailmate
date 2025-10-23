@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { adminDoctorService, type DoctorRow, type DoctorDetail } from '@/services/adminDoctorService';
+import { adminDoctorService } from '@/services/adminDoctorService';
+import { type DoctorDetail, type DoctorRow } from '@/types/adminDoctor.types';
 import { Card, CardContent } from '@/components/UiComponents/Card';
 import { Button } from '@/components/UiComponents/button';
 import { CheckCircle2, XCircle, ExternalLink, Loader2 } from 'lucide-react';
@@ -16,7 +17,6 @@ import { Viewer, Worker } from '@react-pdf-viewer/core';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import { toast } from 'sonner';
 
-// Keep workerUrl, ensure version matches your installed pdfjs-dist
 const workerUrl = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 type StatusFilter = '' | 'pending' | 'verified' | 'rejected';
@@ -35,6 +35,9 @@ export default function DoctorListings() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectUserId, setRejectUserId] = useState<string | null>(null);
   const [rejectReasons, setRejectReasons] = useState<string>('');
+
+  // verify modal
+  const [verifyUserId, setVerifyUserId] = useState<string | null>(null);
 
   // view modal
   const [viewOpen, setViewOpen] = useState(false);
@@ -83,7 +86,17 @@ export default function DoctorListings() {
     {
       id: 'status',
       header: 'Status',
-      cell: (d) => <StatusBadge status={d.status === 'verified' ? 'verified' : d.status === 'pending' ? 'pending' : 'rejected'} />,
+      cell: (d) => (
+        <StatusBadge
+          status={
+            d.status === 'verified'
+              ? 'verified'
+              : d.status === 'pending'
+              ? 'pending'
+              : 'rejected'
+          }
+        />
+      ),
     },
     {
       id: 'certificate',
@@ -105,7 +118,8 @@ export default function DoctorListings() {
     {
       id: 'submitted',
       header: 'Submitted',
-      cell: (d) => (d.submittedAt ? new Date(d.submittedAt).toLocaleString() : '—'),
+      cell: (d) =>
+        d.submittedAt ? new Date(d.submittedAt).toLocaleString() : '—',
     },
     {
       id: 'actions',
@@ -116,7 +130,7 @@ export default function DoctorListings() {
             size="sm"
             className="bg-green-600 hover:bg-green-700"
             disabled={d.status === 'verified'}
-            onClick={() => onVerify(d.userId)}
+            onClick={() => openVerifyConfirm(d.userId)}
             title={d.status === 'verified' ? 'Already verified' : 'Verify'}
           >
             <CheckCircle2 className="w-4 h-4 mr-1" />
@@ -137,10 +151,16 @@ export default function DoctorListings() {
     },
   ], []);
 
-  const onVerify = async (userId: string) => {
-    if (!confirm('Mark this doctor as Verified?')) return;
+  const openVerifyConfirm = (userId: string) => {
+    setVerifyUserId(userId);
+  };
+
+  const performVerify = async () => {
+    if (!verifyUserId) return;
     try {
-      await adminDoctorService.verify(userId);
+      await adminDoctorService.verify(verifyUserId);
+      toast.success('Doctor verified successfully');
+      setVerifyUserId(null);
       await fetchList();
     } catch (e: any) {
       toast(e?.response?.data?.message || 'Verify failed');
@@ -155,7 +175,10 @@ export default function DoctorListings() {
 
   const submitReject = async () => {
     if (!rejectUserId) return;
-    const reasons = rejectReasons.split('\n').map((s) => s.trim()).filter(Boolean);
+    const reasons = rejectReasons
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (reasons.length === 0) {
       toast('Enter at least one reason');
       return;
@@ -253,6 +276,7 @@ export default function DoctorListings() {
         </CardContent>
       </Card>
 
+      {/* Reject Confirmation Modal */}
       <ConfirmModal
         open={rejectOpen}
         title="Reject verification"
@@ -272,6 +296,31 @@ License number missing
 Document is blurry"
         />
       </ConfirmModal>
+
+      {/* Verify Confirmation Modal */}
+      {verifyUserId && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-3">Verify Doctor</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to mark this doctor as verified? This action
+              will grant them verified status immediately.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setVerifyUserId(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={performVerify}>
+                Verify
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {certOpen && certUrl && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
@@ -295,9 +344,6 @@ Document is blurry"
                   <Viewer fileUrl={certUrl} />
                 </Worker>
               </div>
-              <p className="mt-3 text-xs text-gray-500">
-             
-              </p>
             </div>
           </div>
         </div>
@@ -333,7 +379,7 @@ Document is blurry"
                       src={
                         viewData.avatarUrl ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
-                          viewData.displayName || viewData.username || "Dr"
+                          viewData.displayName || viewData.username || 'Dr'
                         )}`
                       }
                       alt="avatar"
@@ -342,14 +388,16 @@ Document is blurry"
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-lg font-semibold">
-                          {viewData.displayName || viewData.username || "Doctor"}
+                          {viewData.displayName ||
+                            viewData.username ||
+                            'Doctor'}
                         </h4>
                         <span className="text-xs">
-                          {viewData.status === "verified" ? (
+                          {viewData.status === 'verified' ? (
                             <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                               Verified
                             </span>
-                          ) : viewData.status === "pending" ? (
+                          ) : viewData.status === 'pending' ? (
                             <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                               Pending
                             </span>
@@ -360,66 +408,81 @@ Document is blurry"
                           )}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">{viewData.email || "—"}</p>
+                      <p className="text-sm text-gray-600">
+                        {viewData.email || '—'}
+                      </p>
                     </div>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4 text-sm">
                     <div className="p-4 rounded-xl bg-gray-50">
                       <p className="text-gray-500">License</p>
-                      <p className="font-medium">{viewData.licenseNumber || "—"}</p>
+                      <p className="font-medium">
+                        {viewData.licenseNumber || '—'}
+                      </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50">
                       <p className="text-gray-500">Experience</p>
-                      <p className="font-medium">{viewData.experienceYears ?? "—"} years</p>
+                      <p className="font-medium">
+                        {viewData.experienceYears ?? '—'} years
+                      </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50">
                       <p className="text-gray-500">Fee (per hour)</p>
                       <p className="font-medium">
-                        {viewData.consultationFee != null ? `₹${viewData.consultationFee}` : "—"}
+                        {viewData.consultationFee != null
+                          ? `₹${viewData.consultationFee}`
+                          : '—'}
                       </p>
                     </div>
-                  <div className="p-4 rounded-xl bg-gray-50">
-  <p className="text-gray-500">Certificate</p>
-  {viewData.certificateUrl ? (
-    <div className="flex items-center gap-3">
-      {/* Keep View -> opens the inline PDF modal you already wired */}
-      <button
-        type="button"
-        onClick={() => openCertificatePreview(viewData.certificateUrl!)}
-        className="text-[#0EA5E9] hover:underline"
-        title="View certificate"
-      >
-        View
-      </button>
-
-      {/* Add Download -> direct download link */}
-      <a
-        href={viewData.certificateUrl}
-        download
-        className="text-xs px-2 py-1 rounded-md bg-[#0EA5E9] text-white hover:bg-[#0284C7]"
-        title="Download certificate"
-      >
-        Download
-      </a>
-    </div>
-  ) : (
-    <p className="font-medium">—</p>
-  )}
-</div>
+                    <div className="p-4 rounded-xl bg-gray-50">
+                      <p className="text-gray-500">Certificate</p>
+                      {viewData.certificateUrl ? (
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openCertificatePreview(viewData.certificateUrl!)
+                            }
+                            className="text-[#0EA5E9] hover:underline"
+                            title="View certificate"
+                          >
+                            View
+                          </button>
+                          <a
+                            href={viewData.certificateUrl}
+                            download
+                            className="text-xs px-2 py-1 rounded-md bg-[#0EA5E9] text-white hover:bg-[#0284C7]"
+                            title="Download certificate"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="font-medium">—</p>
+                      )}
+                    </div>
 
                     <div className="p-4 rounded-xl bg-gray-50 sm:col-span-2">
                       <p className="text-gray-500">Bio</p>
-                      <p className="font-medium whitespace-pre-wrap">{viewData.bio || "—"}</p>
+                      <p className="font-medium whitespace-pre-wrap">
+                        {viewData.bio || '—'}
+                      </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50 sm:col-span-2">
-                      <p className="text-gray-500">Verification timeline</p>
+                      <p className="text-gray-500">
+                        Verification timeline
+                      </p>
                       <p className="font-medium">
-                        Submitted:{" "}
-                        {viewData.submittedAt ? new Date(viewData.submittedAt).toLocaleString() : "—"}
-                        {"  |  "}
-                        Verified:{" "}
-                        {viewData.verifiedAt ? new Date(viewData.verifiedAt).toLocaleString() : "—"}
+                        Submitted:{' '}
+                        {viewData.submittedAt
+                          ? new Date(viewData.submittedAt).toLocaleString()
+                          : '—'}
+                        {'  |  '}
+                        Verified:{' '}
+                        {viewData.verifiedAt
+                          ? new Date(viewData.verifiedAt).toLocaleString()
+                          : '—'}
                       </p>
                     </div>
                   </div>

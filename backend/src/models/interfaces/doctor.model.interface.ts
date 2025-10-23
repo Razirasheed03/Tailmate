@@ -1,6 +1,6 @@
 // backend/src/models/interfaces/doctor.model.interface.ts
 import { Document, Types } from "mongoose";
-export type DoctorVerificationStatus = "pending" | "verified" | "rejected";
+export type DoctorVerificationStatus = "pending" | "verified" | "rejected"|"not_submitted";
 
 export interface IDoctorModel extends Document {
   userId: Types.ObjectId;

@@ -20,7 +20,6 @@ import PetProfiles from "@/pages/user/Profile/PetProfile";
 import ProfileLayout from "@/components/Layouts/ProfileLayout";
 import NotFound from "@/pages/user/NotFound";
 import { RouteErrorElement } from "@/components/common/ErrorBoundary";
-// import ComingSoon from "@/components/common/ComingSoon";
 import Profile from "@/pages/doctor/Profile";
 import PetCategory from "@/pages/admin/PetCategory";
 import Marketplace from "@/pages/user/Marketplace";
@@ -35,6 +34,7 @@ import DoctorSessions from "@/pages/doctor/Sessions";
 import Success from "@/pages/payments/Success";
 import DoctorWallet from "@/pages/doctor/Wallet";
 import SessionDetailPage from "@/pages/doctor/SessionDetail";
+import VerifiedDoctorRoute from "@/components/LogicalComponents/VerifiedDoctorRoute";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -62,7 +62,8 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorElement />,
     children: [{ index: true, element: <HomePage /> }],
   },
-  ///user routes
+
+  // User routes
   {
     path: "/profile",
     element: <ProtectedRoute allowedRoles={["user"]} />,
@@ -83,7 +84,7 @@ export const router = createBrowserRouter([
           { path: "personal", element: <Personal /> },
           { path: "security", element: <Security /> },
           { path: "pets", element: <PetProfiles /> },
-          {path:"listings",element:<Listings/>},
+          { path: "listings", element: <Listings /> },
         ],
       },
     ],
@@ -93,28 +94,28 @@ export const router = createBrowserRouter([
     element: <Vets />
   },
   {
-    path:"/vets/:id",
-    element:<VetDetail/>
+    path: "/vets/:id",
+    element: <VetDetail />
   },
   {
     path: "/marketplace",
     element: <Marketplace />
   },
   {
-    path:"/marketplace/:id",
-    element:<ListingDetail/>
+    path: "/marketplace/:id",
+    element: <ListingDetail />
   },
   {
-    path:"/checkout",
-    element:<Checkout/>
+    path: "/checkout",
+    element: <Checkout />
   },
   {
-    path:"/booking/confirm",
-    element:<BookingConfirm/>
+    path: "/booking/confirm",
+    element: <BookingConfirm />
   },
-  { path: "/doctor/sessions", element: <DoctorSessions /> },
-{ path: "/payments/Success", element: <Success /> },
-  ///admin areaa
+  { path: "/payments/Success", element: <Success /> },
+
+  // Admin area
   {
     path: "/admin",
     element: <ProtectedAdminRoute />,
@@ -127,30 +128,59 @@ export const router = createBrowserRouter([
         children: [
           { path: "users", element: <UserListing /> },
           { path: "doctors", element: <DoctorListings /> },
-          {path:"addpetcategory",element:<PetCategory/>},
+          { path: "addpetcategory", element: <PetCategory /> },
           { index: true, element: <div>Please select an option from above.</div> },
         ],
       },
     ],
   },
 
-  // Doctor area
+  // Doctor area - All routes under DoctorProtectedRoute
   {
     path: "/doctor",
     element: <DoctorProtectedRoute />,
     errorElement: <RouteErrorElement />,
-    children: [{ index: true, element: <DoctorLandingPage /> }],
+    children: [
+      // Always accessible (no verification required)
+      { index: true, element: <DoctorLandingPage /> },
+      { path: "profile", element: <Profile /> },
+
+      // Verified-only routes
+      {
+        path: "appointments",
+        element: (
+          <VerifiedDoctorRoute>
+            <Appointments />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "sessions",
+        element: (
+          <VerifiedDoctorRoute>
+            <DoctorSessions />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "sessions/:id",
+        element: (
+          <VerifiedDoctorRoute>
+            <SessionDetailPage />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "wallet",
+        element: (
+          <VerifiedDoctorRoute>
+            <DoctorWallet />
+          </VerifiedDoctorRoute>
+        ),
+      },
+    ],
   },
-  {
-    path:"/doctor/appointments",
-    element:<Appointments/>
-  },
-  {
-    path:"/doctor/profile",
-    element:<Profile/>
-  },
-  { path: "/doctor/wallet", element: <DoctorWallet /> },
-  { path: "/doctor/sessions/:id", element: <SessionDetailPage /> },
+
   // 404 (must be last)
   { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
 ]);
