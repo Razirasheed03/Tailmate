@@ -2,8 +2,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
-import { doctorService, type SessionRow } from "@/services/doctorService";
-
+import { doctorService } from "@/services/doctorService";
+import type { SessionRow } from "@/types/doctor.types";
 type TabKey = "upcoming" | "today" | "past";
 
 function formatDateTime(date: string, time: string) {

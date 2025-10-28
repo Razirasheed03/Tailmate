@@ -73,13 +73,7 @@ export class BookingRepository {
   async findById(bookingId: string): Promise<BookingLean | null> {
     if (!Types.ObjectId.isValid(bookingId)) return null;
     const _id = new Types.ObjectId(bookingId);
-
-    // Option A (avoids union T | T[]): pass lean as a query option directly
     const row = await this.model.findById(_id, null, { lean: true }).exec();
-
-    // Option B: or use .lean<BookingLean>() (works on current Mongoose types too)
-    // const row = await this.model.findById(_id).lean<BookingLean>().exec();
-
     return (row as unknown as BookingLean | null) ?? null;
   }
 }

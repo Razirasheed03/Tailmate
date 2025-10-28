@@ -1,20 +1,14 @@
 // backend/src/repositories/interfaces/doctor.repository.interface.ts
+import { IDoctorModel, IDoctorVerification, IDoctorProfile, UpdateProfileDTO } from "../../models/interfaces/doctor.model.interface";
+
 export interface IDoctorRepository {
-  createIfMissing(userId: string): Promise<any>;
-  getVerification(userId: string): Promise<any>;
-  submitCertificate(userId: string, certificateUrl: string): Promise<any>;
-  getProfile(userId: string): Promise<any>;
-  updateProfile(userId: string, profile: Partial<{
-    displayName: string;
-    bio: string;
-    specialties: string[];
-    experienceYears: number;
-    licenseNumber: string;
-    avatarUrl: string;
-    consultationFee: number;
-  }>): Promise<any>;
-  saveCertificateUrl(userId: string, certificateUrl: string): Promise<any>;
-  submitForReview(userId: string): Promise<any>;
+  createIfMissing(userId: string): Promise<IDoctorModel>;
+  getVerification(userId: string): Promise<IDoctorVerification>;
+  submitCertificate(userId: string, certificateUrl: string): Promise<IDoctorModel>;
+  getProfile(userId: string): Promise<IDoctorProfile>;
+  updateProfile(userId: string, profile: Partial<UpdateProfileDTO>): Promise<IDoctorProfile>;
+  saveCertificateUrl(userId: string, certificateUrl: string): Promise<IDoctorVerification>;
+  submitForReview(userId: string): Promise<IDoctorModel>;
   listSessions(doctorId: string, opts: {
     page: number;
     limit: number;

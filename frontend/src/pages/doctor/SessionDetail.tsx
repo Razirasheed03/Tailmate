@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
-import { doctorService, type SessionDetail } from "@/services/doctorService";
+import { doctorService } from "@/services/doctorService";
+import type { SessionDetail } from "@/types/doctor.types";
 import httpClient from "@/services/httpClient";
 
 type PaymentView = {
