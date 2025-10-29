@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import httpClient from "@/services/httpClient";
-import { CheckCircle2, Clock, AlertTriangle, ExternalLink, Home, Stethoscope, Store } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  ExternalLink,
+  Home,
+  Stethoscope,
+  Store,
+} from "lucide-react";
 
 type SessionView = {
   id: string;
@@ -35,7 +43,10 @@ type UiState =
 function currency(amount: number, code: string) {
   const safe = Number.isFinite(amount) ? amount : 0;
   try {
-    return new Intl.NumberFormat("en-IN", { style: "currency", currency: code }).format(safe);
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: code,
+    }).format(safe);
   } catch {
     return `${code} ${safe}`;
   }
@@ -56,7 +67,10 @@ export default function Success() {
   const [session, setSession] = useState<SessionView | undefined>(undefined);
   const [payment, setPayment] = useState<PaymentView | undefined>(undefined);
   const [marketplaceConfirmed, setMarketplaceConfirmed] = useState(false);
-  const [ui, setUi] = useState<UiState>({ phase: "loading", title: "Verifying payment…" });
+  const [ui, setUi] = useState<UiState>({
+    phase: "loading",
+    title: "Verifying payment…",
+  });
 
   const isMarketplace = useMemo(
     () => session?.kind === "marketplace" || !!qOrderId || !!qListingId,
@@ -69,7 +83,13 @@ export default function Success() {
     const oid = session?.orderId || qOrderId || "";
     const lid = session?.listingId || qListingId || "";
     return `${oid}|${lid}`;
-  }, [isMarketplace, session?.orderId, session?.listingId, qOrderId, qListingId]);
+  }, [
+    isMarketplace,
+    session?.orderId,
+    session?.listingId,
+    qOrderId,
+    qListingId,
+  ]);
 
   // Marketplace polling (debounced by pollKey)
   useEffect(() => {
@@ -81,26 +101,42 @@ export default function Success() {
 
     async function poll() {
       const start = Date.now();
-      setUi({ phase: "processing", title: "Completing your order…", subtitle: "This usually takes a few seconds." });
+      setUi({
+        phase: "processing",
+        title: "Completing your order…",
+        subtitle: "This usually takes a few seconds.",
+      });
 
       async function tick() {
         if (!active) return;
         try {
           if (orderId) {
-            const o = await httpClient.get<{ success: boolean; data: any }>(`/marketplace/orders/${orderId}`);
+            const o = await httpClient.get<{ success: boolean; data: any }>(
+              `/marketplace/orders/${orderId}`
+            );
             const od = o?.data?.data;
             if (od?.status === "paid") {
               setMarketplaceConfirmed(true);
-              setUi({ phase: "success", title: "Payment successful", subtitle: "Your order has been confirmed." });
+              setUi({
+                phase: "success",
+                title: "Payment successful",
+                subtitle: "Your order has been confirmed.",
+              });
               return;
             }
           }
           if (listingId) {
-            const l = await httpClient.get<{ success: boolean; data: any }>(`/marketplace/listings/${listingId}`);
+            const l = await httpClient.get<{ success: boolean; data: any }>(
+              `/marketplace/listings/${listingId}`
+            );
             const ld = l?.data?.data;
             if (ld?.status === "closed") {
               setMarketplaceConfirmed(true);
-              setUi({ phase: "success", title: "Payment successful", subtitle: "The listing is now closed." });
+              setUi({
+                phase: "success",
+                title: "Payment successful",
+                subtitle: "The listing is now closed.",
+              });
               return;
             }
           }
@@ -133,11 +169,18 @@ export default function Success() {
 
     async function load() {
       if (!sessionId) {
-        setUi({ phase: "error", title: "Missing session id", hint: "Return to Home and try again." });
+        setUi({
+          phase: "error",
+          title: "Missing session id",
+          hint: "Return to Home and try again.",
+        });
         return;
       }
       try {
-        const ses = await httpClient.get<{ success: boolean; data: SessionView }>(`/checkout/session/${sessionId}`);
+        const ses = await httpClient.get<{
+          success: boolean;
+          data: SessionView;
+        }>(`/checkout/session/${sessionId}`);
         const s = ses?.data?.data;
         if (!active) return;
         setSession(s);
@@ -146,8 +189,12 @@ export default function Success() {
         if (s?.kind === "marketplace" || qOrderId || qListingId) {
           setUi({
             phase: s?.payment_status === "paid" ? "processing" : "loading",
-            title: s?.payment_status === "paid" ? "Payment received" : "Verifying payment…",
-            subtitle: s?.payment_status === "paid" ? "Securing your order…" : undefined,
+            title:
+              s?.payment_status === "paid"
+                ? "Payment received"
+                : "Verifying payment…",
+            subtitle:
+              s?.payment_status === "paid" ? "Securing your order…" : undefined,
           });
           return;
         }
@@ -156,13 +203,20 @@ export default function Success() {
         const bookingId = s?.bookingId || "";
         if (bookingId) {
           try {
-            const payRes = await httpClient.get<{ success: boolean; data: PaymentView }>(`/payments/by-booking/${bookingId}`);
+            const payRes = await httpClient.get<{
+              success: boolean;
+              data: PaymentView;
+            }>(`/payments/by-booking/${bookingId}`);
             const p = payRes?.data?.data;
             if (!active) return;
 
             if (p?.paymentStatus === "success") {
               setPayment(p);
-              setUi({ phase: "success", title: "Payment successful", subtitle: "Your session has been confirmed." });
+              setUi({
+                phase: "success",
+                title: "Payment successful",
+                subtitle: "Your session has been confirmed.",
+              });
               return;
             }
           } catch {
@@ -184,13 +238,18 @@ export default function Success() {
             const poll = async () => {
               if (!active) return;
               try {
-                const payRes = await httpClient.get<{ success: boolean; data: PaymentView }>(
-                  `/payments/by-booking/${s.bookingId}`
-                );
+                const payRes = await httpClient.get<{
+                  success: boolean;
+                  data: PaymentView;
+                }>(`/payments/by-booking/${s.bookingId}`);
                 const p = payRes?.data?.data;
                 if (p?.paymentStatus === "success") {
                   setPayment(p);
-                  setUi({ phase: "success", title: "Payment successful", subtitle: "Your session has been confirmed." });
+                  setUi({
+                    phase: "success",
+                    title: "Payment successful",
+                    subtitle: "Your session has been confirmed.",
+                  });
                   return;
                 }
               } catch {
@@ -220,8 +279,10 @@ export default function Success() {
 
   // Header icon
   function HeaderIcon() {
-    if (ui.phase === "success") return <CheckCircle2 className="w-10 h-10 text-emerald-600" />;
-    if (ui.phase === "processing" || ui.phase === "loading") return <Clock className="w-10 h-10 text-amber-600" />;
+    if (ui.phase === "success")
+      return <CheckCircle2 className="w-10 h-10 text-emerald-600" />;
+    if (ui.phase === "processing" || ui.phase === "loading")
+      return <Clock className="w-10 h-10 text-amber-600" />;
     return <AlertTriangle className="w-10 h-10 text-rose-600" />;
   }
 
@@ -231,21 +292,41 @@ export default function Success() {
       return (
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-900">
           <div className="grid grid-cols-2 gap-2">
-            <div><span className="text-emerald-700">Booking Id:</span> {payment.bookingId}</div>
-            <div><span className="text-emerald-700">Status:</span> {payment.paymentStatus}</div>
+            <div>
+              <span className="text-emerald-700">Booking Id:</span>{" "}
+              {payment.bookingId}
             </div>
+            <div>
+              <span className="text-emerald-700">Status:</span>{" "}
+              {payment.paymentStatus}
+            </div>
+          </div>
         </div>
       );
     }
 
-    if (isMarketplace && (marketplaceConfirmed || session?.payment_status === "paid")) {
+    if (
+      isMarketplace &&
+      (marketplaceConfirmed || session?.payment_status === "paid")
+    ) {
       return (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
           <div className="grid grid-cols-2 gap-2">
-            <div><span className="text-blue-700">Order:</span> {session?.orderId || qOrderId}</div>
-            <div><span className="text-blue-700">Listing:</span> {session?.listingId || qListingId}</div>
-            <div><span className="text-blue-700">Stripe:</span> {session?.id}</div>
-            <div><span className="text-blue-700">Status:</span> {marketplaceConfirmed ? "confirmed" : "processing"}</div>
+            <div>
+              <span className="text-blue-700">Order:</span>{" "}
+              {session?.orderId || qOrderId}
+            </div>
+            <div>
+              <span className="text-blue-700">Listing:</span>{" "}
+              {session?.listingId || qListingId}
+            </div>
+            <div>
+              <span className="text-blue-700">Stripe:</span> {session?.id}
+            </div>
+            <div>
+              <span className="text-blue-700">Status:</span>{" "}
+              {marketplaceConfirmed ? "confirmed" : "processing"}
+            </div>
           </div>
         </div>
       );
@@ -254,8 +335,13 @@ export default function Success() {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-800">
         <div className="grid grid-cols-2 gap-2">
-          <div><span className="text-gray-600">Stripe session:</span> {session?.id}</div>
-          <div><span className="text-gray-600">Stripe status:</span> {session?.payment_status || "unknown"}</div>
+          <div>
+            <span className="text-gray-600">Stripe session:</span> {session?.id}
+          </div>
+          <div>
+            <span className="text-gray-600">Stripe status:</span>{" "}
+            {session?.payment_status || "unknown"}
+          </div>
         </div>
       </div>
     );
@@ -314,14 +400,22 @@ export default function Success() {
         <div className="bg-white border rounded-2xl shadow-sm p-6">
           <div
             className="flex items-start gap-4"
-            role={ui.phase === "processing" || ui.phase === "loading" ? "status" : undefined}
+            role={
+              ui.phase === "processing" || ui.phase === "loading"
+                ? "status"
+                : undefined
+            }
             aria-live="polite"
           >
             <HeaderIcon />
             <div className="flex-1">
               <h1 className="text-xl font-semibold">{ui.title}</h1>
-              {ui.subtitle && <p className="text-sm text-gray-600 mt-1">{ui.subtitle}</p>}
-              {ui.hint && <p className="text-xs text-gray-500 mt-1">{ui.hint}</p>}
+              {ui.subtitle && (
+                <p className="text-sm text-gray-600 mt-1">{ui.subtitle}</p>
+              )}
+              {ui.hint && (
+                <p className="text-xs text-gray-500 mt-1">{ui.hint}</p>
+              )}
             </div>
           </div>
 
@@ -334,13 +428,18 @@ export default function Success() {
           <div className="mt-8 text-xs text-gray-500">
             {ui.phase === "success" ? (
               <p>
-                A receipt has been issued by Stripe. If you don’t see it in your inbox, please check spam or contact support.
+                A receipt has been issued by Stripe. If you don’t see it in your
+                inbox, please check spam or contact support.
               </p>
             ) : ui.phase === "processing" ? (
-              <p>Webhooks can take a few seconds to finalize. Your payment is safe—this will update automatically on refresh.</p>
+              <p>
+                Webhooks can take a few seconds to finalize. Your payment is
+                safe—this will update automatically on refresh.
+              </p>
             ) : ui.phase === "error" ? (
               <p>
-                If this keeps happening, contact support with your Stripe session id {session?.id}.
+                If this keeps happening, contact support with your Stripe
+                session id {session?.id}.
               </p>
             ) : (
               <p>Verifying your payment details…</p>
