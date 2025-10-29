@@ -1,25 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
-import { adminDoctorService } from '@/services/adminDoctorService';
-import { type DoctorDetail, type DoctorRow } from '@/types/adminDoctor.types';
-import { Card, CardContent } from '@/components/UiComponents/Card';
-import { Button } from '@/components/UiComponents/button';
-import { CheckCircle2, XCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { adminDoctorService } from "@/services/adminDoctorService";
+import { type DoctorDetail, type DoctorRow } from "@/types/adminDoctor.types";
+import { Card, CardContent } from "@/components/UiComponents/Card";
+import { Button } from "@/components/UiComponents/button";
+import { CheckCircle2, XCircle, ExternalLink, Loader2 } from "lucide-react";
 
-import { Table } from '@/components/table/Table';
-import type { ColumnDef } from '@/components/table/types';
-import { TableToolbar } from '@/components/table/TableToolbar';
-import { TablePagination } from '@/components/table/TablePagination';
-import { StatusBadge } from '@/components/common/StatusBadge';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { Table } from "@/components/table/Table";
+import type { ColumnDef } from "@/components/table/types";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { TablePagination } from "@/components/table/TablePagination";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 
 // PDF viewer
-import { Viewer, Worker } from '@react-pdf-viewer/core';
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import { toast } from 'sonner';
+import { Viewer, Worker } from "@react-pdf-viewer/core";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import { toast } from "sonner";
 
-const workerUrl = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+const workerUrl =
+  "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
 
-type StatusFilter = '' | 'pending' | 'verified' | 'rejected';
+type StatusFilter = "" | "pending" | "verified" | "rejected";
 
 export default function DoctorListings() {
   const [rows, setRows] = useState<DoctorRow[]>([]);
@@ -28,13 +29,13 @@ export default function DoctorListings() {
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [status, setStatus] = useState<StatusFilter>('');
-  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<StatusFilter>("");
+  const [search, setSearch] = useState("");
 
   // reject modal
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectUserId, setRejectUserId] = useState<string | null>(null);
-  const [rejectReasons, setRejectReasons] = useState<string>('');
+  const [rejectReasons, setRejectReasons] = useState<string>("");
 
   // verify modal
   const [verifyUserId, setVerifyUserId] = useState<string | null>(null);
@@ -51,12 +52,17 @@ export default function DoctorListings() {
   const fetchList = async () => {
     setLoading(true);
     try {
-      const res = await adminDoctorService.list({ page, limit, status, search });
+      const res = await adminDoctorService.list({
+        page,
+        limit,
+        status,
+        search,
+      });
       setRows(res.data);
       setTotalPages(res.totalPages);
       setTotal(res.total);
     } catch (e: any) {
-      toast(e?.response?.data?.message || 'Failed to load doctors');
+      toast(e?.response?.data?.message || "Failed to load doctors");
     } finally {
       setLoading(false);
     }
@@ -67,89 +73,92 @@ export default function DoctorListings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, status]);
 
-  const columns = useMemo<ColumnDef<DoctorRow>[]>(() => [
-    {
-      id: 'doctor',
-      header: 'Doctor',
-      cell: (d) => (
-        <button
-          type="button"
-          onClick={() => openView(d.userId)}
-          className="text-left text-[#0EA5E9] hover:underline"
-          title="View profile"
-        >
-          {d.username || '-'}
-        </button>
-      ),
-    },
-    { id: 'email', header: 'Email', cell: (d) => d.email || '-' },
-    {
-      id: 'status',
-      header: 'Status',
-      cell: (d) => (
-        <StatusBadge
-          status={
-            d.status === 'verified'
-              ? 'verified'
-              : d.status === 'pending'
-              ? 'pending'
-              : 'rejected'
-          }
-        />
-      ),
-    },
-    {
-      id: 'certificate',
-      header: 'Certificate',
-      cell: (d) =>
-        d.certificateUrl ? (
+  const columns = useMemo<ColumnDef<DoctorRow>[]>(
+    () => [
+      {
+        id: "doctor",
+        header: "Doctor",
+        cell: (d) => (
           <button
             type="button"
-            onClick={() => openCertificatePreview(d.certificateUrl!)}
-            className="inline-flex items-center gap-1 text-[#0EA5E9] hover:underline"
-            title="View certificate"
+            onClick={() => openView(d.userId)}
+            className="text-left text-[#0EA5E9] hover:underline"
+            title="View profile"
           >
-            View <ExternalLink className="w-3 h-3" />
+            {d.username || "-"}
           </button>
-        ) : (
-          <span className="text-gray-400">—</span>
         ),
-    },
-    {
-      id: 'submitted',
-      header: 'Submitted',
-      cell: (d) =>
-        d.submittedAt ? new Date(d.submittedAt).toLocaleString() : '—',
-    },
-    {
-      id: 'actions',
-      header: <div className="text-right">Actions</div>,
-      cell: (d) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            className="bg-green-600 hover:bg-green-700"
-            disabled={d.status === 'verified'}
-            onClick={() => openVerifyConfirm(d.userId)}
-            title={d.status === 'verified' ? 'Already verified' : 'Verify'}
-          >
-            <CheckCircle2 className="w-4 h-4 mr-1" />
-            Verify
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-[#E5E7EB] bg-white hover:bg-white/90 text-rose-600"
-            onClick={() => openReject(d.userId)}
-          >
-            <XCircle className="w-4 h-4 mr-1" />
-            Reject
-          </Button>
-        </div>
-      ),
-      headerClassName: 'text-right',
-    },
-  ], []);
+      },
+      { id: "email", header: "Email", cell: (d) => d.email || "-" },
+      {
+        id: "status",
+        header: "Status",
+        cell: (d) => (
+          <StatusBadge
+            status={
+              d.status === "verified"
+                ? "verified"
+                : d.status === "pending"
+                ? "pending"
+                : "rejected"
+            }
+          />
+        ),
+      },
+      {
+        id: "certificate",
+        header: "Certificate",
+        cell: (d) =>
+          d.certificateUrl ? (
+            <button
+              type="button"
+              onClick={() => openCertificatePreview(d.certificateUrl!)}
+              className="inline-flex items-center gap-1 text-[#0EA5E9] hover:underline"
+              title="View certificate"
+            >
+              View <ExternalLink className="w-3 h-3" />
+            </button>
+          ) : (
+            <span className="text-gray-400">—</span>
+          ),
+      },
+      {
+        id: "submitted",
+        header: "Submitted",
+        cell: (d) =>
+          d.submittedAt ? new Date(d.submittedAt).toLocaleString() : "—",
+      },
+      {
+        id: "actions",
+        header: <div className="text-right">Actions</div>,
+        cell: (d) => (
+          <div className="flex justify-end gap-2">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              disabled={d.status === "verified"}
+              onClick={() => openVerifyConfirm(d.userId)}
+              title={d.status === "verified" ? "Already verified" : "Verify"}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1" />
+              Verify
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#E5E7EB] bg-white hover:bg-white/90 text-rose-600"
+              onClick={() => openReject(d.userId)}
+            >
+              <XCircle className="w-4 h-4 mr-1" />
+              Reject
+            </Button>
+          </div>
+        ),
+        headerClassName: "text-right",
+      },
+    ],
+    []
+  );
 
   const openVerifyConfirm = (userId: string) => {
     setVerifyUserId(userId);
@@ -159,38 +168,38 @@ export default function DoctorListings() {
     if (!verifyUserId) return;
     try {
       await adminDoctorService.verify(verifyUserId);
-      toast.success('Doctor verified successfully');
+      toast.success("Doctor verified successfully");
       setVerifyUserId(null);
       await fetchList();
     } catch (e: any) {
-      toast(e?.response?.data?.message || 'Verify failed');
+      toast(e?.response?.data?.message || "Verify failed");
     }
   };
 
   const openReject = (userId: string) => {
     setRejectUserId(userId);
-    setRejectReasons('');
+    setRejectReasons("");
     setRejectOpen(true);
   };
 
   const submitReject = async () => {
     if (!rejectUserId) return;
     const reasons = rejectReasons
-      .split('\n')
+      .split("\n")
       .map((s) => s.trim())
       .filter(Boolean);
     if (reasons.length === 0) {
-      toast('Enter at least one reason');
+      toast("Enter at least one reason");
       return;
     }
     try {
       await adminDoctorService.reject(rejectUserId, reasons);
       setRejectOpen(false);
       setRejectUserId(null);
-      setRejectReasons('');
+      setRejectReasons("");
       await fetchList();
     } catch (e: any) {
-      toast(e?.response?.data?.message || 'Reject failed');
+      toast(e?.response?.data?.message || "Reject failed");
     }
   };
 
@@ -203,7 +212,7 @@ export default function DoctorListings() {
       const data = await adminDoctorService.getDetail(userId);
       setViewData(data);
     } catch (e: any) {
-      toast(e?.response?.data?.message || 'Failed to load profile');
+      toast(e?.response?.data?.message || "Failed to load profile");
       setViewOpen(false);
     } finally {
       setViewLoading(false);
@@ -216,8 +225,8 @@ export default function DoctorListings() {
   };
 
   const clearFilters = () => {
-    setStatus('');
-    setSearch('');
+    setStatus("");
+    setSearch("");
     setPage(1);
     fetchList();
   };
@@ -379,7 +388,7 @@ Document is blurry"
                       src={
                         viewData.avatarUrl ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
-                          viewData.displayName || viewData.username || 'Dr'
+                          viewData.displayName || viewData.username || "Dr"
                         )}`
                       }
                       alt="avatar"
@@ -390,14 +399,14 @@ Document is blurry"
                         <h4 className="text-lg font-semibold">
                           {viewData.displayName ||
                             viewData.username ||
-                            'Doctor'}
+                            "Doctor"}
                         </h4>
                         <span className="text-xs">
-                          {viewData.status === 'verified' ? (
+                          {viewData.status === "verified" ? (
                             <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                               Verified
                             </span>
-                          ) : viewData.status === 'pending' ? (
+                          ) : viewData.status === "pending" ? (
                             <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                               Pending
                             </span>
@@ -409,7 +418,7 @@ Document is blurry"
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {viewData.email || '—'}
+                        {viewData.email || "—"}
                       </p>
                     </div>
                   </div>
@@ -418,13 +427,13 @@ Document is blurry"
                     <div className="p-4 rounded-xl bg-gray-50">
                       <p className="text-gray-500">License</p>
                       <p className="font-medium">
-                        {viewData.licenseNumber || '—'}
+                        {viewData.licenseNumber || "—"}
                       </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50">
                       <p className="text-gray-500">Experience</p>
                       <p className="font-medium">
-                        {viewData.experienceYears ?? '—'} years
+                        {viewData.experienceYears ?? "—"} years
                       </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50">
@@ -432,7 +441,7 @@ Document is blurry"
                       <p className="font-medium">
                         {viewData.consultationFee != null
                           ? `₹${viewData.consultationFee}`
-                          : '—'}
+                          : "—"}
                       </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50">
@@ -466,23 +475,21 @@ Document is blurry"
                     <div className="p-4 rounded-xl bg-gray-50 sm:col-span-2">
                       <p className="text-gray-500">Bio</p>
                       <p className="font-medium whitespace-pre-wrap">
-                        {viewData.bio || '—'}
+                        {viewData.bio || "—"}
                       </p>
                     </div>
                     <div className="p-4 rounded-xl bg-gray-50 sm:col-span-2">
-                      <p className="text-gray-500">
-                        Verification timeline
-                      </p>
+                      <p className="text-gray-500">Verification timeline</p>
                       <p className="font-medium">
-                        Submitted:{' '}
+                        Submitted:{" "}
                         {viewData.submittedAt
                           ? new Date(viewData.submittedAt).toLocaleString()
-                          : '—'}
-                        {'  |  '}
-                        Verified:{' '}
+                          : "—"}
+                        {"  |  "}
+                        Verified:{" "}
                         {viewData.verifiedAt
                           ? new Date(viewData.verifiedAt).toLocaleString()
-                          : '—'}
+                          : "—"}
                       </p>
                     </div>
                   </div>
