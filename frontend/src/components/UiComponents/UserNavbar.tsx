@@ -85,11 +85,11 @@ export default function Navbar() {
               label="Marketplace"
               isActive={location.pathname.startsWith(APP_ROUTES.MARKETPLACE)}
             />
-              <NavLink
-                to={APP_ROUTES.MATCHMAKING}
-                label="Matchmaking"
-                isActive={location.pathname === APP_ROUTES.MATCHMAKING}
-              />
+            <NavLink
+              to={APP_ROUTES.MATCHMAKING}
+              label="Matchmaking"
+              isActive={location.pathname === APP_ROUTES.MATCHMAKING}
+            />
             <NavLink
               to={APP_ROUTES.ABOUT}
               label="About Us"
@@ -101,7 +101,6 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-              
                 <div className="relative">
                   <Button
                     size="sm"
@@ -173,31 +172,31 @@ export default function Navbar() {
         {open && (
           <div className="md:hidden border-t border-[#EEF2F7] bg-white/90 backdrop-blur">
             <div className="px-6 py-3 flex flex-col gap-1">
-            <NavLink
-              to={APP_ROUTES.USER_HOME}
-              label="Home"
-              isActive={location.pathname === APP_ROUTES.USER_HOME}
-            />
-            <NavLink
-              to={APP_ROUTES.Vets}
-              label="Vets"
-              isActive={location.pathname.startsWith(APP_ROUTES.Vets)}
-            />
-            <NavLink
-              to={APP_ROUTES.MARKETPLACE}
-              label="Marketplace"
-              isActive={location.pathname.startsWith(APP_ROUTES.MARKETPLACE)}
-            />
+              <NavLink
+                to={APP_ROUTES.USER_HOME}
+                label="Home"
+                isActive={location.pathname === APP_ROUTES.USER_HOME}
+              />
+              <NavLink
+                to={APP_ROUTES.Vets}
+                label="Vets"
+                isActive={location.pathname.startsWith(APP_ROUTES.Vets)}
+              />
+              <NavLink
+                to={APP_ROUTES.MARKETPLACE}
+                label="Marketplace"
+                isActive={location.pathname.startsWith(APP_ROUTES.MARKETPLACE)}
+              />
               <NavLink
                 to={APP_ROUTES.MATCHMAKING}
                 label="Matchmaking"
                 isActive={location.pathname === APP_ROUTES.MATCHMAKING}
               />
-            <NavLink
-              to={APP_ROUTES.ABOUT}
-              label="About Us"
-              isActive={location.pathname === APP_ROUTES.ABOUT}
-            />
+              <NavLink
+                to={APP_ROUTES.ABOUT}
+                label="About Us"
+                isActive={location.pathname === APP_ROUTES.ABOUT}
+              />
               <div className="h-px bg-[#EEF2F7] my-2" />
 
               {isAuthenticated ? (
