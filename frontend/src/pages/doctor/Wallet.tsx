@@ -4,7 +4,10 @@ import { paymentService } from "@/services/paymentService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 
 function formatINR(amount: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+  }).format(amount);
 }
 
 type PaymentRow = {
@@ -39,7 +42,11 @@ export default function DoctorWallet() {
         const rows = await paymentService.listDoctorPayments();
         if (!active) return;
         // Normalize to array just in case service changes
-        const data = Array.isArray(rows) ? rows : Array.isArray((rows as any)?.data) ? (rows as any).data : [];
+        const data = Array.isArray(rows)
+          ? rows
+          : Array.isArray((rows as any)?.data)
+          ? (rows as any).data
+          : [];
         setItems(data as PaymentRow[]);
       } catch (e: any) {
         setErr(e?.message || "Failed to load payments");
@@ -75,20 +82,30 @@ export default function DoctorWallet() {
               <div className="text-sm font-semibold mb-2">Recent Payments</div>
               <ul className="divide-y">
                 {items.map((it) => (
-                  <li key={it._id} className="py-3 flex items-center justify-between">
+                  <li
+                    key={it._id}
+                    className="py-3 flex items-center justify-between"
+                  >
                     <div className="text-sm">
                       <div className="font-medium">
-                        {it.paymentStatus === "success" ? "Booking earning" : it.paymentStatus}
+                        {it.paymentStatus === "success"
+                          ? "Booking earning"
+                          : it.paymentStatus}
                       </div>
                       <div className="text-gray-500 text-xs">
-                        {new Date(it.createdAt).toLocaleString()} • Booking {it.bookingId}
+                        {new Date(it.createdAt).toLocaleString()} • Booking{" "}
+                        {it.bookingId}
                       </div>
                     </div>
-                    <div className="text-sm text-emerald-700">+ {formatINR(it.doctorEarning)}</div>
+                    <div className="text-sm text-emerald-700">
+                      + {formatINR(it.doctorEarning)}
+                    </div>
                   </li>
                 ))}
                 {items.length === 0 && !loading && (
-                  <li className="py-6 text-sm text-gray-500 text-center">No payments yet</li>
+                  <li className="py-6 text-sm text-gray-500 text-center">
+                    No payments yet
+                  </li>
                 )}
               </ul>
             </div>
