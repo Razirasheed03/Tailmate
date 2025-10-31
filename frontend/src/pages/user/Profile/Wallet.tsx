@@ -24,14 +24,20 @@ const Wallet = () => {
   return (
     <div className="max-w-3xl mx-auto p-6 min-h-screen bg-gray-50">
       <h1 className="text-3xl font-bold mb-2">Wallet</h1>
-      <p className="text-gray-600 mb-6">View your current balance and history of wallet activities</p>
+      <p className="text-gray-600 mb-6">
+        View your current balance and history of wallet activities
+      </p>
 
       {/* Balance Section */}
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex items-center justify-between">
         <div>
           <span className="text-gray-500">Balance</span>
           <div className="text-2xl font-bold">
-            {wallet ? `${wallet.currency || "INR"} ${(wallet.balanceMinor/100).toFixed(2)}` : "--"}
+            {wallet
+              ? `${wallet.currency || "INR"} ${(
+                  wallet.balanceMinor / 100
+                ).toFixed(2)}`
+              : "--"}
           </div>
         </div>
       </div>
@@ -54,15 +60,23 @@ const Wallet = () => {
             <tbody>
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-gray-500 text-center py-6">No transactions yet</td>
+                  <td colSpan={4} className="text-gray-500 text-center py-6">
+                    No transactions yet
+                  </td>
                 </tr>
               ) : (
-                transactions.map(tx => (
+                transactions.map((tx) => (
                   <tr key={tx._id}>
-                    <td className="py-1">{(new Date(tx.createdAt)).toLocaleString()}</td>
+                    <td className="py-1">
+                      {new Date(tx.createdAt).toLocaleString()}
+                    </td>
                     <td className="py-1">{tx.type}</td>
-                    <td className={`py-1 font-medium ${tx.amount > 0 ? "text-green-700" : "text-red-700"}`}>
-                      {(tx.amount/100).toFixed(2)}
+                    <td
+                      className={`py-1 font-medium ${
+                        tx.amount > 0 ? "text-green-700" : "text-red-700"
+                      }`}
+                    >
+                      {(tx.amount / 100).toFixed(2)}
                     </td>
                     <td className="py-1">{tx.note || ""}</td>
                   </tr>
