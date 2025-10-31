@@ -1,5 +1,10 @@
 // src/services/interfaces/admin.service.interface.ts
 import { IUserModel } from "../../models/interfaces/user.model.interface";
+import {
+  DoctorDetail,
+  ListDoctorsResponse,
+  DoctorVerification,
+} from "../../models/types/doctor.types";
 
 export interface IAdminService {
   // Existing user operations
@@ -12,34 +17,40 @@ export interface IAdminService {
   blockUser(userId: string): Promise<{ message: string }>;
   unblockUser(userId: string): Promise<{ message: string }>;
   deleteUser(userId: string): Promise<{ message: string }>;
-  getUserStats(): Promise<{ totalUsers: number; totalDoctors: number; blockedUsers: number }>;
-
-  // NEW doctor moderation operations
-  listDoctors(page: number, limit: number, status: string, search: string): Promise<{
-    data: Array<{
-      userId: string;
-      username: string;
-      email: string;
-      status: "pending" | "verified" | "rejected";
-      certificateUrl?: string;
-      submittedAt?: string;
-    }>;
-    page: number;
-    totalPages: number;
-    total: number;
+  getUserStats(): Promise<{
+    totalUsers: number;
+    totalDoctors: number;
+    blockedUsers: number;
   }>;
 
-  verifyDoctor(userId: string, reviewerId: string): Promise<{
+  // Doctor moderation operations
+  listDoctors(
+    page?: number,
+    limit?: number,
+    status?: string,
+    search?: string
+  ): Promise<ListDoctorsResponse>;
+
+  verifyDoctor(
+    userId: string,
+    reviewerId: string
+  ): Promise<{
     status: "verified";
-    verifiedAt: Date | string | undefined;
+    verifiedAt: Date | undefined;
   }>;
-  
-  getDoctorDetail(userId: string): Promise<any>; 
-  rejectDoctor(userId: string, reviewerId: string, reasons: string[]): Promise<{
+
+  getDoctorDetail(userId: string): Promise<DoctorDetail>;
+
+  rejectDoctor(
+    userId: string,
+    reviewerId: string,
+    reasons: string[]
+  ): Promise<{
     status: "rejected";
     rejectionReasons: string[];
   }>;
-   listPetCategories(
+
+  listPetCategories(
     page: number,
     limit: number,
     search?: string,
@@ -65,5 +76,4 @@ export interface IAdminService {
     }>
   ): Promise<any>;
   deletePetCategory(id: string): Promise<boolean>;
-  
 }

@@ -1,8 +1,9 @@
+//doctor.schema.ts ///removing the any in each pages
 import { Schema, model } from "mongoose";
 
 const VerificationSchema = new Schema(
   {
-    status: { type: String, enum: ["pending", "verified", "rejected"], default: "pending", required: true },
+    status: { type: String, enum: ["pending", "verified", "rejected","not_submitted"], default: "pending", required: true },
     certificateUrl: { type: String },
     rejectionReasons: [{ type: String }],
     submittedAt: { type: Date },

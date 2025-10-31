@@ -220,9 +220,7 @@ export class CheckoutService {
           },
         },
         { idempotencyKey: `chk:${booking._id}:${userId}` }
-      ); // returns Stripe.Checkout.Session [web:59][web:60]
-
-      // 3) Persist session identifiers
+      );
       await Booking.updateOne(
         { _id: booking._id },
         {
@@ -232,8 +230,6 @@ export class CheckoutService {
           },
         }
       );
-
-      // 4) Return hosted Checkout URL
       return {
         bookingId: String(booking._id),
         redirectUrl: session.url ?? null,

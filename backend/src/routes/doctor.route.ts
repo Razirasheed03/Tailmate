@@ -28,10 +28,11 @@ router.get("/me-user-id", asyncHandler(async (req: any, res) => {
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   return res.json({ success: true, data: { userId } });
 }));
+
 // Verification
 router.get("/verification", asyncHandler(doctorController.getVerification));
 router.post("/verification/upload", uploadPdf, asyncHandler(doctorController.uploadCertificate));
-
+router.post("/submit-review", asyncHandler(doctorController.submitForReview));
 // Profile
 router.get("/profile", asyncHandler(doctorController.getProfile));
 router.put("/profile", asyncHandler(doctorController.updateProfile));

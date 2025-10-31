@@ -1,10 +1,11 @@
+//user/Profile/PetProfile.tsx
 import { useEffect, useState } from "react";
 import { listMyPets, updatePet, deletePet } from "@/services/petsApiService";
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
 import { PawPrint, History } from "lucide-react";
 import { toast } from "sonner";
-import PetHistoryModal from "../../../components/Modals/petHistoryModal";
+import PetHistoryModal from "@/components/Modals/petHistoryModal";
 
 type PetItem = {
   _id: string;
@@ -72,19 +73,7 @@ export default function PetProfiles() {
   };
 
   const openHistory = (pet: PetItem) => {
-    setHistoryModal({
-      open: true,
-      petId: pet._id,
-      petName: pet.name,
-    });
-  };
-
-  const closeHistory = () => {
-    setHistoryModal({
-      open: false,
-      petId: "",
-      petName: "",
-    });
+    setHistoryModal({ open: true, petId: pet._id, petName: pet.name });
   };
 
   const saveEdit = async (e: React.FormEvent) => {
@@ -130,7 +119,7 @@ export default function PetProfiles() {
     }
   };
 
-  const PetCard = (p: PetItem, editable = true) => (
+  const PetCard = (p: PetItem, editable = true, showHistory = true) => (
     <Card
       key={p._id}
       className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-0.5"
@@ -161,18 +150,18 @@ export default function PetProfiles() {
 
         {p.notes && <p className="text-sm text-[#374151] mt-4">{p.notes}</p>}
 
-        <div className="mt-4 flex gap-2">
-          {/* View History Button - available for all pets */}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openHistory(p)}
-            className="flex items-center gap-1.5"
-          >
-            <History className="w-3.5 h-3.5" />
-            History
-          </Button>
-
+        <div className="mt-4 flex gap-2 flex-wrap">
+          {showHistory && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openHistory(p)}
+              className="flex items-center gap-1"
+            >
+              <History className="w-3 h-3" />
+              History
+            </Button>
+          )}
           {editable && (
             <>
               <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
@@ -199,8 +188,8 @@ export default function PetProfiles() {
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <p className="text-sm text-gray-700">
-          View all pets you currently own. Sold pets appear below under Past
-          Pets.
+          View all pets you currently own. Click "History" to see the pet's
+          complete passport and ownership timeline.
         </p>
       </div>
 
@@ -214,17 +203,17 @@ export default function PetProfiles() {
         <>
           {/* All current + bought pets */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {pets.map((p) => PetCard(p, true))}
+            {pets.map((p) => PetCard(p, true, true))}
           </div>
 
           {/* Past Pets visible only if seller has any */}
           {pastPets.length > 0 && (
             <>
               <h3 className="text-md font-medium text-gray-900 mt-6">
-                Past Pets
+                Past Pets (Sold)
               </h3>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {pastPets.map((p) => PetCard(p, false))}
+                {pastPets.map((p) => PetCard(p, false, true))}
               </div>
             </>
           )}
@@ -306,7 +295,7 @@ export default function PetProfiles() {
         open={historyModal.open}
         petId={historyModal.petId}
         petName={historyModal.petName}
-        onClose={closeHistory}
+        onClose={() => setHistoryModal({ open: false, petId: "", petName: "" })}
       />
     </div>
   );

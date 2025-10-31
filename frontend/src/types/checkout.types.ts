@@ -1,5 +1,3 @@
-// src/types/checkout.types.ts
-
 export type PaymentMethod = "upi" | "card" | "netbanking" | "wallet";
 
 export type GetQuotePayload = {

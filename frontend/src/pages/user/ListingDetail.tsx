@@ -15,7 +15,7 @@ interface Listing {
   ageText?: string;
   place: string;
   contact: string;
-  userId?: string; 
+  userId?: string; // seller's user ID
 }
 
 export default function ListingDetail() {
@@ -25,23 +25,28 @@ export default function ListingDetail() {
 
   const [showContact, setShowContact] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isOwnListing, setIsOwnListing] = useState(false);
 
+  // Check ownership using localStorage (no API call needed)
   useEffect(() => {
     const checkOwnership = () => {
       try {
+        // Get user from localStorage (stored during login)
         const storedUser = localStorage.getItem("auth_user");
 
         if (storedUser && listing) {
           const user = JSON.parse(storedUser);
           setCurrentUser(user);
+
+          // Check if current user is the listing owner
           const isOwner =
             String(listing.userId) === String(user._id || user.id);
           setIsOwnListing(isOwner);
         }
       } catch (error) {
         console.error("Failed to check ownership:", error);
+        // Silently fail - user can still view listing
       }
     };
 

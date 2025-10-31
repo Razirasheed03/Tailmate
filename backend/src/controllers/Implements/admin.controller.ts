@@ -3,7 +3,15 @@ import { Request, Response, NextFunction } from "express";
 import { IAdminService } from "../../services/interfaces/admin.service.interface";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
-
+import { Types } from "mongoose";
+interface AuthenticatedRequest extends Request {
+  user?: {
+    _id: Types.ObjectId;
+    email?: string;
+    username?: string;
+    // add other user properties as needed
+  };
+}
 export class AdminController {
   constructor(private readonly _adminService: IAdminService) {}
 
@@ -61,66 +69,82 @@ export class AdminController {
   };
 
   // Doctors
-  listDoctors = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const status = (req.query.status as string) || "";
-      const search = (req.query.search as string) || "";
-      const result = await this._adminService.listDoctors(
-        page,
-        limit,
-        status,
-        search
-      );
-      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
-    } catch (err) {
-      next(err);
+ verifyDoctor = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const reviewerId = req.user?._id?.toString();
+    if (!reviewerId) {
+      return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
     }
-  };
+    const { userId } = req.params;
+    const result = await this._adminService.verifyDoctor(userId, reviewerId);
+    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+  } catch (err) {
+    next(err);
+  }
+};
 
-  verifyDoctor = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const reviewerId = (req as any).user?._id?.toString();
-      if (!reviewerId)
-        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
-      const { userId } = req.params;
-      const result = await this._adminService.verifyDoctor(userId, reviewerId);
-      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
-    } catch (err) {
-      next(err);
+rejectDoctor = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const reviewerId = req.user?._id?.toString();
+    if (!reviewerId) {
+      return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
     }
-  };
+    const { userId } = req.params;
+    const { reasons } = req.body as { reasons: string[] };
+    const result = await this._adminService.rejectDoctor(
+      userId,
+      reviewerId,
+      reasons || []
+    );
+    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+  } catch (err) {
+    next(err);
+  }
+};
 
-  rejectDoctor = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const reviewerId = (req as any).user?._id?.toString();
-      if (!reviewerId)
-        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
-      const { userId } = req.params;
-      const { reasons } = req.body as { reasons: string[] };
-      const result = await this._adminService.rejectDoctor(
-        userId,
-        reviewerId,
-        reasons || []
-      );
-      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
-    } catch (err) {
-      next(err);
+getDoctorDetail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const { userId } = req.params;
+    const data = await this._adminService.getDoctorDetail(userId);
+    if (!data) {
+      return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
     }
-  };
+    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+};
 
-  getDoctorDetail = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { userId } = req.params as any;
-      const data = await this._adminService.getDoctorDetail(userId);
-      if (!data)
-        return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
-      return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
-    } catch (err) {
-      next(err);
-    }
-  };
+listDoctors = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const { page, limit, status, search } = req.query;
+    const result = await this._adminService.listDoctors(
+      Number(page),
+      Number(limit),
+      status as string,
+      search as string
+    );
+    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+};
 
   // Pet Categories
   listPetCategories = async (

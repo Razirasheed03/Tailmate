@@ -7,16 +7,26 @@ import {
 } from "../../utils/uploadToCloudinary";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
-
+interface AuthRequest extends Request {
+  user?: {
+    _id?: string;
+    id?: string;
+    role?: string;
+  };
+  file?: Express.Multer.File;
+}
 export class DoctorController {
   constructor(private readonly svc: DoctorService) {}
 
-  getVerification = async (req: Request, res: Response, next: NextFunction) => {
+getVerification = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-      const userId =
-        (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!userId)
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?._id?.toString() || authReq.user?.id;
+      
+      if (!userId) {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+      
       const data = await this.svc.getVerification(userId);
       return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
@@ -24,88 +34,135 @@ export class DoctorController {
     }
   };
 
-  uploadCertificate = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  uploadCertificate = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-      const userId =
-        (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!userId)
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?._id?.toString() || authReq.user?.id;
+      
+      if (!userId) {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
 
-      const file = (req as any).file as Express.Multer.File | undefined;
-      if (!file) return ResponseHelper.badRequest(res, "No file uploaded");
+      const file = authReq.file;
+      if (!file) {
+        return ResponseHelper.badRequest(res, "No file uploaded");
+      }
 
       const { secure_url } = await uploadPdfBufferToCloudinary(
         file.buffer,
         file.originalname
       );
-      const updated = await this.svc.submitCertificate(userId, secure_url);
+      
+      const updated = await this.svc.uploadCertificate(userId, secure_url);
+      
       return ResponseHelper.ok(
         res,
-        { certificateUrl: secure_url, verification: updated.verification },
-        "Certificate uploaded and submitted for review"
+        { certificateUrl: secure_url, verification: updated },
+        "Certificate uploaded successfully"
       );
     } catch (err) {
       next(err);
     }
   };
 
-  getProfile = async (req: Request, res: Response, next: NextFunction) => {
+  submitForReview = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-      const userId =
-        (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!userId)
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?._id?.toString() || authReq.user?.id;
+      
+      if (!userId) {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+
+      const data = await this.svc.submitForReview(userId);
+      
+      return ResponseHelper.ok(
+        res,
+        data,
+        "Submitted for admin review"
+      );
+    } catch (err) {
+      const error = err as Error & { status?: number };
+      const status = error.status || 400;
+      
+      return ResponseHelper.error(
+        res,
+        status,
+        "SUBMIT_ERROR",
+        error.message || "Failed to submit for review"
+      );
+    }
+  };
+
+  getProfile = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+    try {
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?._id?.toString() || authReq.user?.id;
+      
+      if (!userId) {
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+      
       const data = await this.svc.getProfile(userId);
       return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
-    } catch (err: any) {
-      const status = (err && err.status) || 500;
+    } catch (err) {
+      const error = err as Error & { status?: number };
+      const status = error.status || 500;
+      
       return ResponseHelper.error(
         res,
         status,
         "PROFILE_ERROR",
-        err?.message || "Failed to fetch profile"
+        error.message || "Failed to fetch profile"
       );
     }
   };
 
-  updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+  updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-      const userId =
-        (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!userId)
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?._id?.toString() || authReq.user?.id;
+      
+      if (!userId) {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+      
       const payload = req.body || {};
       const data = await this.svc.updateProfile(userId, payload);
+      
       return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_UPDATED);
-    } catch (err: any) {
-      const status = (err && err.status) || 400;
+    } catch (err) {
+      const error = err as Error & { status?: number };
+      const status = error.status || 400;
+      
       return ResponseHelper.error(
         res,
         status,
         "PROFILE_UPDATE_ERROR",
-        err?.message || "Failed to update profile"
+        error.message || "Failed to update profile"
       );
     }
   };
 
-  uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+  uploadAvatar = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-      const userId =
-        (req as any).user?._id?.toString() || (req as any).user?.id;
-      if (!userId)
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?._id?.toString() || authReq.user?.id;
+      
+      if (!userId) {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
 
-      const file = (req as any).file as Express.Multer.File | undefined;
-      if (!file) return ResponseHelper.badRequest(res, "No image uploaded");
+      const file = authReq.file;
+      if (!file) {
+        return ResponseHelper.badRequest(res, "No image uploaded");
+      }
 
       const { secure_url } = await uploadImageBufferToCloudinary(
         file.buffer,
         file.originalname
       );
+      
       return ResponseHelper.ok(
         res,
         { avatarUrl: secure_url },
@@ -115,7 +172,6 @@ export class DoctorController {
       next(err);
     }
   };
-
   listDaySlots = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId =

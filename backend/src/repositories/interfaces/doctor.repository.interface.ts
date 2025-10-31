@@ -1,20 +1,14 @@
 // backend/src/repositories/interfaces/doctor.repository.interface.ts
-export interface IDoctorRepository {
-  createIfMissing(userId: string): Promise<any>; // unchanged [web:507]
-  getVerification(userId: string): Promise<any>; // unchanged [web:507]
-  submitCertificate(userId: string, certificateUrl: string): Promise<any>; // unchanged [web:507]
-  getProfile(userId: string): Promise<any>; // unchanged [web:507]
-  updateProfile(userId: string, profile: Partial<{
-    displayName: string;
-    bio: string;
-    specialties: string[];
-    experienceYears: number;
-    licenseNumber: string;
-    avatarUrl: string;
-    consultationFee: number;
-  }>): Promise<any>; // unchanged [web:507]
+import { IDoctorModel, IDoctorVerification, IDoctorProfile, UpdateProfileDTO } from "../../models/interfaces/doctor.model.interface";
 
-  // NEW: sessions list + detail for doctor dashboard [web:507]
+export interface IDoctorRepository {
+  createIfMissing(userId: string): Promise<IDoctorModel>;
+  getVerification(userId: string): Promise<IDoctorVerification>;
+  submitCertificate(userId: string, certificateUrl: string): Promise<IDoctorModel>;
+  getProfile(userId: string): Promise<IDoctorProfile>;
+  updateProfile(userId: string, profile: Partial<UpdateProfileDTO>): Promise<IDoctorProfile>;
+  saveCertificateUrl(userId: string, certificateUrl: string): Promise<IDoctorVerification>;
+  submitForReview(userId: string): Promise<IDoctorModel>;
   listSessions(doctorId: string, opts: {
     page: number;
     limit: number;

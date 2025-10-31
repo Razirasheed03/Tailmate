@@ -4,6 +4,8 @@ import { IDoctorRepository } from "../../repositories/interfaces/doctor.reposito
 import { UserRole } from "../../constants/roles";
 import { DoctorSlot, DoctorSlotEntity } from "../../schema/doctorSlot.schema";
 import { Model, Schema, model, Types } from "mongoose";
+import { IDoctorVerification, IDoctorProfile, IDoctorModel, UpdateProfileDTO } from "../../models/interfaces/doctor.model.interface";
+
 
 // Domain type for consultation modes (not a DTO)
 type UIMode = "video" | "audio" | "inPerson";
@@ -40,80 +42,104 @@ export class DoctorService {
     private readonly _doctorRepo: IDoctorRepository
   ) {}
 
-  private async ensureDoctor(userId: string): Promise<void> {
+ private async ensureDoctor(userId: string): Promise<void> {
     const user = await this._userRepo.findById(userId);
     if (!user) throw new Error("User not found");
-    if (user.role !== UserRole.DOCTOR) throw new Error("Only doctors can access this resource");
+    if (user.role !== UserRole.DOCTOR) {
+      throw new Error("Only doctors can access this resource");
+    }
   }
 
-  async getVerification(userId: string): Promise<any> {
-    // Replace any with concrete verification type from repo if available
+  async getVerification(userId: string): Promise<IDoctorVerification> {
     await this.ensureDoctor(userId);
     await this._doctorRepo.createIfMissing(userId);
     return this._doctorRepo.getVerification(userId);
   }
 
-  private async ensureVerified(userId: string): Promise<void> {
-    const v = await this._doctorRepo.getVerification(userId);
-    if (!v || v.status !== "verified") {
-      const err: any = new Error("Profile is available after verification");
-      err.status = 403;
-      throw err;
-    }
-  }
-
-  async submitCertificate(userId: string, certificateUrl: string): Promise<any> {
-    // Replace any with the repo’s return type (e.g., { ok: true } or updated entity)
+  async uploadCertificate(userId: string, certificateUrl: string): Promise<IDoctorVerification> {
     await this.ensureDoctor(userId);
     if (!certificateUrl) throw new Error("certificateUrl is required");
-    return this._doctorRepo.submitCertificate(userId, certificateUrl);
+    return this._doctorRepo.saveCertificateUrl(userId, certificateUrl);
   }
 
-  async getProfile(userId: string): Promise<any> {
-    // Replace any with concrete profile type
+  private isProfileComplete(profile: IDoctorProfile): boolean {
+    return !!(
+      profile?.displayName?.trim() &&
+      profile?.bio?.trim() &&
+      profile?.specialties &&
+      profile.specialties.length > 0 &&
+      typeof profile?.experienceYears === "number" &&
+      profile?.licenseNumber?.trim() &&
+      typeof profile?.consultationFee === "number"
+    );
+  }
+
+  async submitForReview(userId: string): Promise<IDoctorModel> {
     await this.ensureDoctor(userId);
-    await this.ensureVerified(userId);
+    
+    const doc = await this._doctorRepo.getVerification(userId);
+    if (!doc?.certificateUrl) {
+      throw new Error("Please upload a certificate first");
+    }
+
+    const profile = await this._doctorRepo.getProfile(userId).catch(() => ({}));
+    
+    if (!this.isProfileComplete(profile)) {
+      throw new Error("Please complete all required profile fields (name, bio, specialties, experience, license, fee)");
+    }
+
+    return this._doctorRepo.submitForReview(userId);
+  }
+
+  async getProfile(userId: string): Promise<IDoctorProfile> {
+    await this.ensureDoctor(userId);
     return this._doctorRepo.getProfile(userId);
   }
 
-  async updateProfile(
-    userId: string,
-    payload: Partial<{
-      displayName: string;
-      bio: string;
-      specialties: string[];
-      experienceYears: number;
-      licenseNumber: string;
-      avatarUrl: string;
-      consultationFee: number;
-    }>
-  ): Promise<any> {
-    // Replace any with concrete updated profile type
+  async updateProfile(userId: string, payload: Partial<UpdateProfileDTO>): Promise<IDoctorProfile> {
     await this.ensureDoctor(userId);
-    await this.ensureVerified(userId);
-    const profile: any = {};
-    if (typeof payload.displayName === "string") profile.displayName = payload.displayName.trim();
+
+    const profile: Partial<UpdateProfileDTO> = {};
+
+    if (typeof payload.displayName === "string") {
+      profile.displayName = payload.displayName.trim();
+    }
+    
     if (typeof payload.bio === "string") {
       const bio = payload.bio.trim();
       if (bio.length > 5000) throw new Error("Bio is too long");
       profile.bio = bio;
     }
-    if (Array.isArray(payload.specialties))
+    
+    if (Array.isArray(payload.specialties)) {
       profile.specialties = Array.from(
         new Set(payload.specialties.map((s) => String(s).trim()).filter(Boolean))
       );
+    }
+    
     if (typeof payload.experienceYears === "number") {
-      if (payload.experienceYears < 0 || payload.experienceYears > 80) throw new Error("Experience out of range");
+      if (payload.experienceYears < 0 || payload.experienceYears > 80) {
+        throw new Error("Experience out of range");
+      }
       profile.experienceYears = payload.experienceYears;
     }
-    if (typeof payload.licenseNumber === "string") profile.licenseNumber = payload.licenseNumber.trim();
-    if (typeof payload.avatarUrl === "string") profile.avatarUrl = payload.avatarUrl.trim();
+    
+    if (typeof payload.licenseNumber === "string") {
+      profile.licenseNumber = payload.licenseNumber.trim();
+    }
+    
+    if (typeof payload.avatarUrl === "string") {
+      profile.avatarUrl = payload.avatarUrl.trim();
+    }
+    
     if (typeof payload.consultationFee === "number") {
       if (payload.consultationFee < 0) throw new Error("Fee cannot be negative");
       profile.consultationFee = payload.consultationFee;
     }
+
     return this._doctorRepo.updateProfile(userId, profile);
   }
+
 
   // ===== Legacy per-day availability kept (unchanged) =====
   private toMinutes(hhmm: string): number {

@@ -1,3 +1,4 @@
+//user.schema.ts
 import { Schema, model, Document, Types } from "mongoose";
 import { UserRole } from "../constants/roles";
 import { IUserModel } from "../models/interfaces/user.model.interface";

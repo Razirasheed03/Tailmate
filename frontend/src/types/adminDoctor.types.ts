@@ -1,5 +1,3 @@
-// src/types/adminDoctor.types.ts
-
 export type VerificationStatus = "pending" | "verified" | "rejected";
 
 export type DoctorRow = {

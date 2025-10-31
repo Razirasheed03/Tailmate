@@ -3,26 +3,41 @@ import { Model, PipelineStage, Types } from "mongoose";
 import { DoctorModel } from "../../models/implements/doctor.model";
 import { IDoctorRepository } from "../interfaces/doctor.repository.interface";
 import { Booking } from "../../schema/booking.schema";
+import { IDoctorModel, IDoctorVerification, IDoctorProfile, UpdateProfileDTO } from "../../models/interfaces/doctor.model.interface";
 import { UserModel } from "../../models/implements/user.model";
 
 export class DoctorRepository implements IDoctorRepository {
   constructor(private readonly model: Model<any> = DoctorModel) {}
 
-  async createIfMissing(userId: string) {
+ async createIfMissing(userId: string): Promise<IDoctorModel> {
     let doc = await this.model.findOne({ userId });
     if (!doc) {
-      doc = await this.model.create({ userId, verification: { status: "pending" } });
+      doc = await this.model.create({ 
+        userId, 
+        verification: { 
+          status: "not_submitted",
+          certificateUrl: undefined,
+          submittedAt: undefined,
+          rejectionReasons: []
+        } 
+      });
     }
     return doc;
-  } // basic ensure doc row [web:507]
+  }
 
-  async getVerification(userId: string) {
+  async getVerification(userId: string): Promise<IDoctorVerification> {
     const doc = await this.model.findOne({ userId }).select("verification");
-    if (!doc) return { status: "pending", rejectionReasons: [] };
+    if (!doc) {
+      return { 
+        status: "not_submitted", 
+        certificateUrl: undefined, 
+        rejectionReasons: [] 
+      };
+    }
     return doc.verification;
-  } // simple read [web:507]
+  }
 
-  async submitCertificate(userId: string, certificateUrl: string) {
+  async submitCertificate(userId: string, certificateUrl: string): Promise<IDoctorModel> {
     const now = new Date();
     const updated = await this.model
       .findOneAndUpdate(
@@ -38,36 +53,77 @@ export class DoctorRepository implements IDoctorRepository {
         { new: true, upsert: true }
       )
       .select("verification");
+    
     if (!updated) throw new Error("Doctor not found");
     return updated;
-  } // state transition to pending [web:507]
+  }
 
-  async getProfile(userId: string) {
+  async getProfile(userId: string): Promise<IDoctorProfile> {
     const doc = await this.model.findOne({ userId }).select("profile");
     if (!doc) return {};
     return doc.profile || {};
-  } // profile fetch [web:507]
+  }
 
-  async updateProfile(userId: string, profile: Partial<any>) {
-    const $set: Record<string, any> = {};
-    if (typeof profile.displayName === "string") $set["profile.displayName"] = profile.displayName;
-    if (typeof profile.bio === "string") $set["profile.bio"] = profile.bio;
-    if (Array.isArray(profile.specialties)) $set["profile.specialties"] = profile.specialties;
-    if (typeof profile.experienceYears === "number") $set["profile.experienceYears"] = profile.experienceYears;
-    if (typeof profile.licenseNumber === "string") $set["profile.licenseNumber"] = profile.licenseNumber;
-    if (typeof profile.avatarUrl === "string") $set["profile.avatarUrl"] = profile.avatarUrl;
-    if (typeof profile.consultationFee === "number") $set["profile.consultationFee"] = profile.consultationFee;
+  async updateProfile(userId: string, profile: Partial<UpdateProfileDTO>): Promise<IDoctorProfile> {
+    const $set: Record<string, unknown> = {};
+    
+    if (typeof profile.displayName === "string") {
+      $set["profile.displayName"] = profile.displayName;
+    }
+    if (typeof profile.bio === "string") {
+      $set["profile.bio"] = profile.bio;
+    }
+    if (Array.isArray(profile.specialties)) {
+      $set["profile.specialties"] = profile.specialties;
+    }
+    if (typeof profile.experienceYears === "number") {
+      $set["profile.experienceYears"] = profile.experienceYears;
+    }
+    if (typeof profile.licenseNumber === "string") {
+      $set["profile.licenseNumber"] = profile.licenseNumber;
+    }
+    if (typeof profile.avatarUrl === "string") {
+      $set["profile.avatarUrl"] = profile.avatarUrl;
+    }
+    if (typeof profile.consultationFee === "number") {
+      $set["profile.consultationFee"] = profile.consultationFee;
+    }
 
     if (Object.keys($set).length === 0) {
       const doc = await this.model.findOne({ userId }).select("profile");
       if (!doc) throw new Error("Doctor not found");
       return doc.profile || {};
     }
-    const updated = await this.model.findOneAndUpdate({ userId }, { $set }, { new: true, upsert: true }).select("profile");
+
+    const updated = await this.model
+      .findOneAndUpdate({ userId }, { $set }, { new: true, upsert: true })
+      .select("profile");
+    
     if (!updated) throw new Error("Doctor not found");
     return updated.profile || {};
-  } // profile update with selective $set [web:507]
+  }
 
+  async saveCertificateUrl(userId: string, certificateUrl: string): Promise<IDoctorVerification> {
+    const doc = await this.model.findOne({ userId });
+    if (!doc) throw new Error("Doctor not found");
+    
+    doc.verification.certificateUrl = certificateUrl;
+    await doc.save();
+    
+    return doc.verification;
+  }
+
+  async submitForReview(userId: string): Promise<IDoctorModel> {
+    const doc = await this.model.findOne({ userId });
+    if (!doc) throw new Error("Doctor not found");
+    
+    doc.verification.status = "pending";
+    doc.verification.submittedAt = new Date();
+    doc.verification.rejectionReasons = [];
+    await doc.save();
+    
+    return doc;
+  }
   // ===== NEW: Sessions (bookings) aggregation =====
 
   async listSessions(
