@@ -30,7 +30,9 @@ export default function NotFound() {
           </FuzzyText>
         </div>
 
-        <h1 className="mt-6 text-3xl sm:text-4xl font-extrabold">Page not found</h1>
+        <h1 className="mt-6 text-3xl sm:text-4xl font-extrabold">
+          Page not found
+        </h1>
         <p className="mt-2 text-sm sm:text-base text-[#6B7280]">
           The page you’re looking for doesn’t exist or has moved.
         </p>
