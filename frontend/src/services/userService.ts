@@ -2,6 +2,7 @@
 import { API_BASE_URL, AUTH_ROUTES, USER_ROUTES } from '@/constants/apiRoutes';
 import type { Role } from '@/types/user';
 import httpClient from './httpClient';
+import type { BookingRow, BookingListParams } from '@/types/booking.types';
 
 export interface SignupPayload {
   username: string;
@@ -46,6 +47,41 @@ const userService = {
     const { data } = await httpClient.put(USER_ROUTES.UPDATE_PROFILE.replace(API_BASE_URL, ''), profileData);
     return { success: data?.success, data: data?.data, message: data?.message };
   },
+   listBookings: async (params: BookingListParams): Promise<{ data: BookingRow[]; total: number }> => {
+    const { data } = await httpClient.get<{ 
+      success: boolean; 
+      data: { items: BookingRow[]; total: number } 
+    }>("/bookings", { params });
+    const payload = data?.data || { items: [], total: 0 };
+    return { data: payload.items, total: payload.total };
+  },
+
+  getBooking: async (bookingId: string): Promise<BookingRow | null> => {
+    const { data } = await httpClient.get<{ 
+      success: boolean; 
+      data: BookingRow 
+    }>(`/bookings/${bookingId}`);
+    return data?.data || null;
+  },
+
+  cancelBooking: async (bookingId: string): Promise<{ success: boolean; message?: string }> => {
+    const { data } = await httpClient.post<{ 
+      success: boolean; 
+      data?: any;
+      message?: string;
+    }>(`/bookings/${bookingId}/cancel`);
+    return { success: data?.success, message: data?.message };
+  },
+  getWallet: async () => {
+  const { data } = await httpClient.get("/wallet");
+  return data;
+},
+
+getWalletTransactions: async () => {
+  const { data } = await httpClient.get("/wallet/transactions");
+  return data;
+},
 };
+
 
 export default userService;

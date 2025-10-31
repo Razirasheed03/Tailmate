@@ -35,6 +35,8 @@ import Success from "@/pages/payments/Success";
 import DoctorWallet from "@/pages/doctor/Wallet";
 import SessionDetailPage from "@/pages/doctor/SessionDetail";
 import VerifiedDoctorRoute from "@/components/LogicalComponents/VerifiedDoctorRoute";
+import Bookings from "@/pages/user/Profile/Bookings";
+import Wallet from "@/pages/user/Profile/Wallet";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -85,6 +87,8 @@ export const router = createBrowserRouter([
           { path: "security", element: <Security /> },
           { path: "pets", element: <PetProfiles /> },
           { path: "listings", element: <Listings /> },
+          {path:"bookings",element:<Bookings/>},
+          {path:"wallet",element:<Wallet/>}
         ],
       },
     ],

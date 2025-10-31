@@ -81,3 +81,57 @@ export interface IUserService {
     opts: { from: string; to: string; status?: "available" | "booked" }
   ): Promise<DoctorSlotEntry[]>;
 }
+export type BookingRowDTO = {
+  _id: string;
+  patientId: string;
+  doctorId: string;
+  doctorName?: string;
+  doctorSpecialty?: string;
+  doctorProfilePic?: string;
+  slotId?: string | null;
+  date: string;
+  time: string;
+  durationMins: number;
+  mode: UIMode;
+  amount: number;
+  currency: string;
+  petName: string;
+  notes?: string;
+  paymentMethod: string;
+  status: string;
+  paymentProvider?: string;
+  paymentSessionId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type ListBookingsParams = {
+  page: number;
+  limit: number;
+  scope: "upcoming" | "today" | "past" | "all";
+  status?: string;
+  mode?: UIMode;
+  q?: string;
+};
+
+export type ListBookingsResult = {
+  items: BookingRowDTO[];
+  total: number;
+};
+export interface IUserService {
+  // Account
+  updateMyUsername(userId: string, username: string): Promise<PublicUser>;
+
+  // Vets directory
+  listDoctorsWithNextSlot(params: ListDoctorsQuery): Promise<ListDoctorsResult>;
+  getDoctorPublicById(id: string): Promise<DoctorDetail | null>;
+  listDoctorSlotsBetween(
+    id: string,
+    opts: { from: string; to: string; status?: "available" | "booked" }
+  ): Promise<DoctorSlotEntry[]>;
+
+  // Bookings
+  listMyBookings(userId: string, params: ListBookingsParams): Promise<ListBookingsResult>;
+  getMyBookingById(userId: string, bookingId: string): Promise<BookingRowDTO | null>;
+  cancelMyBooking(userId: string, bookingId: string): Promise<{ success: boolean; message?: string }>;
+}

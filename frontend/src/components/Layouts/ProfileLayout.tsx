@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { NavLink, Outlet } from "react-router-dom";
-import { User, Shield, PawPrint, Menu, X } from "lucide-react";
+import { User, Shield, PawPrint, Menu, X,CalendarRange, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import clsx from "clsx";
 
@@ -92,6 +92,8 @@ export default function ProfileLayout() {
               <SideNavItem to="security" icon={Shield} label="Security" />
               <SideNavItem to="pets" icon={PawPrint} label="Pet Profiles" />
               <SideNavItem to="listings" icon={PawPrint} label="Listings" />
+              <SideNavItem to="Bookings" icon={CalendarRange} label="Bookings" />
+              <SideNavItem to="Wallet" icon={Wallet} label="Wallet" />
             </nav>
           </div>
         </aside>
