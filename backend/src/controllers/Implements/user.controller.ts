@@ -212,14 +212,22 @@ export async function cancelMyBooking(
   }
 }
 
-export async function getMyWallet(req: Request, res: Response, next: NextFunction) {
+export async function getMyWallet(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
     const userId = (req as any)?.user?._id?.toString();
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const wallet = await Wallet.findOne({ ownerType: "user", ownerId: userId });
     if (!wallet) {
-      return res.json({ success: true, data: { currency: "INR", balanceMinor: 0 } });
+      return res.json({
+        success: true,
+        data: { currency: "INR", balanceMinor: 0 },
+      });
     }
     res.json({ success: true, data: wallet });
   } catch (err) {
@@ -227,19 +235,25 @@ export async function getMyWallet(req: Request, res: Response, next: NextFunctio
   }
 }
 
-
-export async function getMyWalletTransactions(req:Request, res:Response, next:NextFunction) {
+export async function getMyWalletTransactions(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
     const userId = (req as any)?.user?._id?.toString();
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const transactions = await PaymentModel.find({
       patientId: userId,
-      paymentStatus: "refunded"
+      paymentStatus: "refunded",
     })
-    .sort({ createdAt: -1 })
-    .lean();
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json({ success: true, data: transactions });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
