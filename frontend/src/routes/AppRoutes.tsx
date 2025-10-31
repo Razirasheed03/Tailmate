@@ -37,6 +37,7 @@ import SessionDetailPage from "@/pages/doctor/SessionDetail";
 import VerifiedDoctorRoute from "@/components/LogicalComponents/VerifiedDoctorRoute";
 import Bookings from "@/pages/user/Profile/Bookings";
 import Wallet from "@/pages/user/Profile/Wallet";
+import Earnings from "@/pages/admin/Earnings";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -133,6 +134,7 @@ export const router = createBrowserRouter([
           { path: "users", element: <UserListing /> },
           { path: "doctors", element: <DoctorListings /> },
           { path: "addpetcategory", element: <PetCategory /> },
+          {path:"earnings",element:<Earnings/>},
           { index: true, element: <div>Please select an option from above.</div> },
         ],
       },

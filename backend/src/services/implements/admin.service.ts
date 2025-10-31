@@ -3,6 +3,7 @@ import { IAdminService } from "../interfaces/admin.service.interface";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { AdminRepository } from "../../repositories/implements/admin.repository";
+import { PaymentModel } from "../../models/implements/payment.model";
 
 export type OkMessage = { message: string };
 export type PageMeta = { total: number; page: number; totalPages: number };
@@ -160,5 +161,26 @@ export class AdminService implements IAdminService {
   }
   deletePetCategory(id: string): Promise<boolean> {
     return this._adminRepo.deletePetCategory(id);
+  }
+   async getEarningsByDoctor() {
+    // Group by doctor, sum admin fee
+    const pipeline = [
+      { $match: { paymentStatus: "success" } },
+      {
+        $group: {
+          _id: "$doctorId",
+          totalEarnings: { $sum: "$platformFee" },
+          count: { $sum: 1 },
+        }
+      },
+      { $lookup: {
+        from: "users", // or your doctors collection
+        localField: "_id",
+        foreignField: "_id",
+        as: "doctor"
+      }},
+      { $unwind: "$doctor" }
+    ];
+    return await PaymentModel.aggregate(pipeline);
   }
 }

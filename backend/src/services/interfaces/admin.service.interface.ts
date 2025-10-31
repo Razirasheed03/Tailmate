@@ -6,6 +6,19 @@ import {
   DoctorVerification,
 } from "../../models/types/doctor.types";
 
+export interface DoctorEarning {
+  _id: string; // doctorId
+  totalEarnings: number;
+  count: number;
+  doctor: {
+    _id: string;
+    name?: string;
+    email?: string;
+    specialization?: string;
+    [key: string]: any; // flexibility for future doctor fields
+  };
+}
+
 export interface IAdminService {
   // Existing user operations
   getAllUsers(page: number, limit: number, search: string): Promise<{
@@ -22,6 +35,7 @@ export interface IAdminService {
     totalDoctors: number;
     blockedUsers: number;
   }>;
+  getEarningsByDoctor(): Promise<DoctorEarning[]>;
 
   // Doctor moderation operations
   listDoctors(
