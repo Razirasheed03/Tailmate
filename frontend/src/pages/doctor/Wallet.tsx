@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { paymentService } from "@/services/paymentService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
+import Payout from "@/pages/doctor/Payout";  // <-- Import payout component
 
 function formatINR(amount: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -41,7 +42,6 @@ export default function DoctorWallet() {
       try {
         const rows = await paymentService.listDoctorPayments();
         if (!active) return;
-        // Normalize to array just in case service changes
         const data = Array.isArray(rows)
           ? rows
           : Array.isArray((rows as any)?.data)
@@ -65,7 +65,7 @@ export default function DoctorWallet() {
         <DoctorSidebar isVerified={true} />
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 max-w-3xl mx-auto">
-            <h2 className="text-lg font-semibold mb-3">Wallet</h2>
+            <h2 className="text-lg font-semibold mb-5">Wallet</h2>
 
             {err && (
               <div className="mb-3 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded px-3 py-2">
@@ -73,9 +73,16 @@ export default function DoctorWallet() {
               </div>
             )}
 
-            <div className="mb-4 bg-white border rounded p-4">
-              <div className="text-sm text-gray-500">Current Balance (net)</div>
-              <div className="text-2xl font-semibold">{formatINR(total)}</div>
+            <div className="mb-4 bg-white border rounded p-4 flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-500">Current Balance (net)</div>
+                <div className="text-2xl font-semibold">{formatINR(total)}</div>
+              </div>
+            </div>
+
+            {/* Withdraw section */}
+            <div className="mb-8">
+              <Payout ownerType="doctor" />
             </div>
 
             <div className="bg-white border rounded p-4">
@@ -93,8 +100,7 @@ export default function DoctorWallet() {
                           : it.paymentStatus}
                       </div>
                       <div className="text-gray-500 text-xs">
-                        {new Date(it.createdAt).toLocaleString()} • Booking{" "}
-                        {it.bookingId}
+                        {new Date(it.createdAt).toLocaleString()} • Booking {it.bookingId}
                       </div>
                     </div>
                     <div className="text-sm text-emerald-700">

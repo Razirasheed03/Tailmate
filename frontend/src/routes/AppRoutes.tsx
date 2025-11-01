@@ -186,6 +186,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  
 
   // 404 (must be last)
   { path: "*", element: <NotFound />, errorElement: <RouteErrorElement /> },
