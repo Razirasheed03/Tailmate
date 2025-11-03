@@ -1,7 +1,8 @@
 // src/pages/PetCategory.tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
-import { adminCategoryService, type AdminPetCategory } from '@/services/adminApiServices';
+import { adminCategoryService } from '@/services/adminApiServices';
+import type { AdminPetCategory } from '@/types/adminCategory.types';
 
 import { Table } from '@/components/table/Table';
 import type { ColumnDef } from '@/components/table/types';
@@ -47,6 +48,7 @@ const PetCategory = () => {
       const payload = normalizeListResponse(response);
       const rows = Array.isArray(payload?.data) ? payload.data : [];
       setCategories(rows);
+      console.log("Fetched categories rows:", rows);
       setCurrentPage(Number(payload?.page) || page);
       setTotalPages(Number(payload?.totalPages) || 1);
       setTotal(Number(payload?.total) || rows.length);
@@ -74,7 +76,7 @@ const PetCategory = () => {
   const handleDeleteCategory = async () => {
     if (!selectedCategory) return;
     try {
-      await adminCategoryService.delete(selectedCategory._id);
+      await adminCategoryService.delete(selectedCategory.id);
       toast.success('Category deleted successfully');
       setShowDeleteModal(false);
       setSelectedCategory(null);
@@ -115,7 +117,7 @@ const PetCategory = () => {
     }
     // Local duplicate check among currently loaded categories (case-insensitive)
     const localDup = categories.some(
-      (c) => c._id !== editing?._id && c.name.toLowerCase() === name.toLowerCase()
+      (c) => c.id !== editing?.id && c.name.toLowerCase() === name.toLowerCase()
     );
     if (localDup) errors.push('Category name already exists (case-insensitive)');
 
@@ -132,7 +134,7 @@ const PetCategory = () => {
 
     try {
       if (editing) {
-        await adminCategoryService.update(editing._id, {
+        await adminCategoryService.update(editing.id, {
           ...clean,
           iconKey: clean.iconKey?.trim() || undefined,
           description: clean.description?.trim() || undefined,
@@ -239,7 +241,7 @@ const PetCategory = () => {
             emptyText="No categories found"
             ariaColCount={columns.length}
             ariaRowCount={Array.isArray(categories) ? categories.length : 0}
-            getRowKey={(c) => c._id}
+            getRowKey={(c) => c.id}
             renderLoadingRow={() => (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
