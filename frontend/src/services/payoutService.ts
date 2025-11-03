@@ -1,31 +1,14 @@
-// src/services/payoutService.ts
-import httpClient from "./httpClient";
+import httpClient from "@/services/httpClient";
 
-type OwnerType = "user" | "doctor";
-
-const payoutService = {
-  requestPayout: async (
-    ownerType: OwnerType,
-    amount: number,
-    currency: string = "INR"
-  ) => {
-    // POST request to backend payout endpoint
-    const { data } = await httpClient.post("/payout/request", {
-      ownerType,
-      amount,
-      currency,
-    });
-    if (!data?.success) throw new Error(data?.message || "Payout request failed");
-    return data.data;
+// Request a payout (POST /doctor/payout)
+export const payoutService = {
+  requestPayout: async (amount: number) => {
+    const { data } = await httpClient.post("/doctor/payout", { amount });
+    return data;
   },
-
-  getMyPayoutHistory: async (ownerType: OwnerType) => {
-    // GET request to backend payout history endpoint
-    const { data } = await httpClient.get("/payout/history", {
-      params: { ownerType },
-    });
-    return data?.data || [];
+  // Fetch payout history (GET /doctor/payouts)
+  listPayouts: async () => {
+    const { data } = await httpClient.get("/doctor/payouts");
+    return Array.isArray(data) ? data : data?.records ?? [];
   },
 };
-
-export default payoutService;

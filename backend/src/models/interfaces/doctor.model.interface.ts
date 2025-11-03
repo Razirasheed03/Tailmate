@@ -26,6 +26,8 @@ export interface IDoctorModel extends Document {
   userId: Types.ObjectId;
   verification: IDoctorVerification;
   profile: IDoctorProfile;
+  stripeAccountId?: string;
+  stripeOnboardingStatus?: "pending" | "completed";
   createdAt?: Date;
   updatedAt?: Date;
 }

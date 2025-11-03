@@ -30,6 +30,8 @@ const DoctorSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User", index: true, unique: true, required: true },
     verification: { type: VerificationSchema, default: { status: "pending" } },
     profile: { type: ProfileSchema, default: {} },
+    stripeAccountId: { type: String, default: null },
+    stripeOnboardingStatus: { type: String, enum: ["pending", "completed"], default: "pending" }
   },
   { timestamps: true }
 );
