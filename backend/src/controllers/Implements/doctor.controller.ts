@@ -1,4 +1,5 @@
 // backend/src/controllers/Implements/doctor.controller.ts
+import { io } from '../../server';
 import { Request, Response, NextFunction } from "express";
 import { DoctorService } from "../../services/implements/doctor.service";
 import { PayoutService } from "../../services/implements/payout.service";
@@ -68,34 +69,41 @@ getVerification = async (req: Request, res: Response, next: NextFunction): Promi
     }
   };
 
-  submitForReview = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
-    try {
-      const authReq = req as AuthRequest;
-      const userId = authReq.user?._id?.toString() || authReq.user?.id;
-      
-      if (!userId) {
-        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
-      }
+submitForReview = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?._id?.toString() || authReq.user?.id;
 
-      const data = await this.svc.submitForReview(userId);
-      
-      return ResponseHelper.ok(
-        res,
-        data,
-        "Submitted for admin review"
-      );
-    } catch (err) {
-      const error = err as Error & { status?: number };
-      const status = error.status || 400;
-      
-      return ResponseHelper.error(
-        res,
-        status,
-        "SUBMIT_ERROR",
-        error.message || "Failed to submit for review"
-      );
+    if (!userId) {
+      return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
     }
-  };
+
+    const data = await this.svc.submitForReview(userId);
+
+    io.emit("admin_notification", {
+      message: "A new doctor has applied for verification",
+      doctorId: userId,
+      time: new Date().toISOString(),
+    });
+
+    return ResponseHelper.ok(
+      res,
+      data,
+      "Submitted for admin review"
+    );
+  } catch (err) {
+    const error = err as Error & { status?: number };
+    const status = error.status || 400;
+
+    return ResponseHelper.error(
+      res,
+      status,
+      "SUBMIT_ERROR",
+      error.message || "Failed to submit for review"
+    );
+  }
+};
+
 
   getProfile = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {

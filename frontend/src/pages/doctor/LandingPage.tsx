@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/UiComponents/button";
@@ -13,10 +13,12 @@ import {
   DollarSign,
   AlertTriangle,
   Send,
+  Bell,
 } from "lucide-react";
 import { doctorService } from "@/services/doctorService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { toast } from "sonner";
+import { io, Socket } from "socket.io-client";
 
 type VerificationStatus = "not_submitted" | "pending" | "verified" | "rejected";
 
@@ -29,6 +31,20 @@ type ProfileData = {
   consultationFee: number | "";
 };
 
+type DoctorNotification = {
+  id: string;
+  message: string;
+  date?: string;
+  time?: string;
+  createdAt?: string;
+  bookingId?: string;
+  bookingsUrl?: string;
+  read: boolean;
+};
+
+
+const SOCKET_URL = "http://localhost:4000"; // update as needed
+
 export default function DoctorLandingPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -36,11 +52,15 @@ export default function DoctorLandingPage() {
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus>("not_submitted");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
-  const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(
-    null
-  );
+  const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmittedCertificate, setHasSubmittedCertificate] = useState(false);
+   const [notifications, setNotifications] = useState<DoctorNotification[]>([]);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+
+  const unreadCount = notifications.filter(n => !n.read).length
 
   const [profile, setProfile] = useState<ProfileData>({
     displayName: "",
@@ -63,7 +83,6 @@ export default function DoctorLandingPage() {
         const v = await doctorService.getVerification();
         if (!isMounted) return;
 
-        // Determine actual status
         const actualStatus: VerificationStatus =
           v.status === "verified"
             ? "verified"
@@ -72,13 +91,11 @@ export default function DoctorLandingPage() {
             : v.certificateUrl
             ? "pending"
             : "not_submitted";
-
         setVerificationStatus(actualStatus);
         setHasSubmittedCertificate(!!v.certificateUrl);
 
         if (v.rejectionReasons?.length) setRejectionReasons(v.rejectionReasons);
 
-        // Load profile if exists
         try {
           const p = await doctorService.getProfile();
           if (!isMounted) return;
@@ -100,6 +117,47 @@ export default function DoctorLandingPage() {
     };
   }, []);
 
+   useEffect(() => {
+    if (user?.role === "doctor" && user?._id) {
+      const socket = io(SOCKET_URL, {
+        withCredentials: true, transports: ["websocket"],
+      });
+      socketRef.current = socket;
+      socket.emit("identify_as_doctor", user._id);
+
+      socket.on("doctor_notification", (data) => {
+        toast.info(data.message || "New booking received!");
+        setNotifications(prev => [
+          {
+            id: `${Date.now()}`,
+            message: data.message,
+            date: data.date,
+            time: data.time,
+            createdAt: data.createdAt,
+            bookingId: data.bookingId,
+            bookingsUrl: data.bookingsUrl,
+            read: false,
+          },
+          ...prev,
+        ]);
+      });
+      return () => { socket.disconnect(); };
+    }
+  }, [user]);
+
+  const handleMarkAllAsRead = () =>
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const handleViewAllNotifications = () => {
+    setShowAllNotifications(true); setIsNotificationOpen(true);
+  };
+
+  // Notification click
+  const handleNotificationClick = (notification: DoctorNotification) => {
+    setNotifications(prev =>
+      prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+    // Navigate to bookings page (customize route if needed)
+    if (notification.bookingsUrl) navigate(notification.bookingsUrl);
+  };
   const statusBadge = useMemo(() => {
     if (verificationStatus === "verified")
       return (
@@ -179,11 +237,7 @@ export default function DoctorLandingPage() {
 
     try {
       setIsSubmitting(true);
-
-      // 1. Upload certificate (as draft)
       await doctorService.uploadCertificate(certificateFile!);
-
-      // 2. Update profile
       await doctorService.updateProfile({
         displayName: profile.displayName.trim(),
         bio: profile.bio.trim(),
@@ -192,10 +246,7 @@ export default function DoctorLandingPage() {
         licenseNumber: profile.licenseNumber.trim(),
         consultationFee: Number(profile.consultationFee),
       });
-
-      // 3. Submit for review
       await doctorService.submitForReview();
-
       setVerificationStatus("pending");
       setHasSubmittedCertificate(true);
       setRejectionReasons(null);
@@ -210,18 +261,77 @@ export default function DoctorLandingPage() {
     }
   };
 
-  const actions = (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        className="border-[#E5E7EB] bg-white hover:bg-white/90"
-        onClick={async () => {
-          await logout();
-          navigate("/login");
-        }}
+  // --- Notification dropdown renderer ---
+   const renderNotifications = notifications.length === 0 ? (
+    <div className="p-4 text-sm text-gray-500">
+      No notifications yet.
+    </div>
+  ) : (
+    notifications.map((notification) => (
+      <div
+        key={notification.id}
+        className={`p-4 border-b border-gray-100 transition-colors cursor-pointer ${
+          !notification.read ? "bg-orange-50" : "hover:bg-gray-50"
+        }`}
+        onClick={() => handleNotificationClick(notification)}
       >
-        Logout
-      </Button>
+        <p className="text-sm font-medium text-gray-900">
+          {notification.message}
+          {!notification.read && (
+            <span className="ml-2 inline-block align-middle w-2 h-2 bg-orange-500 rounded-full"></span>
+          )}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ""}
+        </p>
+      </div>
+    ))
+  );
+
+
+ const actions = (
+    <div className="flex gap-2 items-center relative">
+      <Button variant="outline" className="border-[#E5E7EB] bg-white hover:bg-white/90"
+        onClick={async () => { await logout(); navigate("/login"); }}>Logout</Button>
+      <div className="relative inline-block">
+        <Button variant="outline" className="relative border-[#E5E7EB] bg-white hover:bg-white/90"
+          style={{ padding: 0, minWidth: '40px' }}
+          onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
+          <Bell className="w-6 h-6 text-gray-700" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </Button>
+        {(isNotificationOpen || showAllNotifications) && (
+          <>
+            <div className="fixed inset-0 z-10"
+              onClick={() => { setIsNotificationOpen(false); setShowAllNotifications(false); }} />
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="font-semibold text-gray-900">Notifications</h3>
+                {notifications.length > 0 && (
+                  <button
+                    className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                    onClick={handleMarkAllAsRead}>Mark all as read</button>
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {renderNotifications}
+              </div>
+              <div className="p-2 border-t border-gray-200">
+                <button
+                  className="w-full text-center text-sm text-orange-600 hover:text-orange-700 py-2"
+                  onClick={handleViewAllNotifications}
+                >
+                  View all notifications
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
       <Button
         variant="outline"
         className="border-[#E5E7EB] bg-white hover:bg-white/90"
@@ -236,7 +346,6 @@ export default function DoctorLandingPage() {
     <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
       <div className="flex">
         <DoctorSidebar isVerified={isVerified} />
-
         <div className="flex-1 min-h-screen">
           <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
@@ -250,9 +359,7 @@ export default function DoctorLandingPage() {
               </div>
             </div>
           </header>
-
           <main className="container mx-auto px-6 py-8">
-            {/* Under Review */}
             {verificationStatus === "pending" && (
               <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                 <CardContent className="p-6">
@@ -268,7 +375,6 @@ export default function DoctorLandingPage() {
               </Card>
             )}
 
-            {/* Rejected */}
             {verificationStatus === "rejected" && (
               <Card className="border-0 bg-rose-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] mb-6">
                 <CardContent className="p-6">
@@ -295,8 +401,7 @@ export default function DoctorLandingPage() {
               </Card>
             )}
 
-            {/* Verified Dashboard */}
-            {isVerified && (
+            {/* {isVerified && (
               <section className="space-y-6">
                 <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                   <CardContent className="p-6 flex items-start gap-3">
@@ -306,13 +411,11 @@ export default function DoctorLandingPage() {
                         Welcome, {profile.displayName || user?.username}
                       </h2>
                       <p className="text-sm text-[#6B7280]">
-                        You're verified. Manage appointments, patients, and
-                        earnings.
+                        You're verified. Manage appointments, patients, and earnings.
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Tile
                     icon={<Calendar className="w-5 h-5 text-[#0EA5E9]" />}
@@ -344,9 +447,8 @@ export default function DoctorLandingPage() {
                   />
                 </div>
               </section>
-            )}
+            )} */}
 
-            {/* Submission Form (for new or rejected) */}
             {canShowForm && (
               <section className="mt-8">
                 <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
@@ -356,13 +458,10 @@ export default function DoctorLandingPage() {
                         ? "Update Your Profile"
                         : "Complete Your Profile"}
                     </h3>
-
                     <div className="space-y-5">
-                      {/* Certificate Upload */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
-                          Medical Certificate (PDF){" "}
-                          <span className="text-rose-500">*</span>
+                          Medical Certificate (PDF) <span className="text-rose-500">*</span>
                         </label>
                         <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-[#E5E7EB] bg-white cursor-pointer hover:bg-gray-50">
                           <Upload className="w-4 h-4" />
@@ -379,13 +478,10 @@ export default function DoctorLandingPage() {
                           />
                         </label>
                       </div>
-
-                      {/* Profile Fields */}
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            Display Name{" "}
-                            <span className="text-rose-500">*</span>
+                            Display Name <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -400,11 +496,9 @@ export default function DoctorLandingPage() {
                             placeholder="Dr. Jane Doe"
                           />
                         </div>
-
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            License Number{" "}
-                            <span className="text-rose-500">*</span>
+                            License Number <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -419,11 +513,9 @@ export default function DoctorLandingPage() {
                             placeholder="TCMC/123456"
                           />
                         </div>
-
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            Experience (years){" "}
-                            <span className="text-rose-500">*</span>
+                            Experience (years) <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="number"
@@ -442,11 +534,9 @@ export default function DoctorLandingPage() {
                             placeholder="8"
                           />
                         </div>
-
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            Consultation Fee (₹){" "}
-                            <span className="text-rose-500">*</span>
+                            Consultation Fee (₹) <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="number"
@@ -466,7 +556,6 @@ export default function DoctorLandingPage() {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Specialties <span className="text-rose-500">*</span>
@@ -497,7 +586,6 @@ export default function DoctorLandingPage() {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Bio <span className="text-rose-500">*</span>
@@ -515,7 +603,6 @@ export default function DoctorLandingPage() {
                           placeholder="Describe your experience and expertise..."
                         />
                       </div>
-
                       <Button
                         onClick={handleSubmitAll}
                         disabled={!isFormComplete() || isSubmitting}

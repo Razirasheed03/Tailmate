@@ -1,4 +1,3 @@
-//beackend/src/server.ts
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -8,7 +7,7 @@ import cookieParser from "cookie-parser";
 import { connectDB } from "./config/mongodb";
 import { env } from "./config/env";
 
-// Routes
+// Routes (all your imports unchanged)
 import authRoutes from "./routes/auth.route";
 import adminRoutes from "./routes/admin.route";
 import petRoutes from "./routes/pet.route";
@@ -25,7 +24,26 @@ import payoutRoutes from "./routes/payout.route"
 // Webhook controller
 import { paymentsWebhook } from "./controllers/Implements/payment-webhook.controller";
 
+// Socket.IO: Import these!
+import http from "http";
+import { Server } from "socket.io";
+
 const app = express();
+const server = http.createServer(app); // Create HTTP server
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // change to your frontend domain
+    credentials: true,
+  },
+});
+
+// --- Socket.IO event section ---
+io.on("connection", (socket) => {
+  console.log("Socket.IO: New user connected", socket.id);
+  // You can add socket.on(...) listeners here later for notifications/chat!
+});
+
+// --- Your original Express setup below ---
 
 app.use(cors({
   origin: "http://localhost:3000",
@@ -61,11 +79,8 @@ app.use("/api", userRoutes);
 app.use("/api", bookingReadRoutes);
 app.use('/api', petRoutes);
 app.use("/api", payoutRoutes);
-// Booking/session helpers
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api", checkoutSessionRoutes);
-
-// Payments (JSON body)
 app.use("/api/payments", paymentRoutes);
 app.use("/api", paymentReadRoutes);
 app.use("/api/marketplace-payments", marketplacePaymentRoutes);
@@ -79,7 +94,10 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   });
 });
 
-app.listen(env.PORT, () => {
+// CHANGE app.listen TO server.listen!
+server.listen(env.PORT, () => {
   console.log(`Server running on ${env.PORT}`);
   console.log("Stripe webhook path: POST /api/payments/webhook");
+  console.log("Socket.IO server running!");
 });
+export { io }; 

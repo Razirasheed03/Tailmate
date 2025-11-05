@@ -1,14 +1,14 @@
-//payment-webhook.controller.ts
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { stripe } from "../../utils/stripe";
 import { PaymentModel } from "../../models/implements/payment.model";
-import { Booking } from "../../schema/booking.schema";
+import { Booking, BookingLean } from "../../schema/booking.schema";
 import { MarketOrder } from "../../schema/marketOrder.schema";
 import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
 import { Pet } from "../../schema/pet.schema";
 import { Wallet } from "../../schema/wallet.schema";
 import { Types } from "mongoose";
+import { io } from "../../server"; // make sure server exports io!
 
 export async function paymentsWebhook(req: Request, res: Response) {
   const sig = req.headers["stripe-signature"] as string;
@@ -54,11 +54,39 @@ export async function paymentsWebhook(req: Request, res: Response) {
             paymentSessionId: session.id,
           });
           console.log(`Booking marked paid: ${bookingId}`);
+
+          // --- Doctor Notification, slot info & bookings link ---
+          const paidBooking = await Booking.findOne({ _id: bookingId, status: "paid" }).lean() as BookingLean | null;
+          if (paidBooking) {
+            // Create a nice message, e.g.: 'Tuesday 2:00 pm slot booked!'
+            const slotDate = new Date(`${paidBooking.date}T${paidBooking.time}:00`); // ISO format
+            const dateMsg = slotDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "short",
+              day: "numeric"
+            });
+            const timeMsg = paidBooking.time;
+
+            io.to(`doctor_${paidBooking.doctorId}`).emit("doctor_notification", {
+              message: `${dateMsg} ${timeMsg} slot booked!`,
+              patientName: paidBooking.petName,
+              // Complete info sent for frontend
+              date: paidBooking.date,
+              time: paidBooking.time,
+              bookingId: String(paidBooking._id),
+              createdAt: paidBooking.createdAt,
+              // Bookings redirect link (add this for click-on-notification):
+              bookingsUrl: "/doctor/appointments", // Or your actual route
+            });
+            console.log(`Notification emitted to doctor_${paidBooking.doctorId}`);
+          }
         }
 
         return res.status(200).send("ok");
       }
 
+      // ---- marketplace payment ----
       if (kind === "marketplace") {
         const orderId = session.metadata?.orderId;
         console.log(`Marketplace orderId: ${orderId}`);

@@ -1,34 +1,120 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Search,
   ChevronDown,
   LogOut,
   Menu,
+  Bell,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { io, Socket } from 'socket.io-client';
 
 interface NavbarProps {
   title?: string;
   onMobileMenuToggle?: () => void;
 }
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  time: string;
+  read: boolean;
+};
+
+const SOCKET_URL = 'http://localhost:4000'; // Change if needed!
+
 const Navbar: React.FC<NavbarProps> = ({
-  title = "Dashboard",
-  onMobileMenuToggle
+  title = 'Dashboard',
+  onMobileMenuToggle,
 }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  // const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const socketRef = useRef<Socket | null>(null);
 
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
     navigate('/login');
   };
+
+  // Unread notification count
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      const socket = io(SOCKET_URL, {
+        withCredentials: true,
+        transports: ['websocket'],
+      });
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        console.log('Socket.IO: Connected (admin)', socket.id);
+      });
+
+      socket.on('admin_notification', (data) => {
+        toast.info(data.message || 'You have a new notification!');
+        setNotifications((prev) => [
+          {
+            id: `${Date.now()}`,
+            title: data.message,
+            time: new Date(data.time || Date.now()).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric' }),
+            read: false,
+          },
+          ...prev,
+        ]);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [user]);
+
+  // Mark all notifications as read (keeps showing, just marked as read)
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read: true }))
+    );
+  };
+
+  // Show all notifications (historical) when button is clicked
+  const handleViewAllNotifications = () => {
+    setShowAllNotifications(true);
+    setIsNotificationOpen(true);
+  };
+
+  // Dropdown notification list (all notifications always shown)
+  const renderNotifications = notifications.length === 0 ? (
+    <div className="p-4 text-sm text-gray-500">
+      No notifications yet.
+    </div>
+  ) : (
+    notifications.map((notification) => (
+      <div
+        key={notification.id}
+        className={`p-4 border-b border-gray-100 transition-colors ${
+          !notification.read ? 'bg-orange-50' : 'hover:bg-gray-50'
+        }`}
+      >
+        <p className="text-sm font-medium text-gray-900">
+          {notification.title}
+          {!notification.read && (
+            <span className="ml-2 inline-block align-middle w-2 h-2 bg-orange-500 rounded-full"></span>
+          )}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+      </div>
+    ))
+  );
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
       <div className="flex items-center justify-between px-4 py-3 lg:px-6">
@@ -49,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
               })}
             </p>
           </div>
@@ -78,54 +164,51 @@ const Navbar: React.FC<NavbarProps> = ({
             <Search className="w-5 h-5 text-gray-600" />
           </button>
 
-          {/* Messages */}
-          {/* <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
-            <MessageCircle className="w-5 h-5 text-gray-600" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-              3
-            </span>
-          </button> */}
-
           {/* Notifications */}
-          {/* <div className="relative">
+          <div className="relative">
             <button
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
             >
               <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                {notifications.length}
-              </span>
-            </button> */}
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
 
-          {/* Notifications Dropdown */}
-          {/* {isNotificationOpen && (
+            {/* Notifications Dropdown */}
+            {(isNotificationOpen || showAllNotifications) && (
               <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setIsNotificationOpen(false)}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => {
+                    setIsNotificationOpen(false);
+                    setShowAllNotifications(false);
+                  }}
                 />
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                  <div className="p-4 border-b border-gray-200">
+                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    {notifications.length > 0 && (
+                      <button
+                        className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                        onClick={handleMarkAllAsRead}
+                      >
+                        Mark all as read
+                      </button>
+                    )}
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div key={notification.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                      </div>
-                    ))}
+                    {renderNotifications}
                   </div>
                   <div className="p-2 border-t border-gray-200">
-                    <button className="w-full text-center text-sm text-orange-600 hover:text-orange-700 py-2">
-                      View all notifications
-                    </button>
                   </div>
                 </div>
               </>
             )}
-          </div> */}
+          </div>
 
           {/* Profile Dropdown */}
           <div className="relative">
@@ -141,7 +224,11 @@ const Navbar: React.FC<NavbarProps> = ({
               <div className="hidden lg:block text-left">
                 <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
                 <p className="text-xs text-gray-500">
-                  {user?.role === "admin" ? 'Admin' : user?.role === "doctor" ? 'Doctor' : 'Patient'}
+                  {user?.role === 'admin'
+                    ? 'Admin'
+                    : user?.role === 'doctor'
+                    ? 'Doctor'
+                    : 'Patient'}
                 </p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -155,7 +242,6 @@ const Navbar: React.FC<NavbarProps> = ({
                 />
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
                   <div className="py-1">
-
                     <hr className="my-1" />
                     <button
                       onClick={handleLogout}

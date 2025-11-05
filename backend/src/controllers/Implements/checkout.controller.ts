@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { CheckoutService } from "../../services/implements/checkout.service";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
+import { io } from "../../server";
 
 export class CheckoutController {
   constructor(private readonly svc: CheckoutService) {}
