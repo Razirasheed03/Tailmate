@@ -1,27 +1,17 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
 import {
-  Upload,
-  CheckCircle2,
-  Clock,
-  Calendar,
-  Users,
-  MessageSquare,
-  DollarSign,
-  AlertTriangle,
-  Send,
-  Bell,
+  Upload, CheckCircle2, Clock, Calendar, Users, MessageSquare, DollarSign, AlertTriangle, Send,
 } from "lucide-react";
 import { doctorService } from "@/services/doctorService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
+import DoctorNavbar from "@/components/UiComponents/DoctorNavbar";
 import { toast } from "sonner";
-import { io, Socket } from "socket.io-client";
 
 type VerificationStatus = "not_submitted" | "pending" | "verified" | "rejected";
-
 type ProfileData = {
   displayName: string;
   bio: string;
@@ -31,36 +21,15 @@ type ProfileData = {
   consultationFee: number | "";
 };
 
-type DoctorNotification = {
-  id: string;
-  message: string;
-  date?: string;
-  time?: string;
-  createdAt?: string;
-  bookingId?: string;
-  bookingsUrl?: string;
-  read: boolean;
-};
-
-
-const SOCKET_URL = "http://localhost:4000"; // update as needed
-
 export default function DoctorLandingPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [verificationStatus, setVerificationStatus] =
-    useState<VerificationStatus>("not_submitted");
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("not_submitted");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmittedCertificate, setHasSubmittedCertificate] = useState(false);
-   const [notifications, setNotifications] = useState<DoctorNotification[]>([]);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [showAllNotifications, setShowAllNotifications] = useState(false);
-  const socketRef = useRef<Socket | null>(null);
-
-  const unreadCount = notifications.filter(n => !n.read).length
 
   const [profile, setProfile] = useState<ProfileData>({
     displayName: "",
@@ -73,8 +42,7 @@ export default function DoctorLandingPage() {
   const [specialtyInput, setSpecialtyInput] = useState("");
 
   const isVerified = verificationStatus === "verified";
-  const canShowForm =
-    verificationStatus === "not_submitted" || verificationStatus === "rejected";
+  const canShowForm = verificationStatus === "not_submitted" || verificationStatus === "rejected";
 
   useEffect(() => {
     let isMounted = true;
@@ -82,7 +50,6 @@ export default function DoctorLandingPage() {
       try {
         const v = await doctorService.getVerification();
         if (!isMounted) return;
-
         const actualStatus: VerificationStatus =
           v.status === "verified"
             ? "verified"
@@ -93,9 +60,7 @@ export default function DoctorLandingPage() {
             : "not_submitted";
         setVerificationStatus(actualStatus);
         setHasSubmittedCertificate(!!v.certificateUrl);
-
         if (v.rejectionReasons?.length) setRejectionReasons(v.rejectionReasons);
-
         try {
           const p = await doctorService.getProfile();
           if (!isMounted) return;
@@ -103,61 +68,16 @@ export default function DoctorLandingPage() {
             displayName: p?.displayName || "",
             bio: p?.bio || "",
             specialties: Array.isArray(p?.specialties) ? p.specialties : [],
-            experienceYears:
-              typeof p?.experienceYears === "number" ? p.experienceYears : "",
+            experienceYears: typeof p?.experienceYears === "number" ? p.experienceYears : "",
             licenseNumber: p?.licenseNumber || "",
-            consultationFee:
-              typeof p?.consultationFee === "number" ? p.consultationFee : "",
+            consultationFee: typeof p?.consultationFee === "number" ? p.consultationFee : "",
           });
         } catch {}
       } catch {}
     })();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
-   useEffect(() => {
-    if (user?.role === "doctor" && user?._id) {
-      const socket = io(SOCKET_URL, {
-        withCredentials: true, transports: ["websocket"],
-      });
-      socketRef.current = socket;
-      socket.emit("identify_as_doctor", user._id);
-
-      socket.on("doctor_notification", (data) => {
-        toast.info(data.message || "New booking received!");
-        setNotifications(prev => [
-          {
-            id: `${Date.now()}`,
-            message: data.message,
-            date: data.date,
-            time: data.time,
-            createdAt: data.createdAt,
-            bookingId: data.bookingId,
-            bookingsUrl: data.bookingsUrl,
-            read: false,
-          },
-          ...prev,
-        ]);
-      });
-      return () => { socket.disconnect(); };
-    }
-  }, [user]);
-
-  const handleMarkAllAsRead = () =>
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  const handleViewAllNotifications = () => {
-    setShowAllNotifications(true); setIsNotificationOpen(true);
-  };
-
-  // Notification click
-  const handleNotificationClick = (notification: DoctorNotification) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
-    // Navigate to bookings page (customize route if needed)
-    if (notification.bookingsUrl) navigate(notification.bookingsUrl);
-  };
   const statusBadge = useMemo(() => {
     if (verificationStatus === "verified")
       return (
@@ -187,12 +107,10 @@ export default function DoctorLandingPage() {
   const handleChooseFile = (file: File | null) => {
     if (!file) return;
     if (file.type !== "application/pdf") {
-      toast.error("Please upload a PDF file.");
-      return;
+      toast.error("Please upload a PDF file."); return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File too large. Max 10MB.");
-      return;
+      toast.error("File too large. Max 10MB."); return;
     }
     setCertificateFile(file);
   };
@@ -217,24 +135,21 @@ export default function DoctorLandingPage() {
     }));
   };
 
-  const isFormComplete = () => {
-    return !!(
-      certificateFile &&
-      profile.displayName.trim() &&
-      profile.bio.trim() &&
-      profile.specialties.length > 0 &&
-      profile.experienceYears !== "" &&
-      profile.licenseNumber.trim() &&
-      profile.consultationFee !== ""
-    );
-  };
+  const isFormComplete = () => (
+    !!certificateFile &&
+    !!profile.displayName.trim() &&
+    !!profile.bio.trim() &&
+    profile.specialties.length > 0 &&
+    profile.experienceYears !== "" &&
+    !!profile.licenseNumber.trim() &&
+    profile.consultationFee !== ""
+  );
 
   const handleSubmitAll = async () => {
     if (!isFormComplete()) {
       toast.error("Please complete all fields and upload a certificate");
       return;
     }
-
     try {
       setIsSubmitting(true);
       await doctorService.uploadCertificate(certificateFile!);
@@ -261,105 +176,19 @@ export default function DoctorLandingPage() {
     }
   };
 
-  // --- Notification dropdown renderer ---
-   const renderNotifications = notifications.length === 0 ? (
-    <div className="p-4 text-sm text-gray-500">
-      No notifications yet.
-    </div>
-  ) : (
-    notifications.map((notification) => (
-      <div
-        key={notification.id}
-        className={`p-4 border-b border-gray-100 transition-colors cursor-pointer ${
-          !notification.read ? "bg-orange-50" : "hover:bg-gray-50"
-        }`}
-        onClick={() => handleNotificationClick(notification)}
-      >
-        <p className="text-sm font-medium text-gray-900">
-          {notification.message}
-          {!notification.read && (
-            <span className="ml-2 inline-block align-middle w-2 h-2 bg-orange-500 rounded-full"></span>
-          )}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ""}
-        </p>
-      </div>
-    ))
-  );
-
-
- const actions = (
-    <div className="flex gap-2 items-center relative">
-      <Button variant="outline" className="border-[#E5E7EB] bg-white hover:bg-white/90"
-        onClick={async () => { await logout(); navigate("/login"); }}>Logout</Button>
-      <div className="relative inline-block">
-        <Button variant="outline" className="relative border-[#E5E7EB] bg-white hover:bg-white/90"
-          style={{ padding: 0, minWidth: '40px' }}
-          onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
-          <Bell className="w-6 h-6 text-gray-700" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {unreadCount}
-            </span>
-          )}
-        </Button>
-        {(isNotificationOpen || showAllNotifications) && (
-          <>
-            <div className="fixed inset-0 z-10"
-              onClick={() => { setIsNotificationOpen(false); setShowAllNotifications(false); }} />
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="font-semibold text-gray-900">Notifications</h3>
-                {notifications.length > 0 && (
-                  <button
-                    className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
-                    onClick={handleMarkAllAsRead}>Mark all as read</button>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {renderNotifications}
-              </div>
-              <div className="p-2 border-t border-gray-200">
-                <button
-                  className="w-full text-center text-sm text-orange-600 hover:text-orange-700 py-2"
-                  onClick={handleViewAllNotifications}
-                >
-                  View all notifications
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-      <Button
-        variant="outline"
-        className="border-[#E5E7EB] bg-white hover:bg-white/90"
-        onClick={() => navigate("/")}
-      >
-        Go to Site
-      </Button>
-    </div>
-  );
-
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
       <div className="flex">
         <DoctorSidebar isVerified={isVerified} />
         <div className="flex-1 min-h-screen">
-          <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur">
+          {/* FIXED: Added z-50 to header to ensure it's above all cards */}
+          <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur sticky top-0 z-50">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
               <h1 className="text-lg font-semibold">Doctor Portal</h1>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-[#6B7280]">
-                  {user?.username ?? "doctor"}
-                </span>
-                {statusBadge}
-                {actions}
-              </div>
+              <DoctorNavbar />
             </div>
           </header>
-          <main className="container mx-auto px-6 py-8">
+          <main className="container mx-auto px-6 py-8 relative z-0">
             {verificationStatus === "pending" && (
               <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                 <CardContent className="p-6">
@@ -401,7 +230,7 @@ export default function DoctorLandingPage() {
               </Card>
             )}
 
-            {/* {isVerified && (
+            {isVerified && (
               <section className="space-y-6">
                 <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                   <CardContent className="p-6 flex items-start gap-3">
@@ -447,7 +276,7 @@ export default function DoctorLandingPage() {
                   />
                 </div>
               </section>
-            )} */}
+            )}
 
             {canShowForm && (
               <section className="mt-8">
