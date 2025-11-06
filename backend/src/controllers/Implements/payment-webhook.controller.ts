@@ -9,6 +9,7 @@ import { Pet } from "../../schema/pet.schema";
 import { Wallet } from "../../schema/wallet.schema";
 import { Types } from "mongoose";
 import { io } from "../../server"; // ensure server exports io!
+import { NotificationModel } from "../../schema/notification.schema";
 
 // Helper log function for clarity in logs
 function logWithTag(tag: string, ...args: any[]) {
@@ -110,6 +111,20 @@ export async function paymentsWebhook(req: Request, res: Response) {
           createdAt: paidBooking.createdAt,
           bookingsUrl: "/doctor/appointments",
         });
+        await NotificationModel.create({
+  userId: doctorId,
+  userRole: "doctor",
+  type: "booking",
+  message: notificationMsg,
+  meta: {
+    patientName: paidBooking.petName,
+    date: paidBooking.date,
+    time: paidBooking.time,
+    bookingId: String(paidBooking._id),
+  },
+  read: false,
+});
+
         logWithTag("NOTIFY", `Notification emitted for doctorId: ${doctorId}, bookingId: ${bookingId}`);
       }
 

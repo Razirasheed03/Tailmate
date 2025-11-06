@@ -5,19 +5,16 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/UiComponents/button";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
+import httpClient from "@/services/httpClient";
 
 export type DoctorNotification = {
   id: string;
   message: string;
-  date?: string;
-  time?: string;
   createdAt?: string;
-  bookingId?: string;
-  bookingsUrl?: string;
   read: boolean;
 };
 
-const SOCKET_URL = "http://localhost:4000"; // or your production address
+const SOCKET_URL = "http://localhost:4000";
 
 export default function DoctorNavbar() {
   const { user, logout } = useAuth();
@@ -30,32 +27,49 @@ export default function DoctorNavbar() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
-    if (user?.role === "doctor" && user?._id) {
-      const socket: Socket = io(SOCKET_URL, {
-        withCredentials: true,
-        transports: ["websocket"],
-      });
-      socketRef.current = socket;
-      socket.emit("identify_as_doctor", user._id);
+    let mounted = true;
+    (async () => {
+      if (user?.role === "doctor" && user?._id) {
+        try {
+          const { data } = await httpClient.get<{ data: DoctorNotification[] }>("/notifications?limit=30");
+          if (mounted && Array.isArray(data?.data)) {
+            setNotifications(
+              data.data.map((n: any) => ({
+                id: n._id || `${n.createdAt}`,
+                message: n.message,
+                createdAt: n.createdAt,
+                read: n.read,
+              }))
+            );
+          }
+        } catch {}
 
-      socket.on("doctor_notification", (data) => {
-        toast.info(data.message || "New booking received!");
-        setNotifications(prev => [
-          {
-            id: `${Date.now()}`,
-            message: data.message,
-            date: data.date,
-            time: data.time,
-            createdAt: data.createdAt,
-            bookingId: data.bookingId,
-            bookingsUrl: data.bookingsUrl,
-            read: false,
-          },
-          ...prev,
-        ]);
-      });
-      return () => { socket.disconnect(); };
-    }
+        const socket: Socket = io(SOCKET_URL, {
+          withCredentials: true,
+          transports: ["websocket"],
+        });
+        socketRef.current = socket;
+        socket.emit("identify_as_doctor", user._id);
+
+        socket.on("doctor_notification", (data) => {
+          toast.info(data.message || "New booking received!");
+          setNotifications(prev => [
+            {
+              id: `${Date.now()}`,
+              message: data.message,
+              createdAt: data.createdAt,
+              read: false,
+            },
+            ...prev,
+          ]);
+        });
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      socketRef.current?.disconnect();
+    };
   }, [user]);
 
   const handleMarkAllAsRead = () =>
@@ -69,7 +83,7 @@ export default function DoctorNavbar() {
   const handleNotificationClick = (notification: DoctorNotification) => {
     setNotifications(prev =>
       prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
-    if (notification.bookingsUrl) navigate(notification.bookingsUrl);
+    // Optionally navigate based on meta here
   };
 
   const renderNotifications = notifications.length === 0 ? (
@@ -81,7 +95,7 @@ export default function DoctorNavbar() {
       <div
         key={notification.id}
         className={`p-4 border-b border-gray-100 transition-colors cursor-pointer ${!notification.read ? "bg-orange-50" : "hover:bg-gray-50"}`}
-        onClick={() => handleNotificationClick(notification)}
+ onClick={() => handleNotificationClick(notification)}
       >
         <p className="text-sm font-medium text-gray-900">
           {notification.message}
@@ -127,7 +141,7 @@ export default function DoctorNavbar() {
         </Button>
         {(isNotificationOpen || showAllNotifications) && (
           <>
-            {/* Backdrop - z-[9999] to ensure it's above everything */}
+            {/* Backdrop */}
             <div
               className="fixed inset-0 z-[9999]"
               onClick={() => {
@@ -135,10 +149,7 @@ export default function DoctorNavbar() {
                 setShowAllNotifications(false);
               }}
             />
-            {/* Dropdown - z-[10000] to be above the backdrop */}
-            <div
-              className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-[10000]"
-            >
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-[10000]">
               <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 className="font-semibold text-gray-900">Notifications</h3>
                 {notifications.length > 0 && (

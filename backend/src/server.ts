@@ -22,6 +22,7 @@ import paymentRoutes from "./routes/payment.route";
 import marketplacePaymentRoutes from "./routes/marketplace.payment.route";
 import payoutRoutes from "./routes/payout.route";
 import { paymentsWebhook } from "./controllers/Implements/payment-webhook.controller";
+import notificationRoutes from "./routes/notification.route";
 
 // --- SOCKET.IO imports ---
 import http from "http";
@@ -97,7 +98,7 @@ app.use("/api", checkoutSessionRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api", paymentReadRoutes);
 app.use("/api/marketplace-payments", marketplacePaymentRoutes);
-
+app.use("/api", notificationRoutes);
 // Centralized error handler (keep unchanged)
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error("Error handler:", err?.message);
