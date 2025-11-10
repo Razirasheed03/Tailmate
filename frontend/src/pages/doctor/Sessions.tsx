@@ -12,6 +12,11 @@ function formatDateTime(date: string, time: string) {
   d.setHours(h, m, 0, 0);
   return d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
+function generateBookingNumber(id: string | undefined, prefix: string = "BKD"): string {
+  if (!id || id.length < 7) return prefix + "0000";
+  return `${prefix}${id.slice(-7).toUpperCase()}`;
+}
+
 
 export default function DoctorSessions() {
   const [tab, setTab] = useState<TabKey>("upcoming");
@@ -110,7 +115,9 @@ export default function DoctorSessions() {
                     <li key={s._id} className="grid grid-cols-12 px-4 py-3 items-center">
                       <div className="col-span-4">
                         <div className="text-sm font-medium">{formatDateTime(s.date, s.time)}</div>
-                        <div className="text-xs text-gray-500">#{s._id}</div>
+                        <div className="text-xs text-gray-500">
+  {generateBookingNumber(s._id, "BKD")}
+</div>
                       </div>
                       <div className="col-span-3">
                         <div className="text-sm">{s.patientName || "Patient"}</div>

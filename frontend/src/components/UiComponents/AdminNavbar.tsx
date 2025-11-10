@@ -1,3 +1,4 @@
+//src/components/UiComponents/AdminNavbar.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, LogOut, Menu, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +17,7 @@ type NotificationItem = {
   message: string;
   createdAt: string;
   read: boolean;
+  doctorId?: string;
 };
 
 const SOCKET_URL = "http://localhost:4000";
@@ -33,29 +35,37 @@ const AdminNavbar: React.FC<NavbarProps> = ({
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Helper function to fetch notifications from backend
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await httpClient.get<{ data: any[] }>(
+        "/notifications?limit=30"
+      );
+      if (Array.isArray(data?.data)) {
+        setNotifications(
+          data.data.map((n: any) => ({
+            id: n._id || `${n.createdAt}`,
+            message: n.message,
+            createdAt: n.createdAt,
+            read: n.read,
+            doctorId: n.meta?.doctorId,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
 
   // Fetch notification history + socket.io live
   useEffect(() => {
     let mounted = true;
     (async () => {
       if (user?.role === "admin" && user?._id) {
-        // Fetch persistent notification history
-        try {
-          const { data } = await httpClient.get<{ data: NotificationItem[] }>("/notifications?limit=30");
-          if (mounted && Array.isArray(data?.data)) {
-            setNotifications(
-              data.data.map((n: any) => ({
-                id: n._id || `${n.createdAt}`,
-                message: n.message,
-                createdAt: n.createdAt,
-                read: n.read,
-              }))
-            );
-          }
-        } catch {
-          // ignore (optional toast)
-        }
+        // Initial fetch
+        await fetchNotifications();
 
         // SOCKET.IO real-time
         const socket = io(SOCKET_URL, {
@@ -65,22 +75,18 @@ const AdminNavbar: React.FC<NavbarProps> = ({
         socketRef.current = socket;
 
         socket.on("connect", () => {
-          // Optionally identify as admin:
-          // socket.emit("identify_as_admin", user._id);
           console.log("Socket.IO: Connected (admin)", socket.id);
         });
 
-        socket.on("admin_notification", (data) => {
+        // ✅ FIX: Only refetch from backend, don't add locally!
+        socket.on("admin_notification", async (data) => {
           toast.info(data.message || "You have a new notification!");
-          setNotifications(prev => [
-            {
-              id: `${Date.now()}`,
-              message: data.message,
-              createdAt: data.time || new Date().toISOString(),
-              read: false,
-            },
-            ...prev,
-          ]);
+          // Refetch all notifications from backend
+          await fetchNotifications();
+        });
+
+        socket.on("disconnect", () => {
+          console.log("Socket disconnected");
         });
 
         return () => {
@@ -96,8 +102,15 @@ const AdminNavbar: React.FC<NavbarProps> = ({
     };
   }, [user]);
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const handleMarkAllAsRead = async () => {
+    try {
+      await httpClient.patch("/notifications/mark-all-read");
+      await fetchNotifications(); // Refetch to get updated read status
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+      // Fallback: update locally if backend fails
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
   };
 
   const handleViewAllNotifications = () => {
@@ -105,32 +118,50 @@ const AdminNavbar: React.FC<NavbarProps> = ({
     setIsNotificationOpen(true);
   };
 
-  const renderNotifications = notifications.length === 0 ? (
-    <div className="p-4 text-sm text-gray-500">
-      No notifications yet.
-    </div>
-  ) : (
-    notifications.map((notification) => (
-      <div
-        key={notification.id}
-        className={`p-4 border-b border-gray-100 transition-colors ${
-          !notification.read ? "bg-orange-50" : "hover:bg-gray-50"
-        }`}
-      >
-        <p className="text-sm font-medium text-gray-900">
-          {notification.message}
-          {!notification.read && (
-            <span className="ml-2 inline-block align-middle w-2 h-2 bg-orange-500 rounded-full"></span>
-          )}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ""}
-        </p>
-      </div>
-    ))
-  );
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    // Mark single notification as read
+    try {
+      await httpClient.patch(`/notifications/${notification.id}/read`);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+      );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
 
-  // Profile/logout menu as before...
+    // Navigate to doctor verification if doctorId exists
+    if (notification.doctorId) {
+      navigate(`/admin/doctor-verification/${notification.doctorId}`);
+    }
+  };
+
+  const renderNotifications =
+    notifications.length === 0 ? (
+      <div className="p-4 text-sm text-gray-500">No notifications yet.</div>
+    ) : (
+      notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`p-4 border-b border-gray-100 transition-colors cursor-pointer ${
+            !notification.read ? "bg-orange-50" : "hover:bg-gray-50"
+          }`}
+          onClick={() => handleNotificationClick(notification)}
+        >
+          <p className="text-sm font-medium text-gray-900">
+            {notification.message}
+            {!notification.read && (
+              <span className="ml-2 inline-block align-middle w-2 h-2 bg-orange-500 rounded-full"></span>
+            )}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {notification.createdAt
+              ? new Date(notification.createdAt).toLocaleString()
+              : ""}
+          </p>
+        </div>
+      ))
+    );
+
   const handleLogout = () => {
     logout();
     toast.success("Logged out successfully");
@@ -148,13 +179,15 @@ const AdminNavbar: React.FC<NavbarProps> = ({
             <Menu className="w-5 h-5 text-gray-600" />
           </button>
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{title}</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
+              {title}
+            </h1>
             <p className="text-sm text-gray-500 hidden sm:block">
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               })}
             </p>
           </div>
@@ -202,7 +235,9 @@ const AdminNavbar: React.FC<NavbarProps> = ({
                 />
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-[10000]">
                   <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      Notifications
+                    </h3>
                     {notifications.length > 0 && (
                       <button
                         className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
@@ -228,14 +263,14 @@ const AdminNavbar: React.FC<NavbarProps> = ({
             >
               <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-semibold text-sm">
-                  {user?.username?.charAt(0).toUpperCase() || 'U'}
+                  {user?.username?.charAt(0).toUpperCase() || "U"}
                 </span>
               </div>
               <div className="hidden lg:block text-left">
-                <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
-                <p className="text-xs text-gray-500">
-                  Admin
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.username || "User"}
                 </p>
+                <p className="text-xs text-gray-500">Admin</p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>

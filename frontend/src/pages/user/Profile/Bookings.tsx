@@ -1,8 +1,8 @@
-// frontend/src/pages/user/Bookings.tsx
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import userService from "@/services/userService";
 import type { BookingRow, BookingStatus, UIMode } from "@/types/booking.types";
+import { Button } from "@/components/UiComponents/button";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -15,6 +15,7 @@ const Bookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "">("");
   const [modeFilter, setModeFilter] = useState<UIMode | "">("");
+  const [cancelId, setCancelId] = useState<string | null>(null);
 
   const limit = 10;
 
@@ -48,9 +49,9 @@ const Bookings = () => {
     fetchBookings();
   };
 
+  // This version does NOT show any browser confirm/alert, only uses modal below:
   const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) return;
-
+    setCancelId(null);
     try {
       const { success, message } = await userService.cancelBooking(bookingId);
       if (success) {
@@ -302,17 +303,17 @@ const Bookings = () => {
                   {/* Actions */}
                   <div className="flex gap-2">
                     {booking.status === "paid" && (
-                      <button
-                        onClick={() => handleCancelBooking(booking._id)}
+                      <Button
+                        onClick={() => setCancelId(booking._id)}
                         className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     )}
                     {booking.status === "pending" && (
-                      <button className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium">
+                      <Button className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium">
                         Complete Payment
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -345,6 +346,37 @@ const Bookings = () => {
             </button>
           </div>
         )}
+
+        {/* Cancellation Confirmation Modal */}
+        {cancelId && (
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-semibold mb-3">Cancel Booking</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Are you sure you want to cancel this booking? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCancelId(null)}
+                >
+                  No, Go Back
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={async () => {
+                    await handleCancelBooking(cancelId as string);
+                  }}
+                >
+                  Yes, Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
