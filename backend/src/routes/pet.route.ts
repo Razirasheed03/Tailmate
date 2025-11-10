@@ -33,7 +33,7 @@ router.post('/pets', PetController.createPet);
 router.patch('/pets/:id', PetController.updatePet);  // Update
 router.delete('/pets/:id', PetController.deletePet); // Delete
 
+
 // Upload pet photo
 router.post('/pet-uploads/photo', authJwt, uploadImage, PetController.uploadPetPhoto);
-
 export default router;

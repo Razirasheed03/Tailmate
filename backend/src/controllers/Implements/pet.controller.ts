@@ -82,6 +82,7 @@ export const PetController = {
         .json({ message: "name and speciesCategoryId are required" });
     }
     try {
+      
       const pet = await PetService.createPet({
         user: (req as any).user,
         name: b.name,
@@ -91,6 +92,7 @@ export const PetController = {
         notes: b.notes,
         photoUrl: b.photoUrl,
       });
+
       return res.status(HttpStatus.CREATED).json(pet);
     } catch (e: any) {
       return res
@@ -98,7 +100,6 @@ export const PetController = {
         .json({ message: e?.message || "Create failed" });
     }
   },
-
   async updatePet(req: Request, res: Response) {
     try {
       const pet = await PetService.updatePetScoped(

@@ -4,6 +4,7 @@ import { marketplaceService } from '@/services/marketplaceService';
 import { updatePet } from '@/services/petsApiService';
 import { PetSelectDialog } from '../../pages/pets/PetSelectDialog';
 import { uploadListingPhoto } from '@/services/petsApiService'; // reuse existing uploader
+import { toast } from 'sonner';
 
 type Props = { open: boolean; onClose: () => void; onCreated: () => void; };
 
@@ -75,12 +76,17 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     return () => {
       images.forEach(img => { try { URL.revokeObjectURL(img.url); } catch {} });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setErr(null);
+    // ///testing
+ 
+    //   const res=await fetch(`api/pet/getPetLastList?petId=${pickedPet?._id}`)
+    //   if(!res.ok){
+    //     toast.error("not valid already done within 7days")
+    //   }
 
     if (!pickedPet) return setErr('Please select a pet from your profile');
     if (!title.trim()) return setErr('Title is required');
@@ -93,21 +99,14 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     setSubmitting(true);
     setUploadingPhotos(true);
     try {
-      // Upload any additional listing photos
       const uploaded: string[] = [];
       for (const img of images) {
         const res = await uploadListingPhoto(img.file);
         uploaded.push(res.url);
       }
-
-      // Compose photos: pet's main photo first (if any), then optional listing photos
       const photos: string[] = [];
       if (pickedPet.photoUrl) photos.push(pickedPet.photoUrl);
       photos.push(...uploaded);
-
-      // Optional: if your backend requires at least one photo and pet has none,
-      // ensure images.length > 0 before proceeding.
-
       const listingData: any = {
   petId: pickedPet._id,
   title: title.trim(),
@@ -120,10 +119,8 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
 };
 
       const createdListing = await marketplaceService.create(listingData);
-
-      // Optional pet-side patch (non-blocking)
       try {
-        await updatePet(pickedPet._id, { /* e.g., status: 'listed' */ });
+        await updatePet(pickedPet._id, {});
       } catch {}
 
       if (createdListing) {

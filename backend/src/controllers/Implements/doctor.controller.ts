@@ -67,7 +67,6 @@ export class DoctorController {
 
       const data = await this.svc.submitForReview(userId);
 
-      // Live emit to all admins (optional for live, not persistent)
       io.emit("admin_notification", {
         message: "A new doctor has applied for verification",
         doctorId: userId,
