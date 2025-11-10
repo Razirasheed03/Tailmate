@@ -10,18 +10,28 @@ function formatDateTime(date: string, time: string) {
   const [h, m] = time.split(":").map(Number);
   const d = new Date(date + "T00:00:00Z");
   d.setHours(h, m, 0, 0);
-  return d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
-function generateBookingNumber(id: string | undefined, prefix: string = "BKD"): string {
+function generateBookingNumber(
+  id: string | undefined,
+  prefix: string = "BKD"
+): string {
   if (!id || id.length < 7) return prefix + "0000";
   return `${prefix}${id.slice(-7).toUpperCase()}`;
 }
 
-
 export default function DoctorSessions() {
   const [tab, setTab] = useState<TabKey>("upcoming");
   const [query, setQuery] = useState("");
-  const [mode, setMode] = useState<"all" | "video" | "audio" | "inPerson">("all");
+  const [mode, setMode] = useState<"all" | "video" | "audio" | "inPerson">(
+    "all"
+  );
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
 
@@ -29,7 +39,10 @@ export default function DoctorSessions() {
   const [items, setItems] = useState<SessionRow[]>([]);
   const [total, setTotal] = useState(0);
 
-  const canLoadMore = useMemo(() => items.length < total, [items.length, total]);
+  const canLoadMore = useMemo(
+    () => items.length < total,
+    [items.length, total]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -50,7 +63,9 @@ export default function DoctorSessions() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [tab, query, mode, page, limit]);
 
   function onSearch(e: React.FormEvent) {
@@ -70,8 +85,15 @@ export default function DoctorSessions() {
                 {(["upcoming", "today", "past"] as TabKey[]).map((t) => (
                   <button
                     key={t}
-                    onClick={() => { setTab(t); setPage(1); }}
-                    className={`px-3 py-1.5 rounded text-sm border ${tab === t ? "bg-black text-white border-black" : "bg-white border-gray-300"}`}
+                    onClick={() => {
+                      setTab(t);
+                      setPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded text-sm border ${
+                      tab === t
+                        ? "bg-black text-white border-black"
+                        : "bg-white border-gray-300"
+                    }`}
                   >
                     {t[0].toUpperCase() + t.slice(1)}
                   </button>
@@ -86,7 +108,10 @@ export default function DoctorSessions() {
                 />
                 <select
                   value={mode}
-                  onChange={(e) => { setMode(e.target.value as any); setPage(1); }}
+                  onChange={(e) => {
+                    setMode(e.target.value as any);
+                    setPage(1);
+                  }}
                   className="border rounded px-3 py-2"
                 >
                   <option value="all">All modes</option>
@@ -94,7 +119,9 @@ export default function DoctorSessions() {
                   <option value="audio">Audio</option>
                   <option value="inPerson">In‑Person</option>
                 </select>
-                <button className="px-3 py-2 rounded bg-black text-white">Filter</button>
+                <button className="px-3 py-2 rounded bg-black text-white">
+                  Filter
+                </button>
               </form>
             </header>
 
@@ -112,34 +139,58 @@ export default function DoctorSessions() {
                 </div>
                 <ul className="divide-y">
                   {items.map((s) => (
-                    <li key={s._id} className="grid grid-cols-12 px-4 py-3 items-center">
+                    <li
+                      key={s._id}
+                      className="grid grid-cols-12 px-4 py-3 items-center"
+                    >
                       <div className="col-span-4">
-                        <div className="text-sm font-medium">{formatDateTime(s.date, s.time)}</div>
+                        <div className="text-sm font-medium">
+                          {formatDateTime(s.date, s.time)}
+                        </div>
                         <div className="text-xs text-gray-500">
-  {generateBookingNumber(s._id, "BKD")}
-</div>
+                          {generateBookingNumber(s._id, "BKD")}
+                        </div>
                       </div>
                       <div className="col-span-3">
-                        <div className="text-sm">{s.patientName || "Patient"}</div>
-                        <div className="text-xs text-gray-500">{s.patientEmail || ""}</div>
+                        <div className="text-sm">
+                          {s.patientName || "Patient"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {s.patientEmail || ""}
+                        </div>
                       </div>
                       <div className="col-span-2">
                         <div className="text-sm">{s.petName}</div>
-                        {s.notes ? <div className="text-xs text-gray-500 truncate">{s.notes}</div> : null}
+                        {s.notes ? (
+                          <div className="text-xs text-gray-500 truncate">
+                            {s.notes}
+                          </div>
+                        ) : null}
                       </div>
-                      <div className="col-span-1 text-sm">{s.mode === "inPerson" ? "In‑Person" : s.mode}</div>
-                      <div className="col-span-1 text-sm">{s.durationMins}m</div>
+                      <div className="col-span-1 text-sm">
+                        {s.mode === "inPerson" ? "In‑Person" : s.mode}
+                      </div>
+                      <div className="col-span-1 text-sm">
+                        {s.durationMins}m
+                      </div>
                       <div className="col-span-1 text-right">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          s.status === "paid" ? "bg-emerald-50 text-emerald-700" :
-                          s.status === "pending" ? "bg-amber-50 text-amber-700" :
-                          "bg-gray-100 text-gray-600"
-                        }`}>
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            s.status === "paid"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : s.status === "pending"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
                           {s.status}
                         </span>
                       </div>
                       <div className="col-span-12 pt-2">
-                        <Link to={`/doctor/sessions/${s._id}`} className="text-xs text-sky-700 hover:underline">
+                        <Link
+                          to={`/doctor/sessions/${s._id}`}
+                          className="text-xs text-sky-700 hover:underline"
+                        >
                           View details
                         </Link>
                       </div>

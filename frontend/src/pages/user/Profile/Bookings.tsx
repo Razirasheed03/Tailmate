@@ -353,7 +353,8 @@ const Bookings = () => {
             <div className="bg-white rounded-xl w-full max-w-md p-6">
               <h3 className="text-lg font-semibold mb-3">Cancel Booking</h3>
               <p className="text-sm text-gray-600 mb-6">
-                Are you sure you want to cancel this booking? This action cannot be undone.
+                Are you sure you want to cancel this booking? This action cannot
+                be undone.
               </p>
               <div className="flex justify-end gap-2">
                 <Button
@@ -376,7 +377,6 @@ const Bookings = () => {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
