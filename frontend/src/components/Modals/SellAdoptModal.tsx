@@ -3,8 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { marketplaceService } from '@/services/marketplaceService';
 import { updatePet } from '@/services/petsApiService';
 import { PetSelectDialog } from '../../pages/pets/PetSelectDialog';
-import { uploadListingPhoto } from '@/services/petsApiService'; // reuse existing uploader
-import { toast } from 'sonner';
+import { uploadListingPhoto } from '@/services/petsApiService';
 
 type Props = { open: boolean; onClose: () => void; onCreated: () => void; };
 
@@ -71,7 +70,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
     });
   };
 
-  // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
       images.forEach(img => { try { URL.revokeObjectURL(img.url); } catch {} });
@@ -81,12 +79,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
   const submit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setErr(null);
-    // ///testing
- 
-    //   const res=await fetch(`api/pet/getPetLastList?petId=${pickedPet?._id}`)
-    //   if(!res.ok){
-    //     toast.error("not valid already done within 7days")
-    //   }
 
     if (!pickedPet) return setErr('Please select a pet from your profile');
     if (!title.trim()) return setErr('Title is required');

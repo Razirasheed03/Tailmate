@@ -38,6 +38,7 @@ import VerifiedDoctorRoute from "@/components/LogicalComponents/VerifiedDoctorRo
 import Bookings from "@/pages/user/Profile/Bookings";
 import Wallet from "@/pages/user/Profile/Wallet";
 import Earnings from "@/pages/admin/Earnings";
+import DashboardPage from "@/pages/admin/DashboardPage";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -135,7 +136,8 @@ export const router = createBrowserRouter([
           { path: "doctors", element: <DoctorListings /> },
           { path: "addpetcategory", element: <PetCategory /> },
           {path:"earnings",element:<Earnings/>},
-          { index: true, element: <div>Please select an option from above.</div> },
+          { index: true, element: <DashboardPage /> },
+
         ],
       },
     ],

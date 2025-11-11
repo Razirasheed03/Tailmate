@@ -32,5 +32,5 @@ router.patch('/pet-categories/:id', asyncHandler(adminController.updatePetCatego
 router.delete('/pet-categories/:id', asyncHandler(adminController.deletePetCategory));
 
 router.get("/wallet/earnings", asyncHandler(adminController.getAdminEarnings));
-
+router.get("/dashboard-stats", asyncHandler(adminController.getAdminDashboardStats));
 export default router;

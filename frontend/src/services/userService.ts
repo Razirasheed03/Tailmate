@@ -72,14 +72,16 @@ const userService = {
     }>(`/bookings/${bookingId}/cancel`);
     return { success: data?.success, message: data?.message };
   },
-  getWallet: async () => {
+getWallet: async () => {
   const { data } = await httpClient.get("/wallet");
-  return data;
+  // Backend returns { success: true, data: wallet }
+  return { success: data?.success, data: data?.data };
 },
 
 getWalletTransactions: async () => {
   const { data } = await httpClient.get("/wallet/transactions");
-  return data;
+  // Backend returns { success: true, data: transactions[] }
+  return { success: data?.success, data: data?.data };
 },
 };
 

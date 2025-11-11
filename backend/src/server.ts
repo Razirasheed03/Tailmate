@@ -109,7 +109,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 });
 
 // Listen on all interfaces
-server.listen(env.PORT, "0.0.0.0", () => {
+server.listen(env.PORT, () => {
   console.log(`Server running on ${env.PORT}`);
   console.log("Stripe webhook path: POST /api/payments/webhook");
   console.log("Socket.IO server running!");

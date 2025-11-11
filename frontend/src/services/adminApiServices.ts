@@ -42,6 +42,11 @@ export const adminService = {
   getWalletEarnings: async () => {
     const { data } = await httpClient.get("/admin/wallet/earnings"); // Adjust path to match backend
     return data?.data || [];
+  },
+    getDashboardStats: async () => {
+    const { data } = await httpClient.get("/admin/dashboard-stats");
+    if (data.success) return data.data;
+    throw new Error("Failed to fetch admin dashboard stats");
   }
 };
 

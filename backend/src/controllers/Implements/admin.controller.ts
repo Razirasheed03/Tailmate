@@ -4,6 +4,10 @@ import { IAdminService } from "../../services/interfaces/admin.service.interface
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
 import { Types } from "mongoose";
+import { UserModel } from "../../models/implements/user.model";
+import { PetModel } from "../../models/implements/pet.model";
+import { Booking } from "../../schema/booking.schema";
+import { PaymentModel } from "../../models/implements/payment.model";
 interface AuthenticatedRequest extends Request {
   user?: {
     _id: Types.ObjectId;
@@ -243,4 +247,42 @@ listDoctors = async (
       next(err);
     }
   };
+  getAdminDashboardStats = async (
+  req: Request,
+  res: Response,
+  next: any // or NextFunction if you prefer
+) => {
+  try {
+    const [
+      totalUsers,
+      totalDoctors,
+      totalPets,
+      totalBookings,
+      totalEarnings
+    ] = await Promise.all([
+      UserModel.countDocuments({}), // all users
+      UserModel.countDocuments({ role: "doctor" }), // all doctors
+      PetModel.countDocuments({}), // all pets
+      Booking.countDocuments({}), // all bookings
+      PaymentModel.aggregate([
+        { $match: { paymentStatus: "success" } },
+        { $group: { _id: null, total: { $sum: "$platformFee" } } }
+      ]).then(res => res[0]?.total || 0)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalUsers,
+        totalDoctors,
+        totalPets,
+        totalBookings,
+        totalEarnings
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 }

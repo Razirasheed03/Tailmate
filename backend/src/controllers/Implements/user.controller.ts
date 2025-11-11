@@ -245,11 +245,13 @@ export async function getMyWalletTransactions(
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
+    // Only refunds
     const transactions = await PaymentModel.find({
       patientId: userId,
       paymentStatus: "refunded",
     })
       .sort({ createdAt: -1 })
+      .select("amount currency createdAt bookingId paymentStatus") // Ensure you select only relevant fields
       .lean();
 
     res.json({ success: true, data: transactions });
@@ -257,4 +259,5 @@ export async function getMyWalletTransactions(
     next(err);
   }
 }
+
 
