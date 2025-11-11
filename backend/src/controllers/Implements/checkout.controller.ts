@@ -15,7 +15,6 @@ export class CheckoutController {
       }
       const payload = req.body || {};
       const data = await this.svc.getQuote(uid, payload);
-      // Frontend expects { success, data: QuoteResponse }
       return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);

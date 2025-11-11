@@ -40,23 +40,12 @@ type UiState =
   | { phase: "processing"; title: string; subtitle?: string; hint?: string }
   | { phase: "error"; title: string; subtitle?: string; hint?: string };
 
-function currency(amount: number, code: string) {
-  const safe = Number.isFinite(amount) ? amount : 0;
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: code,
-    }).format(safe);
-  } catch {
-    return `${code} ${safe}`;
-  }
+
+function generateBookingNumber(id: string | undefined, prefix: string = "BKD"): string {
+  if (!id || id.length < 7) return prefix + "0000";
+  return `${prefix}${id.slice(-7).toUpperCase()}`;
 }
 
-// function maskId(id?: string | null) {
-//   if (!id) return "—";
-//   if (id.length <= 10) return id;
-//   return `${id.slice(0, 6)}…${id.slice(-4)}`;
-// }
 
 export default function Success() {
   const [sp] = useSearchParams();
@@ -198,8 +187,6 @@ export default function Success() {
           });
           return;
         }
-
-        // Doctor path: try reading Payment row directly
         const bookingId = s?.bookingId || "";
         if (bookingId) {
           try {
@@ -288,22 +275,23 @@ export default function Success() {
 
   // Summary block
   function Summary() {
-    if (payment && ui.phase === "success") {
-      return (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-900">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <span className="text-emerald-700">Booking Id:</span>{" "}
-              {payment.bookingId}
-            </div>
-            <div>
-              <span className="text-emerald-700">Status:</span>{" "}
-              {payment.paymentStatus}
-            </div>
-          </div>
+  if (payment && ui.phase === "success") {
+  return (
+    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-900">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <span className="text-emerald-700">Booking Number:</span>{" "}
+          <span className="font-mono">{generateBookingNumber(payment.bookingId, "BKD")}</span>
         </div>
-      );
-    }
+        <div>
+          <span className="text-emerald-700">Status:</span>{" "}
+          {payment.paymentStatus}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
     if (
       isMarketplace &&

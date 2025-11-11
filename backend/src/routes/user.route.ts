@@ -31,8 +31,7 @@ router.get('/bookings/:id', getMyBooking);
 router.post('/bookings/:id/cancel', cancelMyBooking);
 
 // user.routes.ts
-router.get('/wallet', getMyWallet); // in controller: get wallet for req.user._id
-router.get('/wallet/transactions', getMyWalletTransactions); // list for req.user._id
-
+router.get('/wallet', getMyWallet);
+router.get('/wallet/transactions', getMyWalletTransactions); 
 
 export default router;

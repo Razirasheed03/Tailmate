@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { vetsService } from "@/services/vetsService";
-import { checkoutService, type CreateCheckoutPayload } from "@/services/checkoutService";
+import { checkoutService } from "@/services/checkoutService";
+import type { CreateCheckoutPayload } from "@/types/checkout.types";
 import { paymentService } from "@/services/paymentService";
 import { PetSelectDialog } from "@/pages/pets/PetSelectDialog";
 

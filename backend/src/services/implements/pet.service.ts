@@ -165,7 +165,6 @@ export const PetService = {
       payload.speciesCategoryId
     ).lean();
     if (!cat || !cat.isActive) throw new Error("Invalid or inactive category");
-
     const creatorId = payload.user._id;
 
     const doc = await PetModel.create({
