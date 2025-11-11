@@ -5,6 +5,9 @@ import { UserRole } from "../../constants/roles";
 import { DoctorSlot, DoctorSlotEntity } from "../../schema/doctorSlot.schema";
 import { Model, Schema, model, Types } from "mongoose";
 import { IDoctorVerification, IDoctorProfile, IDoctorModel, UpdateProfileDTO } from "../../models/interfaces/doctor.model.interface";
+import { stripe } from "../../utils/stripe";
+import { DoctorModel } from "../../models/implements/doctor.model";
+import { UserModel } from "../../models/implements/user.model";
 
 
 // Domain type for consultation modes (not a DTO)
@@ -452,4 +455,50 @@ export class DoctorService {
 
     return out as GeneratedAvailability;
   }
+async createStripeOnboarding(userId: string): Promise<{ url: string | null; alreadyConnected: boolean }> {
+  const doctor = await DoctorModel.findOne({ userId });
+  if (!doctor) throw new Error("Doctor not found");
+  const user = await UserModel.findById(userId);
+  const doctorEmail = user?.email;
+  if (!doctorEmail || !doctorEmail.includes("@")) throw new Error("Doctor email not found or invalid");
+
+  if (doctor.stripeAccountId) {
+    const acct = await stripe.accounts.retrieve(doctor.stripeAccountId);
+
+    // If account is incompletely onboarded or payouts not enabled
+    if (!(acct && acct.payouts_enabled && acct.charges_enabled)) {
+      // Always generate an onboarding link for incomplete status
+      const accountLink = await stripe.accountLinks.create({
+        account: doctor.stripeAccountId,
+        refresh_url: process.env.APP_URL + "/doctor/wallet?connect=refresh",
+        return_url: process.env.APP_URL + "/doctor/wallet?connect=return",
+        type: "account_onboarding",
+      });
+      return { url: accountLink.url, alreadyConnected: false };
+    }
+    // Onboarding finished
+    return { url: null, alreadyConnected: true };
+  }
+
+  // No stripe account: create one and immediately offer onboarding
+  const account = await stripe.accounts.create({
+    type: "express",
+    country: "US",
+    email: doctorEmail,
+  });
+  doctor.stripeAccountId = account.id;
+  doctor.stripeOnboardingStatus = "pending";
+  await doctor.save();
+  const accountLink = await stripe.accountLinks.create({
+    account: account.id,
+    refresh_url: process.env.APP_URL + "/doctor/wallet?connect=refresh",
+    return_url: process.env.APP_URL + "/doctor/wallet?connect=return",
+    type: "account_onboarding",
+  });
+  return { url: accountLink.url, alreadyConnected: false };
+}
+
+
+
+
 }

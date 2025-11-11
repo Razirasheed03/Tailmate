@@ -67,6 +67,14 @@ export class AdminController {
       next(err);
     }
   };
+    getAdminEarnings = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await this._adminService.getEarningsByDoctor();
+      return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
+  }
 
   // Doctors
  verifyDoctor = async (

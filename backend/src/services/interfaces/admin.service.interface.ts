@@ -1,79 +1,32 @@
 // src/services/interfaces/admin.service.interface.ts
-import { IUserModel } from "../../models/interfaces/user.model.interface";
 import {
-  DoctorDetail,
-  ListDoctorsResponse,
-  DoctorVerification,
-} from "../../models/types/doctor.types";
+  UserListResponseDTO,
+  UserStatsDTO,
+  UserActionResponseDTO,
+  DoctorListResponseDTO,
+  DoctorDetailDTO,
+  DoctorVerifyResponseDTO,
+  DoctorRejectResponseDTO,
+  PetCategoryListResponseDTO,
+  PetCategoryDTO,
+  CreatePetCategoryDTO,
+  UpdatePetCategoryDTO,
+  EarningsResponseDTO,
+} from "../../dtos";
 
 export interface IAdminService {
-  // Existing user operations
-  getAllUsers(page: number, limit: number, search: string): Promise<{
-    users: Omit<IUserModel, "password">[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }>;
-  blockUser(userId: string): Promise<{ message: string }>;
-  unblockUser(userId: string): Promise<{ message: string }>;
-  deleteUser(userId: string): Promise<{ message: string }>;
-  getUserStats(): Promise<{
-    totalUsers: number;
-    totalDoctors: number;
-    blockedUsers: number;
-  }>;
-
-  // Doctor moderation operations
-  listDoctors(
-    page?: number,
-    limit?: number,
-    status?: string,
-    search?: string
-  ): Promise<ListDoctorsResponse>;
-
-  verifyDoctor(
-    userId: string,
-    reviewerId: string
-  ): Promise<{
-    status: "verified";
-    verifiedAt: Date | undefined;
-  }>;
-
-  getDoctorDetail(userId: string): Promise<DoctorDetail>;
-
-  rejectDoctor(
-    userId: string,
-    reviewerId: string,
-    reasons: string[]
-  ): Promise<{
-    status: "rejected";
-    rejectionReasons: string[];
-  }>;
-
-  listPetCategories(
-    page: number,
-    limit: number,
-    search?: string,
-    active?: string
-  ): Promise<any>;
-
-  createPetCategory(payload: {
-    name: string;
-    iconKey?: string;
-    description?: string;
-    isActive?: boolean;
-    sortOrder?: number;
-  }): Promise<any>;
-
-  updatePetCategory(
-    id: string,
-    payload: Partial<{
-      name: string;
-      iconKey: string;
-      description: string;
-      isActive: boolean;
-      sortOrder: number;
-    }>
-  ): Promise<any>;
+  getAllUsers(page: number, limit: number, search: string): Promise<UserListResponseDTO>;
+  blockUser(userId: string): Promise<UserActionResponseDTO>;
+  unblockUser(userId: string): Promise<UserActionResponseDTO>;
+  deleteUser(userId: string): Promise<UserActionResponseDTO>;
+  getUserStats(): Promise<UserStatsDTO>;
+  listDoctors(page: number, limit: number, status: string, search: string): Promise<DoctorListResponseDTO>;
+  verifyDoctor(userId: string, reviewerId: string): Promise<DoctorVerifyResponseDTO>;
+  rejectDoctor(userId: string, reviewerId: string, reasons: string[]): Promise<DoctorRejectResponseDTO>;
+  getDoctorDetail(userId: string): Promise<DoctorDetailDTO>;
+  listPetCategories(page: number, limit: number, search?: string, active?: string): Promise<PetCategoryListResponseDTO>;
+  createPetCategory(payload: CreatePetCategoryDTO): Promise<PetCategoryDTO>;
+  updatePetCategory(id: string, payload: UpdatePetCategoryDTO): Promise<PetCategoryDTO | null>;
   deletePetCategory(id: string): Promise<boolean>;
+  getEarningsByDoctor(): Promise<EarningsResponseDTO>;
 }

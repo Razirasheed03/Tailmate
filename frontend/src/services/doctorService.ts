@@ -99,6 +99,10 @@ export const doctorService = {
     }>("/doctor/me-user-id");
     return data.data;
   },
+  startStripeOnboarding: async () => {
+    const { data } = await httpClient.post("/doctor/stripe-onboarding");
+    return data; // { url, alreadyConnected }
+  }
 };
 
 export const doctorIdService = {

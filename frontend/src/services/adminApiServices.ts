@@ -39,6 +39,10 @@ export const adminService = {
     const payload = response.data?.data || response.data;
     return payload as UserStats;
   },
+  getWalletEarnings: async () => {
+    const { data } = await httpClient.get("/admin/wallet/earnings"); // Adjust path to match backend
+    return data?.data || [];
+  }
 };
 
 export const adminCategoryService = {

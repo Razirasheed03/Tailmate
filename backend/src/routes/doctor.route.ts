@@ -54,4 +54,9 @@ router.get("/schedule/rules", asyncHandler(doctorController.getWeeklyRules));
 router.post("/schedule/rules", asyncHandler(doctorController.saveWeeklyRules));
 router.post("/schedule/availability", asyncHandler(doctorController.getGeneratedAvailability));
 
+router.post("/stripe-onboarding", asyncHandler(doctorController.createStripeOnboarding));
+
+router.post("/payout", asyncHandler(doctorController.requestPayout));
+router.get("/payouts", asyncHandler(doctorController.listPayouts));
+
 export default router;

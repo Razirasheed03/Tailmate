@@ -94,8 +94,8 @@ const UserListing = () => {
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
     try {
-      setActionLoading(selectedUser._id);
-      await adminService.deleteUser(selectedUser._id);
+      setActionLoading(selectedUser.id);
+      await adminService.deleteUser(selectedUser.id);
       toast.success('User deleted successfully');
       setShowDeleteModal(false);
       setSelectedUser(null);
@@ -172,8 +172,8 @@ const UserListing = () => {
         <div className="flex items-center space-x-2">
           {user.isBlocked ? (
             <button
-              onClick={() => handleUnblockUser(user._id)}
-              disabled={actionLoading === user._id || user.role === 'admin'}
+              onClick={() => handleUnblockUser(user.id)}
+              disabled={actionLoading === user.id || user.role === 'admin'}
               className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
             >
               <CheckCircle className="w-3 h-3 mr-1" />
@@ -181,8 +181,8 @@ const UserListing = () => {
             </button>
           ) : (
             <button
-              onClick={() => handleBlockUser(user._id)}
-              disabled={actionLoading === user._id || user.role === 'admin'}
+              onClick={() => handleBlockUser(user.id)}
+              disabled={actionLoading === user.id || user.role === 'admin'}
               className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
             >
               <Ban className="w-3 h-3 mr-1" />
@@ -195,7 +195,7 @@ const UserListing = () => {
                 setSelectedUser(user);
                 setShowDeleteModal(true);
               }}
-              disabled={actionLoading === user._id}
+              disabled={actionLoading === user.id}
               className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
             >
               <Trash2 className="w-3 h-3 mr-1" />
@@ -260,7 +260,7 @@ const UserListing = () => {
             emptyText="No users found"
             ariaColCount={columns.length}
             ariaRowCount={users.length}
-            getRowKey={(u) => u._id}
+            getRowKey={(u) => u.id}
             renderLoadingRow={() => (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
@@ -294,7 +294,7 @@ const UserListing = () => {
           setSelectedUser(null);
         }}
         onConfirm={handleDeleteUser}
-        confirmText={actionLoading === selectedUser?._id ? 'Deleting...' : 'Delete'}
+        confirmText={actionLoading === selectedUser?.id ? 'Deleting...' : 'Delete'}
         danger
       />
     </div>

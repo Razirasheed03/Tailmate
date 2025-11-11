@@ -37,17 +37,8 @@ const Sidebar: React.FC = () => {
         { icon: Users, label: 'Users', path: '/admin/users' },
         { icon: Stethoscope, label: 'Doctors', path: '/admin/doctors' },
         { icon: BarChart3, label: 'Pet Category', path: '/admin/addpetcategory' },
-        { icon: FileText, label: 'Reports', path: '/admin/reports' },
+        { icon: FileText, label: 'Earnings', path: '/admin/earnings' },
         { icon: Settings, label: 'Settings', path: '/admin/settings' }
-      ];
-    } else if (user?.role==="doctor") {
-      return [
-        { icon: Home, label: 'Dashboard', path: '/doctor' },
-        { icon: Calendar, label: 'Appointments', path: '/doctor/appointments', badge: '3' },
-        { icon: Users, label: 'Patients', path: '/doctor/patients' },
-        { icon: MessageCircle, label: 'Messages', path: '/doctor/messages', badge: '12' },
-        { icon: FileText, label: 'Records', path: '/doctor/records' },
-        { icon: Settings, label: 'Settings', path: '/doctor/settings' }
       ];
     } else {
       return [

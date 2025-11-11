@@ -1,3 +1,4 @@
+//doctor.model.ts
 import { Model } from "mongoose";
 import { Doctor } from "../../schema/doctor.schema";
 

@@ -1,16 +1,43 @@
 // src/repositories/implements/admin.repository.ts
 import { Model, Types } from "mongoose";
+import mongoose from "mongoose";
 import { IAdminRepository } from "../interfaces/admin.repository.interface";
 import { PetCategory } from '../../schema/petCategory.schema';
 import { Doctor } from "../../schema/doctor.schema";
 
 export class AdminRepository implements IAdminRepository {
-  constructor(private readonly doctorModel: Model<any> = Doctor,
-       private readonly petCategoryModel: Model<any> = PetCategory
+  constructor(
+    private readonly doctorModel: Model<any> = Doctor,
+    private readonly petCategoryModel: Model<any> = PetCategory
   ) {}
-  
 
-  async listDoctors(params: { page: number; limit: number; status?: string; search?: string }) {
+  // ✅ Helper method to validate ObjectId
+  private validateObjectId(id: string | undefined | null, fieldName = 'id'): void {
+    if (!id) {
+      throw new Error(`${fieldName} is required`);
+    }
+    
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new Error(`${fieldName} must be a valid string`);
+    }
+    
+    // Use mongoose built-in validation
+    if (!mongoose.isValidObjectId(id)) {
+      throw new Error(`Invalid ${fieldName} format`);
+    }
+    
+    // Extra check for edge cases (12-char strings)
+    if (!Types.ObjectId.isValid(id) || String(new Types.ObjectId(id)) !== id) {
+      throw new Error(`Invalid ${fieldName} format`);
+    }
+  }
+
+  async listDoctors(params: { 
+    page: number; 
+    limit: number; 
+    status?: string; 
+    search?: string 
+  }) {
     const page = Math.max(1, Number(params.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(params.limit) || 10));
     const skip = (page - 1) * limit;
@@ -74,6 +101,10 @@ export class AdminRepository implements IAdminRepository {
   }
 
   async verifyDoctor(userId: string, reviewerId: string) {
+    // ✅ Validate both IDs
+    this.validateObjectId(userId, 'userId');
+    this.validateObjectId(reviewerId, 'reviewerId');
+
     const now = new Date();
     const updated = await this.doctorModel.findOneAndUpdate(
       { userId: new Types.ObjectId(userId) },
@@ -86,11 +117,18 @@ export class AdminRepository implements IAdminRepository {
       },
       { new: true }
     );
-    if (!updated) throw new Error("Doctor not found");
+    
+    if (!updated) {
+      throw new Error("Doctor not found");
+    }
     return updated;
   }
 
   async rejectDoctor(userId: string, reviewerId: string, reasons: string[]) {
+    // ✅ Validate both IDs
+    this.validateObjectId(userId, 'userId');
+    this.validateObjectId(reviewerId, 'reviewerId');
+
     const updated = await this.doctorModel.findOneAndUpdate(
       { userId: new Types.ObjectId(userId) },
       {
@@ -102,50 +140,65 @@ export class AdminRepository implements IAdminRepository {
       },
       { new: true }
     );
-    if (!updated) throw new Error("Doctor not found");
+    
+    if (!updated) {
+      throw new Error("Doctor not found");
+    }
     return updated;
   }
+
   async getDoctorDetail(userId: string) {
-  const _id = new Types.ObjectId(userId);
+    // ✅ Validate userId
+    this.validateObjectId(userId, 'userId');
+    
+    const _id = new Types.ObjectId(userId);
 
-  const pipeline: any[] = [
-    { $match: { userId: _id } },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "user",
+    const pipeline: any[] = [
+      { $match: { userId: _id } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
       },
-    },
-    { $unwind: "$user" },
-    {
-      $project: {
-        _id: 0,
-        userId: "$userId",
-        username: "$user.username",
-        email: "$user.email",
-        status: "$verification.status",
-        certificateUrl: "$verification.certificateUrl",
-        submittedAt: "$verification.submittedAt",
-        verifiedAt: "$verification.verifiedAt",
-        rejectionReasons: "$verification.rejectionReasons",
-        displayName: "$profile.displayName",
-        bio: "$profile.bio",
-        specialties: "$profile.specialties",
-        experienceYears: "$profile.experienceYears",
-        licenseNumber: "$profile.licenseNumber",
-        avatarUrl: "$profile.avatarUrl",
-        consultationFee: "$profile.consultationFee",
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 0,
+          userId: "$userId",
+          username: "$user.username",
+          email: "$user.email",
+          status: "$verification.status",
+          certificateUrl: "$verification.certificateUrl",
+          submittedAt: "$verification.submittedAt",
+          verifiedAt: "$verification.verifiedAt",
+          rejectionReasons: "$verification.rejectionReasons",
+          displayName: "$profile.displayName",
+          bio: "$profile.bio",
+          specialties: "$profile.specialties",
+          experienceYears: "$profile.experienceYears",
+          licenseNumber: "$profile.licenseNumber",
+          avatarUrl: "$profile.avatarUrl",
+          consultationFee: "$profile.consultationFee",
+        },
       },
-    },
-  ];
+    ];
 
-  const res = await this.doctorModel.aggregate(pipeline);
-  if (!res?.length) throw new Error("Doctor not found");
-  return res[0];
-}
-  async listPetCategories(params: { page: number; limit: number; search?: string; active?: string }) {
+    const res = await this.doctorModel.aggregate(pipeline);
+    if (!res?.length) {
+      throw new Error("Doctor not found");
+    }
+    return res[0];
+  }
+
+  async listPetCategories(params: { 
+    page: number; 
+    limit: number; 
+    search?: string; 
+    active?: string 
+  }) {
     const page = Math.max(1, Number(params.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(params.limit) || 10));
     const skip = (page - 1) * limit;
@@ -159,7 +212,12 @@ export class AdminRepository implements IAdminRepository {
     }
 
     const [data, total] = await Promise.all([
-      this.petCategoryModel.find(filter).sort({ sortOrder: 1, name: 1 }).skip(skip).limit(limit).lean(),
+      this.petCategoryModel
+        .find(filter)
+        .sort({ sortOrder: 1, name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       this.petCategoryModel.countDocuments(filter),
     ]);
 
@@ -167,7 +225,13 @@ export class AdminRepository implements IAdminRepository {
     return { data, page, totalPages, total };
   }
 
-  async createPetCategory(payload: { name: string; iconKey?: string; description?: string; isActive?: boolean; sortOrder?: number }) {
+  async createPetCategory(payload: { 
+    name: string; 
+    iconKey?: string; 
+    description?: string; 
+    isActive?: boolean; 
+    sortOrder?: number 
+  }) {
     const doc = await this.petCategoryModel.create({
       name: payload.name.trim(),
       iconKey: payload.iconKey,
@@ -178,7 +242,19 @@ export class AdminRepository implements IAdminRepository {
     return doc.toObject();
   }
 
-  async updatePetCategory(id: string, payload: Partial<{ name: string; iconKey: string; description: string; isActive: boolean; sortOrder: number }>) {
+  async updatePetCategory(
+    id: string, 
+    payload: Partial<{ 
+      name: string; 
+      iconKey: string; 
+      description: string; 
+      isActive: boolean; 
+      sortOrder: number 
+    }>
+  ) {
+    // ✅ Validate id
+    this.validateObjectId(id, 'categoryId');
+
     const updated = await this.petCategoryModel.findByIdAndUpdate(
       id,
       {
@@ -194,10 +270,12 @@ export class AdminRepository implements IAdminRepository {
     );
     return updated ? updated.toObject() : null;
   }
-async deletePetCategory(id: string) {
-  const deleted = await this.petCategoryModel.findByIdAndDelete(id).lean();
-  return !!deleted;
-}
 
-}
+  async deletePetCategory(id: string) {
+    // ✅ Validate id
+    this.validateObjectId(id, 'categoryId');
 
+    const deleted = await this.petCategoryModel.findByIdAndDelete(id).lean();
+    return !!deleted;
+  }
+}

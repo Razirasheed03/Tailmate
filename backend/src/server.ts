@@ -21,6 +21,7 @@ import bookingReadRoutes from "./routes/booking.read.route";
 import paymentReadRoutes from "./routes/payment.read.route";
 import paymentRoutes from "./routes/payment.route";
 import marketplacePaymentRoutes from "./routes/marketplace.payment.route";
+import payoutRoutes from "./routes/payout.route"
 // Webhook controller
 import { paymentsWebhook } from "./controllers/Implements/payment-webhook.controller";
 
@@ -59,7 +60,7 @@ app.use("/api/doctor", doctorRoutes);
 app.use("/api", userRoutes);
 app.use("/api", bookingReadRoutes);
 app.use('/api', petRoutes);
-
+app.use("/api", payoutRoutes);
 // Booking/session helpers
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api", checkoutSessionRoutes);

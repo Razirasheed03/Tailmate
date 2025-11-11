@@ -1,6 +1,9 @@
 // backend/src/controllers/Implements/doctor.controller.ts
 import { Request, Response, NextFunction } from "express";
 import { DoctorService } from "../../services/implements/doctor.service";
+import { PayoutService } from "../../services/implements/payout.service";
+const payoutService = new PayoutService();
+
 import {
   uploadImageBufferToCloudinary,
   uploadPdfBufferToCloudinary,
@@ -341,4 +344,51 @@ getVerification = async (req: Request, res: Response, next: NextFunction): Promi
       next(err);
     }
   };
+createStripeOnboarding = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?._id?.toString() || authReq.user?.id;
+    if (!userId) {
+      return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+    }
+
+    // Calls service method
+    const { url, alreadyConnected } = await this.svc.createStripeOnboarding(userId);
+
+    return ResponseHelper.ok(
+      res,
+      { url, alreadyConnected },
+      HttpResponse.RESOURCE_FOUND
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+requestPayout = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+    const { amount } = req.body;
+    const result = await payoutService.doctorPayout(userId, amount);
+    return ResponseHelper.ok(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+
+listPayouts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+    const result = await payoutService.getDoctorPayouts(userId);
+    return ResponseHelper.ok(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
 }
