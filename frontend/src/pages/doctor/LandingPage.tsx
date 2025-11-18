@@ -4,7 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
 import {
-  Upload, CheckCircle2, Clock, Calendar, Users, MessageSquare, DollarSign, AlertTriangle, Send,
+  Upload,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  Users,
+  MessageSquare,
+  DollarSign,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
 import { doctorService } from "@/services/doctorService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
@@ -25,9 +33,12 @@ export default function DoctorLandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("not_submitted");
+  const [verificationStatus, setVerificationStatus] =
+    useState<VerificationStatus>("not_submitted");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
-  const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(null);
+  const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmittedCertificate, setHasSubmittedCertificate] = useState(false);
 
@@ -42,7 +53,8 @@ export default function DoctorLandingPage() {
   const [specialtyInput, setSpecialtyInput] = useState("");
 
   const isVerified = verificationStatus === "verified";
-  const canShowForm = verificationStatus === "not_submitted" || verificationStatus === "rejected";
+  const canShowForm =
+    verificationStatus === "not_submitted" || verificationStatus === "rejected";
 
   useEffect(() => {
     let isMounted = true;
@@ -68,14 +80,18 @@ export default function DoctorLandingPage() {
             displayName: p?.displayName || "",
             bio: p?.bio || "",
             specialties: Array.isArray(p?.specialties) ? p.specialties : [],
-            experienceYears: typeof p?.experienceYears === "number" ? p.experienceYears : "",
+            experienceYears:
+              typeof p?.experienceYears === "number" ? p.experienceYears : "",
             licenseNumber: p?.licenseNumber || "",
-            consultationFee: typeof p?.consultationFee === "number" ? p.consultationFee : "",
+            consultationFee:
+              typeof p?.consultationFee === "number" ? p.consultationFee : "",
           });
         } catch {}
       } catch {}
     })();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const statusBadge = useMemo(() => {
@@ -107,10 +123,12 @@ export default function DoctorLandingPage() {
   const handleChooseFile = (file: File | null) => {
     if (!file) return;
     if (file.type !== "application/pdf") {
-      toast.error("Please upload a PDF file."); return;
+      toast.error("Please upload a PDF file.");
+      return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File too large. Max 10MB."); return;
+      toast.error("File too large. Max 10MB.");
+      return;
     }
     setCertificateFile(file);
   };
@@ -135,15 +153,14 @@ export default function DoctorLandingPage() {
     }));
   };
 
-  const isFormComplete = () => (
+  const isFormComplete = () =>
     !!certificateFile &&
     !!profile.displayName.trim() &&
     !!profile.bio.trim() &&
     profile.specialties.length > 0 &&
     profile.experienceYears !== "" &&
     !!profile.licenseNumber.trim() &&
-    profile.consultationFee !== ""
-  );
+    profile.consultationFee !== "";
 
   const handleSubmitAll = async () => {
     if (!isFormComplete()) {
@@ -240,7 +257,8 @@ export default function DoctorLandingPage() {
                         Welcome, {profile.displayName || user?.username}
                       </h2>
                       <p className="text-sm text-[#6B7280]">
-                        You're verified. Manage appointments, patients, and earnings.
+                        You're verified. Manage appointments, patients, and
+                        earnings.
                       </p>
                     </div>
                   </CardContent>
@@ -290,7 +308,8 @@ export default function DoctorLandingPage() {
                     <div className="space-y-5">
                       <div>
                         <label className="text-sm font-medium block mb-2">
-                          Medical Certificate (PDF) <span className="text-rose-500">*</span>
+                          Medical Certificate (PDF){" "}
+                          <span className="text-rose-500">*</span>
                         </label>
                         <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-[#E5E7EB] bg-white cursor-pointer hover:bg-gray-50">
                           <Upload className="w-4 h-4" />
@@ -310,7 +329,8 @@ export default function DoctorLandingPage() {
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            Display Name <span className="text-rose-500">*</span>
+                            Display Name{" "}
+                            <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -327,7 +347,8 @@ export default function DoctorLandingPage() {
                         </div>
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            License Number <span className="text-rose-500">*</span>
+                            License Number{" "}
+                            <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -344,7 +365,8 @@ export default function DoctorLandingPage() {
                         </div>
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            Experience (years) <span className="text-rose-500">*</span>
+                            Experience (years){" "}
+                            <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="number"
@@ -365,7 +387,8 @@ export default function DoctorLandingPage() {
                         </div>
                         <div>
                           <label className="text-sm font-medium block mb-2">
-                            Consultation Fee (₹) <span className="text-rose-500">*</span>
+                            Consultation Fee (₹){" "}
+                            <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="number"
