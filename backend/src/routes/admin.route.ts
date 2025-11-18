@@ -33,4 +33,5 @@ router.delete('/pet-categories/:id', asyncHandler(adminController.deletePetCateg
 
 router.get("/wallet/earnings", asyncHandler(adminController.getAdminEarnings));
 router.get("/dashboard-stats", asyncHandler(adminController.getAdminDashboardStats));
+router.get("/income-by-month", asyncHandler(adminController.getIncomeByMonth));
 export default router;

@@ -497,8 +497,10 @@ async createStripeOnboarding(userId: string): Promise<{ url: string | null; alre
   });
   return { url: accountLink.url, alreadyConnected: false };
 }
-
-
+async doctorDashboard(doctorId:string){
+  const report=await this._doctorRepo.doctorDashboard(doctorId)
+  return report
+}
 
 
 }

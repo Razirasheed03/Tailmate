@@ -15,7 +15,8 @@ export interface IDoctorRepository {
     scope: "upcoming" | "today" | "past";
     mode?: "video" | "audio" | "inPerson";
     q?: string;
-  }): Promise<{ items: any[]; total: number }>; // aggregation with pagination [web:523]
+  }): Promise<{ items: any[]; total: number }>;
 
-  getSession(doctorId: string, bookingId: string): Promise<any | null>; // single booking detail [web:192]
+  getSession(doctorId: string, bookingId: string): Promise<any | null>;
+  doctorDashboard(doctorId:string):Promise<any|null>
 }

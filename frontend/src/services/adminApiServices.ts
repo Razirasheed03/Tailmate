@@ -47,7 +47,13 @@ export const adminService = {
     const { data } = await httpClient.get("/admin/dashboard-stats");
     if (data.success) return data.data;
     throw new Error("Failed to fetch admin dashboard stats");
-  }
+  },
+  getIncomeByMonth: async () => {
+  const { data } = await httpClient.get("/admin/income-by-month");
+  if (data.success) return data.data;
+  throw new Error("Failed to fetch monthly income");
+}
+
 };
 
 export const adminCategoryService = {

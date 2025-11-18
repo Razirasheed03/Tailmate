@@ -284,5 +284,30 @@ listDoctors = async (
     next(err);
   }
 };
+getIncomeByMonth = async (req:Request, res:Response, next:NextFunction) => {
+  try {
+    // Adjust as needed for your date fields & structure
+    const monthly = await PaymentModel.aggregate([
+      { $match: { paymentStatus: "success" } },
+      {
+        $group: {
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+          total: { $sum: "$platformFee" }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+    // Format for chart: get last 12, map to labels/amounts
+    const sorted = monthly.slice(-12); // or -6
+    const months = sorted.map(e =>
+      `${e._id.month.toString().padStart(2, '0')}/${e._id.year}`
+    );
+    const income = sorted.map(e => e.total);
+
+    res.json({ success: true, data: { months, income } });
+  } catch (err) {
+    next(err);
+  }
+};
 
 }
