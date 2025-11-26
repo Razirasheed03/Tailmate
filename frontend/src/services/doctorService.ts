@@ -108,6 +108,7 @@ export const doctorService = {
     if (data.success) return data.data;
     throw new Error(data.message || "Failed to get doctor dashboard");
   },
+ 
 };
 
 export const doctorIdService = {

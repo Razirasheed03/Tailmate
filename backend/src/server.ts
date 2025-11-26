@@ -29,7 +29,7 @@ import http from "http";
 import { Server } from "socket.io";
 
 const app = express();
-const server = http.createServer(app); // Create HTTP server
+const server = http.createServer(app);
 
 // --- Socket.IO ---
 const io = new Server(server, {

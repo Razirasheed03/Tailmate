@@ -71,94 +71,97 @@ export class AdminController {
       next(err);
     }
   };
-    getAdminEarnings = async (req: Request, res: Response, next: NextFunction) => {
+  getAdminEarnings = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const data = await this._adminService.getEarningsByDoctor();
       return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
     }
-  }
+  };
 
   // Doctors
- verifyDoctor = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
-  try {
-    const reviewerId = req.user?._id?.toString();
-    if (!reviewerId) {
-      return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+  verifyDoctor = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response | void> => {
+    try {
+      const reviewerId = req.user?._id?.toString();
+      if (!reviewerId) {
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+      const { userId } = req.params;
+      const result = await this._adminService.verifyDoctor(userId, reviewerId);
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
     }
-    const { userId } = req.params;
-    const result = await this._adminService.verifyDoctor(userId, reviewerId);
-    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
-  } catch (err) {
-    next(err);
-  }
-};
+  };
 
-rejectDoctor = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
-  try {
-    const reviewerId = req.user?._id?.toString();
-    if (!reviewerId) {
-      return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+  rejectDoctor = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response | void> => {
+    try {
+      const reviewerId = req.user?._id?.toString();
+      if (!reviewerId) {
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+      const { userId } = req.params;
+      const { reasons } = req.body as { reasons: string[] };
+      const result = await this._adminService.rejectDoctor(
+        userId,
+        reviewerId,
+        reasons || []
+      );
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
+    } catch (err) {
+      next(err);
     }
-    const { userId } = req.params;
-    const { reasons } = req.body as { reasons: string[] };
-    const result = await this._adminService.rejectDoctor(
-      userId,
-      reviewerId,
-      reasons || []
-    );
-    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_UPDATED);
-  } catch (err) {
-    next(err);
-  }
-};
+  };
 
-getDoctorDetail = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
-  try {
-    const { userId } = req.params;
-    const data = await this._adminService.getDoctorDetail(userId);
-    if (!data) {
-      return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+  getDoctorDetail = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response | void> => {
+    try {
+      const { userId } = req.params;
+      const data = await this._adminService.getDoctorDetail(userId);
+      if (!data) {
+        return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+      }
+      return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
     }
-    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
-  } catch (err) {
-    next(err);
-  }
-};
+  };
 
-listDoctors = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
-  try {
-    const { page, limit, status, search } = req.query;
-    const result = await this._adminService.listDoctors(
-      Number(page),
-      Number(limit),
-      status as string,
-      search as string
-    );
-    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
-  } catch (err) {
-    next(err);
-  }
-};
+  listDoctors = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response | void> => {
+    try {
+      const { page, limit, status, search } = req.query;
+      const result = await this._adminService.listDoctors(
+        Number(page),
+        Number(limit),
+        status as string,
+        search as string
+      );
+      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+    } catch (err) {
+      next(err);
+    }
+  };
 
-  // Pet Categories
   listPetCategories = async (
     req: Request,
     res: Response,
@@ -190,12 +193,12 @@ listDoctors = async (
       const payload = req.body || {};
       const cat = await this._adminService.createPetCategory(payload);
       return ResponseHelper.created(res, cat, HttpResponse.RESOURCE_FOUND);
-    } catch (err: any) {
-      // Duplicate name handled by service or DB; map to 409
+    } catch (err: unknown) {
+      const e = err as { status?: number; code?: number; message?: string };
       if (
-        err?.status === 409 ||
-        err?.code === 11000 ||
-        String(err?.message || "").includes("duplicate key")
+        e?.status === 409 ||
+        e?.code === 11000 ||
+        String(e?.message || "").includes("duplicate key")
       ) {
         return ResponseHelper.conflict(
           res,
@@ -218,11 +221,12 @@ listDoctors = async (
       if (!cat)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.ok(res, cat, HttpResponse.RESOURCE_UPDATED);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { status?: number; code?: number; message?: string };
       if (
-        err?.status === 409 ||
-        err?.code === 11000 ||
-        String(err?.message || "").includes("duplicate key")
+        e?.status === 409 ||
+        e?.code === 11000 ||
+        String(e?.message || "").includes("duplicate key")
       ) {
         return ResponseHelper.conflict(
           res,
@@ -248,66 +252,70 @@ listDoctors = async (
     }
   };
   getAdminDashboardStats = async (
-  req: Request,
-  res: Response,
-  next: any // or NextFunction if you prefer
-) => {
-  try {
-    const [
-      totalUsers,
-      totalDoctors,
-      totalPets,
-      totalBookings,
-      totalEarnings
-    ] = await Promise.all([
-      UserModel.countDocuments({}), // all users
-      UserModel.countDocuments({ role: "doctor" }), // all doctors
-      PetModel.countDocuments({}), // all pets
-      Booking.countDocuments({}), // all bookings
-      PaymentModel.aggregate([
-        { $match: { paymentStatus: "success" } },
-        { $group: { _id: null, total: { $sum: "$platformFee" } } }
-      ]).then(res => res[0]?.total || 0)
-    ]);
-
-    res.json({
-      success: true,
-      data: {
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const [
         totalUsers,
         totalDoctors,
         totalPets,
         totalBookings,
-        totalEarnings
-      }
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-getIncomeByMonth = async (req:Request, res:Response, next:NextFunction) => {
-  try {
-    // Adjust as needed for your date fields & structure
-    const monthly = await PaymentModel.aggregate([
-      { $match: { paymentStatus: "success" } },
-      {
-        $group: {
-          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
-          total: { $sum: "$platformFee" }
-        }
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ]);
-    // Format for chart: get last 12, map to labels/amounts
-    const sorted = monthly.slice(-12); // or -6
-    const months = sorted.map(e =>
-      `${e._id.month.toString().padStart(2, '0')}/${e._id.year}`
-    );
-    const income = sorted.map(e => e.total);
+        totalEarnings,
+      ] = await Promise.all([
+        UserModel.countDocuments({}), // all users
+        UserModel.countDocuments({ role: "doctor" }), // all doctors
+        PetModel.countDocuments({}), // all pets
+        Booking.countDocuments({}), // all bookings
+        PaymentModel.aggregate([
+          { $match: { paymentStatus: "success" } },
+          { $group: { _id: null, total: { $sum: "$platformFee" } } },
+        ]).then((res) => res[0]?.total || 0),
+      ]);
 
-    res.json({ success: true, data: { months, income } });
-  } catch (err) {
-    next(err);
-  }
-};
+      res.json({
+        success: true,
+        data: {
+          totalUsers,
+          totalDoctors,
+          totalPets,
+          totalBookings,
+          totalEarnings,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+  getIncomeByMonth = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const monthly = await PaymentModel.aggregate([
+        { $match: { paymentStatus: "success" } },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            total: { $sum: "$platformFee" },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
+      ]);
+      const sorted = monthly.slice(-12); // or -6
+      const months = sorted.map(
+        (e) => `${e._id.month.toString().padStart(2, "0")}/${e._id.year}`
+      );
+      const income = sorted.map((e) => e.total);
 
+      res.json({ success: true, data: { months, income } });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

@@ -37,10 +37,7 @@ const Wallet = () => {
     }).format(amount);
   }
 
-  function generateBookingNumber(id: string | undefined, prefix: string = "BKD"): string {
-    if (!id || id.length < 6) return prefix + "0000";
-    return `${prefix}${id.slice(-6).toUpperCase()}`;
-  }
+
 
   return (
     <div className="max-w-3xl mx-auto p-6 min-h-screen bg-gray-50">
@@ -103,7 +100,10 @@ const Wallet = () => {
                         })}
                       </td>
                       <td className="py-3 px-2 font-mono text-sm">
-                        {generateBookingNumber(tx.bookingId?.toString(), "BKD")}
+                       <td className="py-3 px-2 font-mono text-sm">
+  {tx.bookingNumber}
+</td>
+
                       </td>
                       <td className="py-3 px-2 font-medium text-green-700">
                         {/* FIX: NO / 100! */}

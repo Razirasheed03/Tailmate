@@ -37,12 +37,13 @@ export async function updateMyProfile(
       },
       HttpResponse.RESOURCE_UPDATED
     );
-  } catch (err: any) {
-    if (err?.code === 11000) {
+  } catch (err: unknown) {
+    const e=err as {code:number,name:string,message:string}
+    if (e?.code === 11000) {
       return ResponseHelper.conflict(res, HttpResponse.USERNAME_EXIST);
     }
-    if (err?.name === "ValidationError") {
-      return ResponseHelper.badRequest(res, err.message);
+    if (e?.name === "ValidationError") {
+      return ResponseHelper.badRequest(res, e.message);
     }
     return next(err);
   }
@@ -64,7 +65,6 @@ export async function listDoctors(
       search,
       specialty,
     });
-    // Keep the expected client shape: { items, total }
     return ResponseHelper.ok(
       res,
       { items: result.items, total: result.total },

@@ -23,6 +23,7 @@ export interface BookingRow {
   status: BookingStatus;
   paymentProvider?: string;
   paymentSessionId?: string;
+  bookingNumber?:string;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -15,7 +15,8 @@ export const PetController = {
     try {
       const cat = await PetService.createCategory(req.body || {});
       return ResponseHelper.created(res, cat, HttpResponse.RESOURCE_FOUND);
-    } catch (e: any) {
+    } catch (err:unknown) {
+      const e=err as {status:number,code:number,message:string}
       if (
         e?.status === 409 ||
         e?.code === 11000 ||
@@ -39,7 +40,8 @@ export const PetController = {
       if (!cat)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.ok(res, cat, HttpResponse.RESOURCE_UPDATED);
-    } catch (e: any) {
+    } catch (err: unknown) {
+            const e=err as {status:number,code:number,message:string}
       if (
         e?.status === 409 ||
         e?.code === 11000 ||
@@ -94,7 +96,8 @@ export const PetController = {
       });
 
       return res.status(HttpStatus.CREATED).json(pet);
-    } catch (e: any) {
+    } catch (err: unknown) {
+      const e=err as {message:string}
       return res
         .status(HttpStatus.BAD_REQUEST)
         .json({ message: e?.message || "Create failed" });
@@ -110,7 +113,8 @@ export const PetController = {
       if (!pet)
         return res.status(HttpStatus.NOT_FOUND).json({ message: "Not found" });
       return res.status(HttpStatus.OK).json(pet);
-    } catch (e: any) {
+    } catch (err: unknown) {
+      const e=err as {message:string}
       return res
         .status(HttpStatus.BAD_REQUEST)
         .json({ message: e?.message || "Update failed" });
@@ -144,7 +148,8 @@ export const PetController = {
         file.originalname || "pet.jpg"
       );
       return res.status(HttpStatus.OK).json({ url });
-    } catch (e: any) {
+    } catch (err: unknown) {
+      const e=err as {message:string}
       return res
         .status(HttpStatus.BAD_REQUEST)
         .json({ message: e?.message || "Upload failed" });
@@ -165,7 +170,8 @@ export const PetController = {
       }
 
       return ResponseHelper.ok(res, pet, "Pet history retrieved successfully");
-    } catch (e: any) {
+    } catch (err: unknown) {
+      const e=err as {message:string}
       return ResponseHelper.badRequest(
         res,
         e?.message || "Failed to retrieve pet history"

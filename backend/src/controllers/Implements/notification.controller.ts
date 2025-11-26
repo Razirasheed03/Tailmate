@@ -9,8 +9,6 @@ export const NotificationController = {
     const userId = (req as any).user?._id;
     const userRole = (req as any).user?.role;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-    // Optional: allow admin to query for any user/role
     let match: any = { userId, userRole: userRole || "doctor" };
     if (userRole === "admin" && req.query.forUser) {
       match = { userId: req.query.forUser };

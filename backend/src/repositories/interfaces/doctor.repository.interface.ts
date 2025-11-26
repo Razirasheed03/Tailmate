@@ -18,5 +18,5 @@ export interface IDoctorRepository {
   }): Promise<{ items: any[]; total: number }>;
 
   getSession(doctorId: string, bookingId: string): Promise<any | null>;
-  doctorDashboard(doctorId:string):Promise<any|null>
+  doctorDashboard(doctorId:string):Promise<any|null>;
 }

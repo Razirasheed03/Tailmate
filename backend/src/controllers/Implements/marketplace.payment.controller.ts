@@ -13,7 +13,8 @@ export const MarketplacePaymentController = {
     try {
       const data = await svc.createCheckoutSession(req.body, uid);
       return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
-    } catch (e: any) {
+    } catch (err: unknown) {
+      const e=err as {message:string}
       return ResponseHelper.badRequest(res, e?.message || "Failed");
     }
   },

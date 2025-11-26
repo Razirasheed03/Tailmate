@@ -39,6 +39,7 @@ import Bookings from "@/pages/user/Profile/Bookings";
 import Wallet from "@/pages/user/Profile/Wallet";
 import Earnings from "@/pages/admin/Earnings";
 import DashboardPage from "@/pages/admin/DashboardPage";
+import Matchmaking from "@/pages/user/Matchmaking";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -120,6 +121,7 @@ export const router = createBrowserRouter([
     element: <BookingConfirm />
   },
   { path: "/payments/Success", element: <Success /> },
+  {path:"/matchmaking",element:<Matchmaking/>},
 
   // Admin area
   {

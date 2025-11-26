@@ -13,8 +13,9 @@ create = async (req:Request, res:Response, next:NextFunction) => {
     if (!userId) return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
     const listing = await svc.create(userId, req.body || {});
     return ResponseHelper.created(res, listing, HttpResponse.RESOURCE_FOUND);
-  } catch (err: any) {
-    if (err?.status === 400) return ResponseHelper.badRequest(res, err.message || "Bad Request");
+  } catch (err: unknown) {
+    const e=err as {status:number,message:string}
+    if (e?.status === 400) return ResponseHelper.badRequest(res, e.message || "Bad Request");
     next(err);
   }
 };

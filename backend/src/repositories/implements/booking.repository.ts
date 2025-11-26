@@ -169,6 +169,7 @@ export class BookingRepository {
         status: item.status,
         paymentProvider: item.paymentProvider || "",
         paymentSessionId: item.paymentSessionId || "",
+         bookingNumber: item.bookingNumber,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       };

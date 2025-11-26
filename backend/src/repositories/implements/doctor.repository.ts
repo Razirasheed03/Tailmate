@@ -256,4 +256,5 @@ export class DoctorRepository implements IDoctorRepository {
       const totalEarnings = totalEarningsAgg[0]?.sum || 0;
       return {totalBookings,totalEarnings}
   }
+  
 }

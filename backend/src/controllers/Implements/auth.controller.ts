@@ -163,7 +163,7 @@ export class AuthController {
         accessToken
       )}&user=${encodeURIComponent(
         JSON.stringify({
-          _id: (user as any)._id,
+          _id: user._id,//(user as an y._id)
           username: user.username,
           email: user.email,
           role: user.role,
