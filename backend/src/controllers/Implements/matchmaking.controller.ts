@@ -8,7 +8,8 @@ const svc = new MatchmakingService();
 export class MatchmakingController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?._id?.toString();
+      // const userId = (req as any).user?._id?.toString();
+      const userId = req.user?._id?.toString();
       if (!userId)
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
 
@@ -92,8 +93,7 @@ export class MatchmakingController {
       const id = req.params.id;
 
       const ok = await svc.remove(userId, id);
-      if (!ok)
-        return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
+      if (!ok) return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
 
       return ResponseHelper.noContent(res);
     } catch (err) {
