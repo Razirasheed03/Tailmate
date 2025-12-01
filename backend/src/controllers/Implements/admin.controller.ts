@@ -318,4 +318,16 @@ export class AdminController {
       next(err);
     }
   };
+getBookingStatusChart = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await this._adminService.getBookingStatusChart();
+    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+}
 }

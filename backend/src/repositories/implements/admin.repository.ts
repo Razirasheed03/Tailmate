@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { IAdminRepository } from "../interfaces/admin.repository.interface";
 import { PetCategory } from '../../schema/petCategory.schema';
 import { Doctor } from "../../schema/doctor.schema";
+import { Booking } from "../../schema/booking.schema";
 
 export class AdminRepository implements IAdminRepository {
   constructor(
@@ -278,4 +279,37 @@ export class AdminRepository implements IAdminRepository {
     const deleted = await this.petCategoryModel.findByIdAndDelete(id).lean();
     return !!deleted;
   }
+async getBookingStatusCounts() {
+  const result = await Booking.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Supported statuses from model
+  const counts: any = {
+    pending: 0,
+    paid: 0,
+    cancelled: 0,
+    failed: 0,
+    refunded: 0
+  };
+
+  result.forEach(r => {
+    counts[r._id] = r.count;
+  });
+
+  return {
+    pending: counts.pending,
+    completed: counts.paid,          // paid = completed
+    cancelled: counts.cancelled,
+    failed: counts.failed,
+    refunded: counts.refunded,
+  };
+}
+
+
 }

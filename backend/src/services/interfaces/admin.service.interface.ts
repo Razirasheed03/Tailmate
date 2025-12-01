@@ -29,4 +29,9 @@ export interface IAdminService {
   updatePetCategory(id: string, payload: UpdatePetCategoryDTO): Promise<PetCategoryDTO | null>;
   deletePetCategory(id: string): Promise<boolean>;
   getEarningsByDoctor(): Promise<EarningsResponseDTO>;
+  getBookingStatusChart(): Promise<{
+    pending: number;
+    completed: number;
+    cancelled: number;
+  }>;
 }

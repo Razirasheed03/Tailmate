@@ -5,33 +5,6 @@ import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { AdminRepository } from "../../repositories/implements/admin.repository";
 import { PaymentModel } from "../../models/implements/payment.model";
 
-// export type OkMessage = { message: string };
-// export type PageMeta = { total: number; page: number; totalPages: number };
-// export type ListDoctorsParams = {
-//   page: number;
-//   limit: number;
-//   status?: string;
-//   search?: string;
-// };
-// export type DoctorVerified = {
-//   status: "verified";
-//   verifiedAt: string | Date | null;
-// };
-// export type DoctorRejected = { status: "rejected"; rejectionReasons: string[] };
-// export type CreatePetCategoryPayload = {
-//   name: string;
-//   iconKey?: string;
-//   description?: string;
-//   isActive?: boolean;
-//   sortOrder?: number;
-// };
-// export type UpdatePetCategoryPayload = Partial<{
-//   name: string;
-//   iconKey: string;
-//   description: string;
-//   isActive: boolean;
-//   sortOrder: number;
-// }>;
 import {
   UserListResponseDTO,
   UserStatsDTO,
@@ -216,4 +189,9 @@ async updatePetCategory(
     const results = await PaymentModel.aggregate(pipeline);
     return EarningsMapper.toEarningsResponseDTO(results);
   }
+  async getBookingStatusChart() {
+    const data = await this._adminRepo.getBookingStatusCounts();
+    return data;
+  }
+
 }

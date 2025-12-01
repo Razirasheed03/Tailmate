@@ -26,5 +26,10 @@ export interface IAdminRepository {
   createPetCategory(payload: { name: string; iconKey?: string; description?: string; isActive?: boolean; sortOrder?: number }): Promise<any>;
   updatePetCategory(id: string, payload: Partial<{ name: string; iconKey: string; description: string; isActive: boolean; sortOrder: number }>): Promise<any>;
     deletePetCategory(id: string): Promise<boolean>;
+      getBookingStatusCounts(): Promise<{
+    pending: number;
+    completed: number;
+    cancelled: number;
+  }>;
 }
 
