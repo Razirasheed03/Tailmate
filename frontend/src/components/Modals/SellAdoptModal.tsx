@@ -167,7 +167,6 @@ export default function SellAdoptModal({ open, onClose, onCreated }: Props) {
           {pickedPet.photoUrl && <img src={pickedPet.photoUrl} alt="" className="w-7 h-7 rounded object-cover border" />}
           <div className="text-sm">
             <div className="font-medium leading-tight">{pickedPet.name}</div>
-            <div className="text-xs text-gray-500 leading-tight">{pickedPet._id}</div>
           </div>
         </div>
       )}

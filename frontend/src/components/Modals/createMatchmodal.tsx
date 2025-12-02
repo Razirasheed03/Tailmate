@@ -65,8 +65,6 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
         const res = await uploadListingPhoto(img.file);
         uploaded.push(res.url);
       }
-
-      // ⚠️ CRITICAL FIX: include pet main photo
       const photos: string[] = [];
       if (pickedPet.photoUrl) photos.push(pickedPet.photoUrl);
       photos.push(...uploaded);

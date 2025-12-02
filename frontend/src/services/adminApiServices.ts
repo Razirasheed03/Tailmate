@@ -60,10 +60,7 @@ getStatusChart:async() =>{
 getDoctorList: async () => {
   const res = await httpClient.get("/admin/simple-doctors");
   return res.data.data;
-}
-,
-
-
+},
 
 getFilteredEarnings: async (start?: string, end?: string, doctorId?: string) => {
   const params: any = {};
@@ -73,6 +70,10 @@ getFilteredEarnings: async (start?: string, end?: string, doctorId?: string) => 
 
   const response = await httpClient.get("/admin/earnings/filter", { params });
   return response.data.data;
+},
+getGrowthStats: async () => {
+  const { data } = await httpClient.get("/admin/growth-stats");
+  return data.data;
 },
 
 

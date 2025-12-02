@@ -206,7 +206,44 @@ async getSimpleDoctorList() {
     count: doc.count
   }));
 }
+async getGrowthStats() {
+  const counts = await this._adminRepo.getGrowthStats();
 
+  const calcPercent = (current: number, previous: number) => {
+    if (previous === 0) {
+      if (current === 0) return 0;
+      return 100; // or null if you prefer "∞"
+    }
+    return ((current - previous) / previous) * 100;
+  };
+
+  return {
+    users: {
+      current: counts.users.current,
+      previous: counts.users.previous,
+      percent: calcPercent(
+        counts.users.current,
+        counts.users.previous
+      ),
+    },
+    doctors: {
+      current: counts.doctors.current,
+      previous: counts.doctors.previous,
+      percent: calcPercent(
+        counts.doctors.current,
+        counts.doctors.previous
+      ),
+    },
+    bookings: {
+      current: counts.bookings.current,
+      previous: counts.bookings.previous,
+      percent: calcPercent(
+        counts.bookings.current,
+        counts.bookings.previous
+      ),
+    },
+  };
+}
 
 
 

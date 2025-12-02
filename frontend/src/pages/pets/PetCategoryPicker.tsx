@@ -1,7 +1,7 @@
 // src/pages/pets/PetCategoryPicker.tsx
 import * as React from 'react';
 import { getActiveCategories } from '@/services/petsApiService';
-import type { PetCategory } from '@/services/petsApiService';
+type PetCategory = Awaited<ReturnType<typeof getActiveCategories>> extends (infer U)[] ? U : never;
 
 export function PetCategoryPicker({ onPick }: { onPick: (c: PetCategory) => void }) {
   const [items, setItems] = React.useState<PetCategory[]>([]);

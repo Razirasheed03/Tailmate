@@ -52,5 +52,9 @@ getFilteredEarnings(
       email?: string;
     }>
   >;
-
+getGrowthStats(): Promise<{
+  users: { current: number; previous: number; percent: number };
+  doctors: { current: number; previous: number; percent: number };
+  bookings: { current: number; previous: number; percent: number };
+}>;
 }

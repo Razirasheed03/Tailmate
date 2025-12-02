@@ -354,6 +354,14 @@ getSimpleDoctorList = async (req: Request, res: Response, next: NextFunction) =>
     next(err);
   }
 };
+getGrowthStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await this._adminService.getGrowthStats();
+    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+};
 
 
 }

@@ -392,7 +392,60 @@ async getFilteredEarnings(start?: string, end?: string, doctorId?: string) {
 
     return list;
   }
+ async getGrowthStats() {
+    const now = new Date();
 
+    const startCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startPrevMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
+    );
+    const endPrevMonth = startCurrentMonth;
+
+    const [
+      currentUsers,
+      prevUsers,
+      currentDoctors,
+      prevDoctors,
+      currentBookings,
+      prevBookings,
+    ] = await Promise.all([
+      // New users this month
+      UserModel.countDocuments({ createdAt: { $gte: startCurrentMonth } }),
+
+      // New users previous month
+      UserModel.countDocuments({
+        createdAt: { $gte: startPrevMonth, $lt: endPrevMonth },
+      }),
+
+      // New doctors this month
+      UserModel.countDocuments({
+        role: "doctor",
+        createdAt: { $gte: startCurrentMonth },
+      }),
+
+      // New doctors previous month
+      UserModel.countDocuments({
+        role: "doctor",
+        createdAt: { $gte: startPrevMonth, $lt: endPrevMonth },
+      }),
+
+      // New bookings this month
+      Booking.countDocuments({ createdAt: { $gte: startCurrentMonth } }),
+
+      // New bookings previous month
+      Booking.countDocuments({
+        createdAt: { $gte: startPrevMonth, $lt: endPrevMonth },
+      }),
+    ]);
+
+    return {
+      users: { current: currentUsers, previous: prevUsers },
+      doctors: { current: currentDoctors, previous: prevDoctors },
+      bookings: { current: currentBookings, previous: prevBookings },
+    };
+  }
 
 
 

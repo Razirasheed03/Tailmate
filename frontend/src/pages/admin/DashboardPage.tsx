@@ -1,7 +1,3 @@
-// ------------------------------
-// DashboardPage.tsx (FULL DROP-IN)
-// ------------------------------
-
 import { useEffect, useState } from "react";
 import { adminService } from "@/services/adminApiServices";
 import { Line } from "react-chartjs-2";
@@ -46,6 +42,12 @@ type DashboardStats = {
   months: string[];
   incomeByMonth: number[];
 };
+type GrowthStats = {
+  users: { current: number; previous: number; percent: number };
+  doctors: { current: number; previous: number; percent: number };
+  bookings: { current: number; previous: number; percent: number };
+};
+
 
 // ------------------------------
 // Line Chart Component
@@ -167,10 +169,14 @@ const DashboardPage = () => {
   });
 
   const [loading, setLoading] = useState(true);
+const [growth, setGrowth] = useState<GrowthStats | null>(null);
+const formatGrowth = (percent?: number) => {
+  if (percent === undefined || percent === null) return "No change";
+  if (percent === 0) return "No change";
+  const sign = percent > 0 ? "+" : "";
+  return `${sign}${percent.toFixed(1)}% vs last month`;
+};
 
-  // --------------------------
-  // Advanced Earnings Filter
-  // --------------------------
   const [filter, setFilter] = useState({
     start: "",
     end: "",
@@ -198,8 +204,6 @@ const DashboardPage = () => {
       console.error(err);
     }
   };
-
-  // Fetch doctors for dropdown
   useEffect(() => {
     (async () => {
       try {
@@ -210,8 +214,6 @@ const DashboardPage = () => {
       }
     })();
   }, []);
-
-  // Fetch dashboard + income
   useEffect(() => {
     (async () => {
       try {
@@ -232,8 +234,6 @@ const DashboardPage = () => {
       }
     })();
   }, []);
-
-  // Fetch status chart
   useEffect(() => {
     (async () => {
       try {
@@ -252,9 +252,30 @@ const DashboardPage = () => {
     })();
   }, []);
 
-  // --------------------------
-  // Loading screen
-  // --------------------------
+useEffect(() => {
+  (async () => {
+    try {
+      const [dashboardData, incomeData, growthData] = await Promise.all([
+        adminService.getDashboardStats(),
+        adminService.getIncomeByMonth(),
+        adminService.getGrowthStats(),
+      ]);
+
+      setStats({
+        ...dashboardData,
+        months: incomeData?.months || [],
+        incomeByMonth: incomeData?.income || [],
+      });
+
+      setGrowth(growthData);
+    } catch (err) {
+      console.error("Failed to fetch dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, []);
+
   if (loading) {
     return (
       <section className="w-full h-screen flex items-center justify-center bg-slate-50">
@@ -337,11 +358,27 @@ const DashboardPage = () => {
         {/* ------------------------------ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
 
-          <StatCard title="Platform Revenue" value={formatINR(stats.totalEarnings)} subtitle="Total earnings to date" icon="💰" />
-          <StatCard title="Total Users" value={stats.totalUsers.toLocaleString()} subtitle="Registered pet owners" icon="👥" />
-          <StatCard title="Active Doctors" value={stats.totalDoctors.toLocaleString()} subtitle="Verified veterinarians" icon="⚕️" />
+<StatCard
+  title="Platform Revenue"
+  value={formatINR(stats.totalEarnings)}
+  subtitle={growth ? formatGrowth(growth.bookings.percent) : "Total earnings to date"}
+  icon="💰"
+/>
+    <StatCard
+  title="Total Users"
+  value={stats.totalUsers.toLocaleString()}
+  subtitle={growth ? formatGrowth(growth.users.percent) : "Registered pet owners"}
+  icon="👥"
+/>
+        <StatCard
+  title="Active Doctors"
+  value={stats.totalDoctors.toLocaleString()}
+  subtitle={growth ? formatGrowth(growth.doctors.percent) : "Verified veterinarians"}
+  icon="⚕️"
+/>
           <StatCard title="Pet Profiles" value={stats.totalPets.toLocaleString()} subtitle="Registered pets" icon="🐾" />
           <StatCard title="Total Bookings" value={stats.totalBookings.toLocaleString()} subtitle="All appointments" icon="📅" />
+          
 
           {/* Income Line Chart */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 sm:col-span-2 lg:col-span-3">
