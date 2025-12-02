@@ -56,7 +56,26 @@ export const adminService = {
 getStatusChart:async() =>{
   const res = await httpClient.get("/admin/dashboard/status-chart");
   return res.data.data;
+},
+getDoctorList: async () => {
+  const res = await httpClient.get("/admin/simple-doctors");
+  return res.data.data;
 }
+,
+
+
+
+getFilteredEarnings: async (start?: string, end?: string, doctorId?: string) => {
+  const params: any = {};
+  if (start) params.start = start;
+  if (end) params.end = end;
+  if (doctorId) params.doctorId = doctorId;
+
+  const response = await httpClient.get("/admin/earnings/filter", { params });
+  return response.data.data;
+},
+
+
 
 
 };

@@ -193,5 +193,23 @@ async updatePetCategory(
     const data = await this._adminRepo.getBookingStatusCounts();
     return data;
   }
+async getFilteredEarnings(start?: string, end?: string, doctorId?: string) {
+  return await this._adminRepo.getFilteredEarnings(start, end, doctorId);
+}
+async getSimpleDoctorList() {
+  const docs = await this._adminRepo.getSimpleDoctorList();
+
+  return docs.map((doc: any) => ({
+    _id: doc._id.toString(),
+    username: doc.username,
+    email: doc.email,
+    count: doc.count
+  }));
+}
+
+
+
+
+
 
 }

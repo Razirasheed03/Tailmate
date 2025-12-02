@@ -16,8 +16,7 @@ import {
   Filler,
 } from "chart.js";
 import StatusPieChart from "@/components/common/Piechart";
-import RevenueBarChart from "@/components/common/RevenueBarchart";
-
+import RevenueBarChart from "@/components/common/RevenueBarChart";
 
 ChartJS.register(
   LineElement,
@@ -169,6 +168,49 @@ const DashboardPage = () => {
 
   const [loading, setLoading] = useState(true);
 
+  // --------------------------
+  // Advanced Earnings Filter
+  // --------------------------
+  const [filter, setFilter] = useState({
+    start: "",
+    end: "",
+    doctorId: "",
+  });
+
+  const [filteredEarnings, setFilteredEarnings] = useState({
+    totalRevenue: 0,
+    totalPlatformFee: 0,
+    totalDoctorEarnings: 0,
+    count: 0,
+  });
+
+  const [doctorList, setDoctorList] = useState<any[]>([]);
+
+  const fetchFilteredEarnings = async () => {
+    try {
+      const data = await adminService.getFilteredEarnings(
+        filter.start,
+        filter.end,
+        filter.doctorId
+      );
+      setFilteredEarnings(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Fetch doctors for dropdown
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await adminService.getDoctorList(); // <-- required
+        setDoctorList(result);
+      } catch (err) {
+        console.error("Failed to fetch doctors:", err);
+      }
+    })();
+  }, []);
+
   // Fetch dashboard + income
   useEffect(() => {
     (async () => {
@@ -183,7 +225,6 @@ const DashboardPage = () => {
           months: incomeData?.months || [],
           incomeByMonth: incomeData?.income || [],
         });
-
       } catch (err) {
         console.error("Failed to fetch dashboard:", err);
       } finally {
@@ -205,14 +246,15 @@ const DashboardPage = () => {
           failed: chart.failed,
           refunded: chart.refunded,
         });
-
       } catch (err) {
         console.error("Failed to fetch status chart:", err);
       }
     })();
   }, []);
 
+  // --------------------------
   // Loading screen
+  // --------------------------
   if (loading) {
     return (
       <section className="w-full h-screen flex items-center justify-center bg-slate-50">
@@ -226,10 +268,73 @@ const DashboardPage = () => {
     );
   }
 
+  // --------------------------
+  // Render
+  // --------------------------
   return (
     <section className="w-full h-screen overflow-auto bg-slate-50">
       <div className="max-w-7xl mx-auto p-4 sm:p-6">
 
+        {/* ------------------------------ */}
+        {/* Advanced Earnings Filter */}
+        {/* ------------------------------ */}
+        <div className="bg-white border rounded-xl p-5 mb-5">
+          <h2 className="text-lg font-semibold mb-4 text-orange-600">
+            Advanced Earnings Filter
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+            <input
+              type="date"
+              className="border rounded p-2"
+              value={filter.start}
+              onChange={(e) => setFilter({ ...filter, start: e.target.value })}
+            />
+
+            <input
+              type="date"
+              className="border rounded p-2"
+              value={filter.end}
+              onChange={(e) => setFilter({ ...filter, end: e.target.value })}
+            />
+
+            <select
+              className="border rounded p-2"
+              value={filter.doctorId}
+              onChange={(e) =>
+                setFilter({ ...filter, doctorId: e.target.value })
+              }
+            >
+              <option value="">All Doctors</option>
+              {doctorList.map((doc) => (
+                <option key={doc._id} value={doc._id}>
+                  {doc.username}
+                </option>
+              ))}
+            </select>
+
+          </div>
+
+          <button
+            className="mt-4 bg-orange-600 text-white px-4 py-2 rounded"
+            onClick={fetchFilteredEarnings}
+          >
+            Apply Filter
+          </button>
+
+          {/* Filtered Results */}
+          <div className="mt-4 text-sm">
+            <p>Total Revenue: ₹{filteredEarnings.totalRevenue}</p>
+            <p>Platform Fee: ₹{filteredEarnings.totalPlatformFee}</p>
+            <p>Doctor Earnings: ₹{filteredEarnings.totalDoctorEarnings}</p>
+            <p>Filtered Bookings: {filteredEarnings.count}</p>
+          </div>
+        </div>
+
+        {/* ------------------------------ */}
+        {/* Dashboard Stats */}
+        {/* ------------------------------ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
 
           <StatCard title="Platform Revenue" value={formatINR(stats.totalEarnings)} subtitle="Total earnings to date" icon="💰" />
@@ -240,7 +345,9 @@ const DashboardPage = () => {
 
           {/* Income Line Chart */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 sm:col-span-2 lg:col-span-3">
-            <h2 className="text-lg font-semibold text-orange-600 mb-1">Revenue Overview</h2>
+            <h2 className="text-lg font-semibold text-orange-600 mb-1">
+              Revenue Overview
+            </h2>
 
             {stats.months.length ? (
               <IncomeLineChart months={stats.months} income={stats.incomeByMonth} />
@@ -261,20 +368,23 @@ const DashboardPage = () => {
               refunded={statusChart.refunded}
             />
           </div>
+
+          {/* Monthly Revenue Bar Chart */}
           <div className="bg-white border rounded-xl p-5 sm:col-span-2 lg:col-span-3">
-  <h2 className="text-lg font-semibold mb-3 text-orange-600">Monthly Revenue (Bar Graph)</h2>
+            <h2 className="text-lg font-semibold mb-3 text-orange-600">
+              Monthly Revenue (Bar Graph)
+            </h2>
 
-  {stats.months.length ? (
-    <div className="h-64">
-      <RevenueBarChart months={stats.months} income={stats.incomeByMonth} />
-    </div>
-  ) : (
-    <div className="h-64 flex items-center justify-center text-slate-400">
-      No revenue data available
-    </div>
-  )}
-</div>
-
+            {stats.months.length ? (
+              <div className="h-64">
+                <RevenueBarChart months={stats.months} income={stats.incomeByMonth} />
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-slate-400">
+                No revenue data available
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

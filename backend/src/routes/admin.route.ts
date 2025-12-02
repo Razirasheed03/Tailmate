@@ -35,4 +35,9 @@ router.get("/wallet/earnings", asyncHandler(adminController.getAdminEarnings));
 router.get("/dashboard-stats", asyncHandler(adminController.getAdminDashboardStats));
 router.get("/income-by-month", asyncHandler(adminController.getIncomeByMonth));
 router.get("/dashboard/status-chart", adminController.getBookingStatusChart);
+router.get("/earnings/filter", adminController.getFilteredEarnings);
+router.get("/simple-doctors", adminController.getSimpleDoctorList);
+
+
+
 export default router;

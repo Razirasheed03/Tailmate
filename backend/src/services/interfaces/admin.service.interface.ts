@@ -34,4 +34,23 @@ export interface IAdminService {
     completed: number;
     cancelled: number;
   }>;
+getFilteredEarnings(
+  start?: string,
+  end?: string,
+  doctorId?: string
+): Promise<{
+  totalRevenue: number;
+  totalPlatformFee: number;
+  totalDoctorEarnings: number;
+  count: number;
+}>;
+
+  getSimpleDoctorList(): Promise<
+    Array<{
+      _id: string;
+      username: string;
+      email?: string;
+    }>
+  >;
+
 }

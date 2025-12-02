@@ -5,6 +5,8 @@ import { IAdminRepository } from "../interfaces/admin.repository.interface";
 import { PetCategory } from '../../schema/petCategory.schema';
 import { Doctor } from "../../schema/doctor.schema";
 import { Booking } from "../../schema/booking.schema";
+import { PaymentModel } from "../../models/implements/payment.model";
+import { UserModel } from "../../models/implements/user.model";
 
 export class AdminRepository implements IAdminRepository {
   constructor(
@@ -310,6 +312,89 @@ async getBookingStatusCounts() {
     refunded: counts.refunded,
   };
 }
+async getFilteredEarnings(start?: string, end?: string, doctorId?: string) {
+  const match: any = {};
+
+  // DATE FILTER
+  if (start && end) {
+    match.createdAt = {
+      $gte: new Date(start),
+      $lte: new Date(end + "T23:59:59"),
+    };
+  }
+
+  // DOCTOR FILTER (fixed)
+  if (
+    doctorId &&
+    doctorId !== "null" &&
+    doctorId !== "undefined" &&
+    doctorId.trim() !== ""
+  ) {
+    match.doctorId = new mongoose.Types.ObjectId(doctorId);
+  }
+
+  console.log("APPLIED FILTER:", match);  // Debug
+
+  const result = await PaymentModel.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: "$amount" },
+        totalPlatformFee: { $sum: "$platformFee" },
+        totalDoctorEarnings: { $sum: "$doctorEarning" },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return (
+    result[0] || {
+      totalRevenue: 0,
+      totalPlatformFee: 0,
+      totalDoctorEarnings: 0,
+      count: 0,
+    }
+  );
+}
+ async getSimpleDoctorList() {
+    const list = await PaymentModel.aggregate([
+      {
+        $match: {
+          paymentStatus: "success" // only successful earnings
+        }
+      },
+      {
+        $group: {
+          _id: "$doctorId",
+          count: { $sum: 1 } // number of payments
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "doctor"
+        }
+      },
+      { $unwind: "$doctor" },
+      {
+        $project: {
+          _id: 1,
+          username: "$doctor.username",
+          email: "$doctor.email",
+          count: 1
+        }
+      },
+      { $sort: { username: 1 } }
+    ]);
+
+    return list;
+  }
+
+
+
 
 
 }
