@@ -501,6 +501,14 @@ async doctorDashboard(doctorId:string){
   const report=await this._doctorRepo.doctorDashboard(doctorId)
   return report
 }
-
+async getBookingStatusCounts(doctorId: string) {
+  return await this._doctorRepo.getBookingStatusCounts(doctorId);
+}
+  async getDashboardStats(doctorId: string) {
+    return await this._doctorRepo.getDashboardStats(doctorId);
+  }
+async getPetBookingTrends(doctorId: string) {
+  return await this._doctorRepo.getDoctorBookingTrends(doctorId);
+}
 
 }

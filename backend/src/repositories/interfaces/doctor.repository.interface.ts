@@ -19,4 +19,27 @@ export interface IDoctorRepository {
 
   getSession(doctorId: string, bookingId: string): Promise<any | null>;
   doctorDashboard(doctorId:string):Promise<any|null>;
+    getBookingStatusCounts(doctorId: string): Promise<{
+    pending: number;
+    completed: number;
+    cancelled: number;
+  }>;
+   getDashboardStats(doctorId: string): Promise<{
+    appointmentsToday: number;
+    totalPatients: number;
+    earningsThisMonth: number;
+    chart: {
+      months: string[];
+      earnings: number[];
+    };
+  }>;
+
+  getDoctorBookingTrends(doctorId: string): Promise<
+    Array<{
+      categoryName: string;
+      count: number;
+    }>
+  >;
+
+
 }

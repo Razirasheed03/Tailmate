@@ -108,6 +108,18 @@ export const doctorService = {
     if (data.success) return data.data;
     throw new Error(data.message || "Failed to get doctor dashboard");
   },
+  getStatusChart: async () => {
+  const res = await httpClient.get("/doctor/dashboard/status-chart");
+  return res.data.data;
+},
+  getDashboardStats: async () => {
+    const res = await httpClient.get("/doctor/dashboard/stats");
+    return res.data.data;
+  },
+  getPetTrends: async () => {
+  const res = await httpClient.get("/doctor/dashboard/pet-trends");
+  return res.data.data.trends;
+},
  
 };
 
