@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { useState } from "react";
-
+import LocationInput from "@/components/common/LocationInput";
 export default function MatchmakingDetail() {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -69,6 +69,12 @@ export default function MatchmakingDetail() {
                   {showContact ? listing.contact : "Click to reveal contact"}
                 </span>
               </div>
+              <LocationInput
+  onSelect={(loc) => {
+    console.log("Selected location:", loc);
+  }}
+/>
+
               {showContact && (
                 <p className="text-blue-600 text-sm mt-2">
                   Make sure to speak politely and mention the listing title.

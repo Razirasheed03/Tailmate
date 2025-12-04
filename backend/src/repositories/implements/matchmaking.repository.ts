@@ -9,6 +9,13 @@ export class MatchmakingRepository {
       ...body,
       userId: new Types.ObjectId(userId),
       petId: new Types.ObjectId(body.petId),
+      latitude: body.latitude,
+  longitude: body.longitude,
+  location: {
+    type: "Point",
+    coordinates: [body.longitude, body.latitude], // [lng, lat]
+  },
+
       history: [
         {
           action: "created",
@@ -21,57 +28,81 @@ export class MatchmakingRepository {
     return doc.toObject();
   }
 
-  async listPublic(params: {
-    page: number;
-    limit: number;
-    q?: string;
-    place?: string;
-    sortBy?: string;
-  }) {
-    const { page, limit } = params;
+async listPublic(params: {
+  page: number;
+  limit: number;
+  q?: string;
+  place?: string;
+  sortBy?: string;
+  lat?: number | null;
+  lng?: number | null;
+  radius?: number | null;
+}) {
+  const { page, limit } = params;
 
-    const filter: any = { deletedAt: null, status: "active" };
+  const filter: any = { deletedAt: null, status: "active" };
 
-    if (params.place?.trim()) {
-      filter.place = { $regex: params.place.trim(), $options: "i" };
-    }
+  // Place filter
+  if (params.place?.trim()) {
+    filter.place = { $regex: params.place.trim(), $options: "i" };
+  }
 
-    if (params.q?.trim()) {
-      const q = params.q.trim();
-      filter.$or = [
-        { title: { $regex: q, $options: "i" } },
-        { description: { $regex: q, $options: "i" } },
-        { place: { $regex: q, $options: "i" } },
-      ];
-    }
+  // Search filter
+  if (params.q?.trim()) {
+    const q = params.q.trim();
+    filter.$or = [
+      { title: { $regex: q, $options: "i" } },
+      { description: { $regex: q, $options: "i" } },
+      { place: { $regex: q, $options: "i" } },
+    ];
+  }
 
-    let sort: any = { createdAt: -1 };
-    switch (params.sortBy) {
-      case "oldest":
-        sort = { createdAt: 1 };
-        break;
-      case "title_az":
-        sort = { title: 1 };
-        break;
-      case "title_za":
-        sort = { title: -1 };
-        break;
-    }
+  // GEO filter
+  const hasGeo =
+    typeof params.lat === "number" &&
+    typeof params.lng === "number" &&
+    typeof params.radius === "number";
 
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-      this.model.find(filter).sort(sort).skip(skip).limit(limit).lean(),
-      this.model.countDocuments(filter),
-    ]);
-
-    return {
-      data,
-      total,
-      page,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+  if (hasGeo) {
+    filter.location = {
+      $geoWithin: {
+        $centerSphere: [
+          [params.lng!, params.lat!],
+          params.radius! / 6378.1,
+        ],
+      },
     };
   }
+
+  // Sorting
+  let sort: any = { createdAt: -1 };
+  switch (params.sortBy) {
+    case "oldest":
+      sort = { createdAt: 1 };
+      break;
+    case "title_az":
+      sort = { title: 1 };
+      break;
+    case "title_za":
+      sort = { title: -1 };
+      break;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    this.model.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+    this.model.countDocuments(filter),
+  ]);
+
+  return {
+    data,
+    total,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
+}
+
 
   async listMine(userId: string, page: number, limit: number) {
     const filter = {

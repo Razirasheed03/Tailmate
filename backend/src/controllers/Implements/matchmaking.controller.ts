@@ -20,21 +20,36 @@ export class MatchmakingController {
     }
   };
 
-  listPublic = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const page = Number(req.query.page) || 1;
-      const limit = Number(req.query.limit) || 12;
-      const q = (req.query.q as string) || "";
-      const place = (req.query.place as string) || "";
-      const sortBy = (req.query.sortBy as string) || "newest";
+listPublic = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 12;
 
-      const result = await svc.listPublic(page, limit, q, place, sortBy);
+    const q = (req.query.q as string) || "";
+    const place = (req.query.place as string) || "";
+    const sortBy = (req.query.sortBy as string) || "newest";
 
-      return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
-    } catch (err) {
-      next(err);
-    }
-  };
+    const lat = req.query.lat ? Number(req.query.lat) : null;
+    const lng = req.query.lng ? Number(req.query.lng) : null;
+    const radius = req.query.radius ? Number(req.query.radius) : null;
+
+    const result = await svc.listPublic(
+      page,
+      limit,
+      q,
+      place,
+      sortBy,
+      lat,
+      lng,
+      radius
+    );
+
+    return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+};
+
 
   listMine = async (req: Request, res: Response, next: NextFunction) => {
     try {

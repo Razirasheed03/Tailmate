@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
-import { matchmakingService } from "@/services/matchMakingServices";
+import { matchmakingService } from "@/services/matchmakingServices";
 import { uploadListingPhoto } from "@/services/petsApiService";
 import { PetSelectDialog } from "@/pages/pets/PetSelectDialog";
+import LocationInput from "../common/LocationInput";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
 };
+
 
 export default function CreateMatchmakingModal({ open, onClose, onCreated }: Props) {
   const [pickedPet, setPickedPet] = useState<any>(null);
@@ -22,6 +24,12 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [images, setImages] = useState<{ file: File; url: string }[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [location, setLocation] = useState({
+  place: "",
+  latitude: 0,
+  longitude: 0,
+});
+
 
   const pickFiles = () => fileRef.current?.click();
 
@@ -52,8 +60,9 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
     if (!pickedPet) return setErr("Please choose a pet");
     if (!title.trim()) return setErr("Title required");
     if (!desc.trim()) return setErr("Description required");
-    if (!place.trim()) return setErr("Place required");
+    if (!location.place) return setErr("Please select a location");
     if (!contact.trim()) return setErr("Contact required");
+
 
     setSubmitting(true);
     setUploadingPhotos(true);
@@ -74,7 +83,9 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
         title: title.trim(),
         description: desc.trim(),
         photos,
-        place: place.trim(),
+        place: location.place,
+  latitude: location.latitude,
+  longitude: location.longitude,
         contact: contact.trim(),
       };
 
@@ -186,12 +197,19 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
 
           {/* PLACE */}
           <div>
-            <label className="text-sm">Place *</label>
-            <input
-              className="w-full border rounded px-3 py-2"
-              value={place}
-              onChange={(e) => setPlace(e.target.value)}
-            />
+           <label className="block text-sm font-medium">Location</label>
+<LocationInput
+  onSelect={(loc) => {
+    setLocation(loc); 
+  }}
+/>
+
+{location.place && (
+  <p className="text-xs text-green-600 mt-1">
+    Selected: {location.place}
+  </p>
+)}
+
           </div>
 
           {/* CONTACT */}
