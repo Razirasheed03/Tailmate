@@ -34,9 +34,9 @@ async listPublic(
   q?: string,
   place?: string,
   sortBy?: string,
-  lat?: number | null,
-  lng?: number | null,
-  radius?: number | null
+  lat?: number,
+  lng?: number,
+  radius?: number
 ) {
   return this._repo.listPublic({
     page,
@@ -46,9 +46,10 @@ async listPublic(
     sortBy,
     lat,
     lng,
-    radius,
+    radius
   });
 }
+
 
 
   async listMine(userId: string, page: number, limit: number) {

@@ -29,9 +29,9 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
     const place = (req.query.place as string) || "";
     const sortBy = (req.query.sortBy as string) || "newest";
 
-    const lat = req.query.lat ? Number(req.query.lat) : null;
-    const lng = req.query.lng ? Number(req.query.lng) : null;
-    const radius = req.query.radius ? Number(req.query.radius) : null;
+    const lat = req.query.lat ? Number(req.query.lat) : undefined;
+    const lng = req.query.lng ? Number(req.query.lng) : undefined;
+    const radius = req.query.radius ? Number(req.query.radius) : undefined;
 
     const result = await svc.listPublic(
       page,
@@ -49,6 +49,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
     next(err);
   }
 };
+
 
 
   listMine = async (req: Request, res: Response, next: NextFunction) => {

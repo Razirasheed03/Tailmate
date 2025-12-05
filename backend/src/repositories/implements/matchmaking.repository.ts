@@ -34,20 +34,20 @@ async listPublic(params: {
   q?: string;
   place?: string;
   sortBy?: string;
-  lat?: number | null;
-  lng?: number | null;
-  radius?: number | null;
+  lat?: number;
+  lng?: number;
+  radius?: number;
 }) {
   const { page, limit } = params;
 
-  const filter: any = { deletedAt: null, status: "active" };
+  const filter: any = {
+    deletedAt: null,
+    status: "active",
+  };
 
-  // Place filter
-  if (params.place?.trim()) {
-    filter.place = { $regex: params.place.trim(), $options: "i" };
-  }
-
-  // Search filter
+  // -----------------------------------------------------
+  // TEXT SEARCH
+  // -----------------------------------------------------
   if (params.q?.trim()) {
     const q = params.q.trim();
     filter.$or = [
@@ -57,25 +57,29 @@ async listPublic(params: {
     ];
   }
 
-  // GEO filter
-  const hasGeo =
+  // -----------------------------------------------------
+  // GEO RADIUS FILTER
+  // -----------------------------------------------------
+  if (
     typeof params.lat === "number" &&
     typeof params.lng === "number" &&
-    typeof params.radius === "number";
+    typeof params.radius === "number" &&
+    params.radius > 0
+  ) {
+    const radiusInRadians = params.radius / 6371; // Earth radius km
 
-  if (hasGeo) {
     filter.location = {
       $geoWithin: {
-        $centerSphere: [
-          [params.lng!, params.lat!],
-          params.radius! / 6378.1,
-        ],
+        $centerSphere: [[params.lng, params.lat], radiusInRadians],
       },
     };
   }
 
-  // Sorting
+  // -----------------------------------------------------
+  // SORTING
+  // -----------------------------------------------------
   let sort: any = { createdAt: -1 };
+
   switch (params.sortBy) {
     case "oldest":
       sort = { createdAt: 1 };
@@ -102,6 +106,8 @@ async listPublic(params: {
     totalPages: Math.max(1, Math.ceil(total / limit)),
   };
 }
+
+
 
 
   async listMine(userId: string, page: number, limit: number) {
