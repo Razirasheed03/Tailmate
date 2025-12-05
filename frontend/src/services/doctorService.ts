@@ -102,7 +102,13 @@ export const doctorService = {
   startStripeOnboarding: async () => {
     const { data } = await httpClient.post("/doctor/stripe-onboarding");
     return data; // { url, alreadyConnected }
-  }
+  },
+    getDoctorDashboard: async () => {
+    const { data } = await httpClient.get("/doctor/doctorDashboard");
+    if (data.success) return data.data;
+    throw new Error(data.message || "Failed to get doctor dashboard");
+  },
+ 
 };
 
 export const doctorIdService = {
@@ -113,4 +119,5 @@ export const doctorIdService = {
     }>("/doctor/me-id");
     return data.data;
   },
+  
 };

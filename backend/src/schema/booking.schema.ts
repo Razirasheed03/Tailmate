@@ -22,6 +22,7 @@ export interface BookingAttrs {
   paymentProvider?: string;
   paymentSessionId?: string;
   paymentRedirectUrl?: string;
+  bookingNumber?:string;
 }
 
 export type BookingDoc = HydratedDocument<BookingAttrs>;
@@ -66,6 +67,7 @@ const BookingSchema = new Schema<BookingAttrs>(
     paymentProvider: { type: String, default: "" },
     paymentSessionId: { type: String, default: "" },
     paymentRedirectUrl: { type: String, default: "" },
+    bookingNumber: { type: String, required: true, unique: true },
   },
   { timestamps: true }
 );

@@ -1,6 +1,7 @@
 // backend/src/services/implements/checkout.service.ts
 import { Types } from "mongoose";
 import { DoctorPublicRepository } from "../../repositories/implements/doctorPublic.repository";
+import { generateBookingNumber } from "../../utils/generateBookingNumber";
 import { Booking } from "../../schema/booking.schema";
 import { stripe } from "../../utils/stripe";
 
@@ -175,10 +176,30 @@ export class CheckoutService {
       });
     }
 
-    const fee = Number(match.fee ?? amount ?? 0);
 
+
+    const now = new Date();
+const day = String(now.getDate()).padStart(2, "0");
+const month = String(now.getMonth() + 1).padStart(2, "0");
+const year = now.getFullYear();
+const today = `${day}${month}${year}`;
+
+const lastBooking = await Booking.findOne({
+  bookingNumber: { $regex: `^BK-${today}-` }
+})
+.sort({ createdAt: -1 })
+.lean();
+
+let lastSerial = 0;
+if (lastBooking && lastBooking.bookingNumber) {
+  const parts = lastBooking.bookingNumber.split("-");
+  lastSerial = Number(parts[2]) || 0;
+}
+    const fee = Number(match.fee ?? amount ?? 0);
+const bookingNumber = generateBookingNumber(lastSerial);
     // 1) Create booking as pending
     const booking = await Booking.create({
+      bookingNumber,       
       patientId: new Types.ObjectId(userId),
       doctorId: new Types.ObjectId(doctorId),
       slotId: null,

@@ -90,6 +90,7 @@ export class UserService {
       status?: string;
       mode?: UIMode;
       q?: string;
+      
     }
   ): Promise<{ items: any[]; total: number }> {
     this.validateObjectId(userId);
@@ -139,9 +140,6 @@ export class UserService {
         message: "Booking not found or cannot be cancelled",
       };
     }
-
-    // === Find corresponding successful payment and process refund ===
-    // Find payment for booking
     const payment = await PaymentModel.findOne({
       bookingId: cancelled._id,
       paymentStatus: "success",
@@ -204,10 +202,9 @@ export class UserService {
     // Optionally, mark booking as 'refunded'
     await this._bookingRepo.updateBookingStatus(bookingId, "refunded");
 
-    // Optionally, update payment status
-    await PaymentModel.findByIdAndUpdate(payment._id, {
-      paymentStatus: "failed",
-    }); // or make a new field: "refunded"
+await PaymentModel.findByIdAndUpdate(payment._id, {
+  paymentStatus: "refunded", 
+});
 
     return {
       success: true,

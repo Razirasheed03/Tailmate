@@ -58,5 +58,6 @@ router.post("/stripe-onboarding", asyncHandler(doctorController.createStripeOnbo
 
 router.post("/payout", asyncHandler(doctorController.requestPayout));
 router.get("/payouts", asyncHandler(doctorController.listPayouts));
+router.get("/doctorDashboard",asyncHandler(doctorController.doctorDashboard))
 
 export default router;

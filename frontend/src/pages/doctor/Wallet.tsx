@@ -29,7 +29,13 @@ type PayoutRecord = {
   status: "pending" | "paid" | "failed";
 };
 
-function PayoutSection({ balance, onPayout }: { balance: number; onPayout: () => void }) {
+function PayoutSection({
+  balance,
+  onPayout,
+}: {
+  balance: number;
+  onPayout: () => void;
+}) {
   const [amount, setAmount] = useState(Math.floor(balance));
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -60,7 +66,7 @@ function PayoutSection({ balance, onPayout }: { balance: number; onPayout: () =>
           min={0}
           max={balance}
           value={amount}
-          onChange={e => setAmount(Number(e.target.value))}
+          onChange={(e) => setAmount(Number(e.target.value))}
           className="border px-2 py-1 rounded w-32"
         />
       </div>
@@ -72,7 +78,9 @@ function PayoutSection({ balance, onPayout }: { balance: number; onPayout: () =>
         {loading ? "Processing..." : "Withdraw"}
       </button>
       {error && <div className="mt-2 text-sm text-rose-600">{error}</div>}
-      {success && <div className="mt-2 text-sm text-emerald-600">{success}</div>}
+      {success && (
+        <div className="mt-2 text-sm text-emerald-600">{success}</div>
+      )}
     </div>
   );
 }
@@ -84,14 +92,23 @@ function PayoutHistory({ records }: { records: PayoutRecord[] }) {
       <ul className="divide-y">
         {records.map((it) => (
           <li key={it._id} className="py-3 flex items-center justify-between">
-            <span className="text-sm">{new Date(it.createdAt).toLocaleString()}</span>
+            <span className="text-sm">
+              {new Date(it.createdAt).toLocaleString()}
+            </span>
             <span className="font-medium">
-              {formatINR(it.amount)} {it.status === "paid" ? "✅" : it.status === "failed" ? "❌" : "⏳"}
+              {formatINR(it.amount)}{" "}
+              {it.status === "paid"
+                ? "✅"
+                : it.status === "failed"
+                ? "❌"
+                : "⏳"}
             </span>
           </li>
         ))}
         {records.length === 0 && (
-          <li className="py-6 text-sm text-gray-500 text-center">No payout history yet</li>
+          <li className="py-6 text-sm text-gray-500 text-center">
+            No payout history yet
+          </li>
         )}
       </ul>
     </div>
@@ -114,7 +131,9 @@ export default function DoctorWallet() {
 
   const total = useMemo(
     () =>
-      items.filter(i => i.paymentStatus === "success").reduce((s, i) => s + (i.doctorEarning || 0), 0),
+      items
+        .filter((i) => i.paymentStatus === "success")
+        .reduce((s, i) => s + (i.doctorEarning || 0), 0),
     [items]
   );
 
@@ -146,13 +165,16 @@ export default function DoctorWallet() {
   // Check Stripe connection status
   useEffect(() => {
     setCheckingStripe(true);
-    doctorService.startStripeOnboarding().then(result => {
-      setStripeUrl(result.url);
-      setAlreadyConnected(result.alreadyConnected);
-      setCheckingStripe(false);
-    }).catch(error => {
-      setCheckingStripe(false);
-    });
+    doctorService
+      .startStripeOnboarding()
+      .then((result) => {
+        setStripeUrl(result.url);
+        setAlreadyConnected(result.alreadyConnected);
+        setCheckingStripe(false);
+      })
+      .catch((error) => {
+        setCheckingStripe(false);
+      });
   }, []);
 
   // Load payout history
@@ -166,7 +188,7 @@ export default function DoctorWallet() {
   }, [refreshKey]);
 
   function handlePayoutComplete() {
-    setRefreshKey(k => k + 1); // reload both payments and payouts
+    setRefreshKey((k) => k + 1); // reload both payments and payouts
   }
 
   return (
@@ -185,75 +207,80 @@ export default function DoctorWallet() {
             {/* Balance Card */}
             <div className="mb-4 bg-white border rounded p-4 flex items-center justify-between">
               <div>
-                <div className="text-sm text-gray-500">Current Balance (net)</div>
+                <div className="text-sm text-gray-500">
+                  Current Balance (net)
+                </div>
                 <div className="text-2xl font-semibold">{formatINR(total)}</div>
               </div>
             </div>
 
             {/* Stripe Onboarding Section */}
-           {/* Stripe Onboarding Section */}
-<div className="mb-6 bg-white border rounded p-4">
-  <h3 className="text-sm font-semibold mb-3">Payout Setup</h3>
+            {/* Stripe Onboarding Section */}
+            <div className="mb-6 bg-white border rounded p-4">
+              <h3 className="text-sm font-semibold mb-3">Payout Setup</h3>
 
-  {checkingStripe ? (
-    <div className="flex items-center gap-2 text-sm text-gray-600">
-      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-      <span>Checking Stripe status...</span>
-    </div>
-  ) : !stripeUrl && !alreadyConnected ? (
-    <div className="text-rose-700 text-sm py-2">
-      Stripe onboarding info not available. Contact support or try refreshing the page.
-    </div>
-  ) : !alreadyConnected && stripeUrl ? (
-    <div>
-      <p className="text-sm text-gray-600 mb-3">
-        Connect your Stripe account to receive payouts directly to your bank account.
-      </p>
-      <a
-        href={stripeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm font-medium"
-      >
-        Set up Stripe payouts
-      </a>
-      <div className="mt-2 text-xs text-gray-500">
-        After completing Stripe onboarding, refresh the wallet to activate payouts.
-      </div>
-    </div>
-  ) : alreadyConnected ? (
-    <div className="flex items-center gap-2">
-      <span className="inline-flex items-center gap-2 bg-green-50 border border-green-700 text-green-700 px-3 py-2 rounded text-sm font-medium">
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-            clipRule="evenodd"
-          />
-        </svg>
-        Stripe payouts connected! You can now withdraw your earnings.
-      </span>
-    </div>
-  ) : null}
-</div>
+              {checkingStripe ? (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span>Checking Stripe status...</span>
+                </div>
+              ) : !stripeUrl && !alreadyConnected ? (
+                <div className="text-rose-700 text-sm py-2">
+                  Stripe onboarding info not available. Contact support or try
+                  refreshing the page.
+                </div>
+              ) : !alreadyConnected && stripeUrl ? (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Connect your Stripe account to receive payouts directly to
+                    your bank account.
+                  </p>
+                  <a
+                    href={stripeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm font-medium"
+                  >
+                    Set up Stripe payouts
+                  </a>
+                  <div className="mt-2 text-xs text-gray-500">
+                    After completing Stripe onboarding, refresh the wallet to
+                    activate payouts.
+                  </div>
+                </div>
+              ) : alreadyConnected ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-2 bg-green-50 border border-green-700 text-green-700 px-3 py-2 rounded text-sm font-medium">
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Stripe payouts connected! You can now withdraw your
+                    earnings.
+                  </span>
+                </div>
+              ) : null}
+            </div>
 
-{/* Payout/Withdraw Section - Only show if Stripe is connected */}
-{alreadyConnected && (
-  <PayoutSection balance={total} onPayout={handlePayoutComplete} />
-)}
-{alreadyConnected && (
-  <PayoutHistory records={payouts} />
-)}
+            {/* Payout/Withdraw Section - Only show if Stripe is connected */}
+            {alreadyConnected && (
+              <PayoutSection balance={total} onPayout={handlePayoutComplete} />
+            )}
+            {alreadyConnected && <PayoutHistory records={payouts} />}
 
-            
             {/* Payout/Withdraw Section - Only show if Stripe is connected */}
             {alreadyConnected && (
               <PayoutSection balance={total} onPayout={handlePayoutComplete} />
             )}
             {/* Payout History */}
-            {alreadyConnected && (
-              <PayoutHistory records={payouts} />
-            )}
+            {alreadyConnected && <PayoutHistory records={payouts} />}
 
             {/* Recent Payments */}
             <div className="bg-white border rounded p-4">
@@ -265,7 +292,10 @@ export default function DoctorWallet() {
               ) : (
                 <ul className="divide-y">
                   {items.map((it) => (
-                    <li key={it._id} className="py-3 flex items-center justify-between">
+                    <li
+                      key={it._id}
+                      className="py-3 flex items-center justify-between"
+                    >
                       <div className="text-sm">
                         <div className="font-medium">
                           {it.paymentStatus === "success"
@@ -273,7 +303,8 @@ export default function DoctorWallet() {
                             : it.paymentStatus}
                         </div>
                         <div className="text-gray-500 text-xs">
-                          {new Date(it.createdAt).toLocaleString()} • Booking {it.bookingId}
+                          {new Date(it.createdAt).toLocaleString()} • Booking{" "}
+                          {it.bookingId}
                         </div>
                       </div>
                       <div className="text-sm text-emerald-700">

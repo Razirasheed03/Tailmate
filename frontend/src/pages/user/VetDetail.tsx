@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
-import { vetsService, type UIMode } from "@/services/vetsService";
+import { vetsService } from "@/services/vetsService";
+import type { UIMode } from "@/types/booking.types";
 
 type DoctorDetail = {
   doctorId: string;
@@ -137,8 +138,9 @@ export default function VetDetail() {
     return slots.find((x) => x.date === selected.date && x.time === selected.time) || null;
   }, [selected, slots]);
 
+
   function onProceed() {
-    if (!selected || !doctor || !selectedSlot) return; // require slot selection to proceed
+    if (!selected || !doctor || !selectedSlot) return;
     const fee = selectedSlot.fee;                       // use slot fee only
     const dur = selectedSlot.durationMins;              // use slot duration
     navigate(`/checkout`, {

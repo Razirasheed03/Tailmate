@@ -38,6 +38,10 @@ import VerifiedDoctorRoute from "@/components/LogicalComponents/VerifiedDoctorRo
 import Bookings from "@/pages/user/Profile/Bookings";
 import Wallet from "@/pages/user/Profile/Wallet";
 import Earnings from "@/pages/admin/Earnings";
+import DashboardPage from "@/pages/admin/DashboardPage";
+import Matchmaking from "@/pages/user/Matchmaking";
+import MatchmakingDetail from "@/pages/user/matchmakingDetail";
+import MyMatchListings from "@/pages/user/Profile/MyMatchListings";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -89,6 +93,7 @@ export const router = createBrowserRouter([
           { path: "pets", element: <PetProfiles /> },
           { path: "listings", element: <Listings /> },
           {path:"bookings",element:<Bookings/>},
+          {path:"matchmaking",element:<MyMatchListings/>},
           {path:"wallet",element:<Wallet/>}
         ],
       },
@@ -119,7 +124,11 @@ export const router = createBrowserRouter([
     element: <BookingConfirm />
   },
   { path: "/payments/Success", element: <Success /> },
+  {path:"/matchmaking",
+    element:<Matchmaking/>},
 
+  {path:"/matchmaking/:id",
+    element:<MatchmakingDetail/>},
   // Admin area
   {
     path: "/admin",
@@ -135,7 +144,8 @@ export const router = createBrowserRouter([
           { path: "doctors", element: <DoctorListings /> },
           { path: "addpetcategory", element: <PetCategory /> },
           {path:"earnings",element:<Earnings/>},
-          { index: true, element: <div>Please select an option from above.</div> },
+          { index: true, element: <DashboardPage /> },
+
         ],
       },
     ],

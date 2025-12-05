@@ -28,7 +28,6 @@ export async function requestPayout(req: Request, res: Response, next: NextFunct
   }
 }
 
-// GET /payout/history (optionally ?ownerType=user|doctor query)
 export async function listMyPayouts(req: Request, res: Response, next: NextFunction) {
   const uid = (req as any)?.user?._id?.toString() || (req as any)?.user?.id;
   if (!uid) return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);

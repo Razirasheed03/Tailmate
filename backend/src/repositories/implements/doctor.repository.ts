@@ -5,6 +5,7 @@ import { IDoctorRepository } from "../interfaces/doctor.repository.interface";
 import { Booking } from "../../schema/booking.schema";
 import { IDoctorModel, IDoctorVerification, IDoctorProfile, UpdateProfileDTO } from "../../models/interfaces/doctor.model.interface";
 import { UserModel } from "../../models/implements/user.model";
+import { PaymentModel } from "../../models/implements/payment.model";
 
 export class DoctorRepository implements IDoctorRepository {
   constructor(private readonly model: Model<any> = DoctorModel) {}
@@ -205,7 +206,7 @@ export class DoctorRepository implements IDoctorRepository {
 
     const [r] = await Booking.aggregate(pipeline).exec();
     return { items: r?.items || [], total: r?.total || 0 };
-  } // pagination via $facet and date parsing via $dateFromString [web:523][web:358]
+  }
 
   async getSession(doctorId: string, bookingId: string): Promise<any | null> {
     if (!Types.ObjectId.isValid(bookingId)) return null;
@@ -245,5 +246,15 @@ export class DoctorRepository implements IDoctorRepository {
     ]).exec();
 
     return rows?.[0] || null;
-  } // single row with $lookup join to patient [web:192]
+  } 
+  async doctorDashboard(doctorId: string): Promise<any | null> {
+    const totalBookings=await Booking.countDocuments({doctorId})
+    const totalEarningsAgg=await PaymentModel.aggregate([
+      {$match:{doctorId,paymentStatus:"Success"}},
+      {$group:{_id:null,sum:{$sum:"$doctorEarning"}}}
+    ])
+      const totalEarnings = totalEarningsAgg[0]?.sum || 0;
+      return {totalBookings,totalEarnings}
+  }
+  
 }

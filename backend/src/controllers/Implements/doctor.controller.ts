@@ -161,7 +161,7 @@ export class DoctorController {
 
   listDaySlots = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const userId = (req as any).user?._id?.toString()
       const date = String(req.query.date || "");
       if (!date) return ResponseHelper.badRequest(res, "date is required");
       const data = await this.svc.listDaySlots(userId, date);
@@ -173,7 +173,7 @@ export class DoctorController {
 
   saveDaySchedule = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+  const userId = (req as any).user?._id?.toString()
       const { date, slots } = req.body || {};
       if (!date || !Array.isArray(slots)) {
         return ResponseHelper.badRequest(res, "date and slots are required");
@@ -187,7 +187,7 @@ export class DoctorController {
 
   createDaySlot = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+  const userId = (req as any).user?._id?.toString()
       const data = await this.svc.createDaySlot(userId, req.body);
       return ResponseHelper.created(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
@@ -201,7 +201,7 @@ export class DoctorController {
     next: NextFunction
   ) => {
     try {
-      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+     const userId = (req as any).user?._id?.toString()
       const { status } = req.body || {};
       if (status !== "available" && status !== "booked") {
         return ResponseHelper.badRequest(res, "invalid status");
@@ -215,7 +215,7 @@ export class DoctorController {
 
   deleteDaySlot = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
+    const userId = (req as any).user?._id?.toString()
       const ok = await this.svc.deleteDaySlot(userId, req.params.id);
       if (!ok) return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.noContent(res);
@@ -226,7 +226,7 @@ export class DoctorController {
 
   listSessions = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const doctorId = (req as any).user?._id?.toString() || (req as any).user?.id;
+      const doctorId =(req as any).user?._id?.toString()
       const page = Number(req.query.page || 1);
       const limit = Number(req.query.limit || 10);
       const scope = String(req.query.scope || "upcoming") as "upcoming" | "today" | "past";
@@ -336,4 +336,13 @@ export class DoctorController {
       next(err);
     }
   };
+  doctorDashboard=async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+      const userId=(req as any).user?._id?.toString()||(req as any).user?.id;
+      const result=await this.svc.doctorDashboard(userId)
+      return ResponseHelper.ok(res,result)
+    }catch(err){
+      next(err)
+    }
+  }
 }

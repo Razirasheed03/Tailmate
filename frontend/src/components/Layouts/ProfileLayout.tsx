@@ -93,6 +93,7 @@ export default function ProfileLayout() {
               <SideNavItem to="pets" icon={PawPrint} label="Pet Profiles" />
               <SideNavItem to="listings" icon={PawPrint} label="Listings" />
               <SideNavItem to="Bookings" icon={CalendarRange} label="Bookings" />
+    <SideNavItem to="matchmaking" icon={PawPrint} label="Matchmaking" />
               <SideNavItem to="Wallet" icon={Wallet} label="Wallet" />
             </nav>
           </div>

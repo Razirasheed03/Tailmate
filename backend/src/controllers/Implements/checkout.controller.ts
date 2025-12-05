@@ -1,4 +1,3 @@
-// backend/src/controllers/Implements/checkout.controller.ts
 import { Request, Response, NextFunction } from "express";
 import { CheckoutService } from "../../services/implements/checkout.service";
 import { ResponseHelper } from "../../http/ResponseHelper";
@@ -29,7 +28,6 @@ export class CheckoutController {
       }
       const payload = req.body || {};
       const data = await this.svc.createCheckout(uid, payload);
-      // Frontend expects { success, data: { bookingId, redirectUrl? } }
       return ResponseHelper.created(res, data, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
