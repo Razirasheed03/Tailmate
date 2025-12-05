@@ -16,6 +16,10 @@ export class MatchmakingService {
       throw Object.assign(new Error("Place is required"), { status: 400 });
     if (!payload.contact?.trim())
       throw Object.assign(new Error("Contact is required"), { status: 400 });
+    if (typeof payload.latitude !== "number" || typeof payload.longitude !== "number") {
+  throw Object.assign(new Error("Valid location required"), { status: 400 });
+}
+
 
     if (!Array.isArray(payload.photos)) payload.photos = [];
     if (payload.photos.length > 6)
@@ -24,15 +28,29 @@ export class MatchmakingService {
     return this._repo.create(userId, payload);
   }
 
-  async listPublic(
-    page: number,
-    limit: number,
-    q?: string,
-    place?: string,
-    sortBy?: string
-  ) {
-    return this._repo.listPublic({ page, limit, q, place, sortBy });
-  }
+async listPublic(
+  page: number,
+  limit: number,
+  q?: string,
+  place?: string,
+  sortBy?: string,
+  lat?: number,
+  lng?: number,
+  radius?: number
+) {
+  return this._repo.listPublic({
+    page,
+    limit,
+    q,
+    place,
+    sortBy,
+    lat,
+    lng,
+    radius
+  });
+}
+
+
 
   async listMine(userId: string, page: number, limit: number) {
     return this._repo.listMine(userId, page, limit);

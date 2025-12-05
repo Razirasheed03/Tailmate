@@ -20,7 +20,14 @@ const MatchmakingListingSchema = new Schema(
 
     photos: { type: [String], default: [] },
 
-    place: { type: String, required: true, trim: true },
+    place: {type: String},
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  location: {
+  type: { type: String, enum: ["Point"], default: "Point" },
+  coordinates: { type: [Number], index: "2dsphere" },
+},
+
 
     contact: { type: String, required: true, trim: true },
 
