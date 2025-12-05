@@ -1,5 +1,5 @@
 // backend/src/repositories/implements/doctor.repository.ts
-import { Model, PipelineStage, Types } from "mongoose";
+import mongoose, { Model, PipelineStage, Types } from "mongoose";
 import { DoctorModel } from "../../models/implements/doctor.model";
 import { IDoctorRepository } from "../interfaces/doctor.repository.interface";
 import { Booking } from "../../schema/booking.schema";
@@ -255,6 +255,159 @@ export class DoctorRepository implements IDoctorRepository {
     ])
       const totalEarnings = totalEarningsAgg[0]?.sum || 0;
       return {totalBookings,totalEarnings}
+  }
+  async getBookingStatusCounts(doctorId: string) {
+  const id = new Types.ObjectId(doctorId);
+
+  const result = await Booking.aggregate([
+    { $match: { doctorId: id } },
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // Initialize default structure
+  const counts = {
+    pending: 0,
+    completed: 0,
+    cancelled: 0,
+  };
+
+  // Map Mongo results to our structure
+  result.forEach((item: any) => {
+    if (item._id === "pending") counts.pending = item.count;
+    if (item._id === "paid") counts.completed = item.count;
+    if (item._id === "cancelled") counts.cancelled = item.count;
+  });
+
+  return counts;
+}
+ async getDashboardStats(doctorId: string) {
+    const doctorObjId = new mongoose.Types.ObjectId(doctorId);
+
+    // TODAY date range
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // -----------------------------
+    // 1. Appointments Today
+    // -----------------------------
+    const appointmentsToday = await Booking.countDocuments({
+      doctorId: doctorObjId,
+      date: todayStart.toISOString().split("T")[0],
+      status: { $in: ["pending", "paid"] }
+    });
+
+    // -----------------------------
+    // 2. Unique Patients Count
+    // -----------------------------
+    const patientsResult = await Booking.aggregate([
+      { $match: { doctorId: doctorObjId, status: "paid" } },
+      { $group: { _id: "$patientId" } }
+    ]);
+    const totalPatients = patientsResult.length;
+
+    // -----------------------------
+    // 3. Earnings This Month
+    // -----------------------------
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const earningsMonthResult = await PaymentModel.aggregate([
+      { 
+        $match: { 
+          doctorId: doctorObjId, 
+          paymentStatus: "success",
+          createdAt: { $gte: monthStart }
+        }
+      },
+      { $group: { _id: null, total: { $sum: "$doctorEarning" } } }
+    ]);
+
+    const earningsThisMonth = earningsMonthResult[0]?.total || 0;
+
+    // -----------------------------
+    // 4. Earnings Last 6 Months Graph
+    // -----------------------------
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1); 
+
+    const graphData = await PaymentModel.aggregate([
+      { 
+        $match: { 
+          doctorId: doctorObjId, 
+          paymentStatus: "success",
+          createdAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: { 
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          total: { $sum: "$doctorEarning" }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+
+    const months = graphData.map(e => 
+      new Date(e._id.year, e._id.month - 1).toLocaleString("en-US", { month: "short" })
+    );
+
+    const earnings = graphData.map(e => e.total);
+
+    return {
+      appointmentsToday,
+      totalPatients,
+      earningsThisMonth,
+      chart: {
+        months,
+        earnings
+      }
+    };
+  }
+ async getDoctorBookingTrends(doctorId: string) {
+    return await Booking.aggregate([
+      { $match: { doctorId: new mongoose.Types.ObjectId(doctorId), status: "paid" } },
+
+      {
+        $lookup: {
+          from: "pets",
+          localField: "petName",   // your Booking stores petName, not petId
+          foreignField: "name",    // match by pet name
+          as: "petData"
+        }
+      },
+
+      { $unwind: "$petData" },
+
+      {
+        $group: {
+          _id: "$petData.speciesCategoryName",
+          count: { $sum: 1 }
+        }
+      },
+
+      { $sort: { count: -1 } },
+
+      {
+        $project: {
+          _id: 0,
+          categoryName: "$_id",
+          count: 1
+        }
+      }
+    ]);
   }
   
 }

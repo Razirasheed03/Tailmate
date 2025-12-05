@@ -69,7 +69,6 @@ export default function MatchmakingDetail() {
                   {showContact ? listing.contact : "Click to reveal contact"}
                 </span>
               </div>
-
               {showContact && (
                 <p className="text-blue-600 text-sm mt-2">
                   Make sure to speak politely and mention the listing title.

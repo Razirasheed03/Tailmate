@@ -52,7 +52,32 @@ export const adminService = {
   const { data } = await httpClient.get("/admin/income-by-month");
   if (data.success) return data.data;
   throw new Error("Failed to fetch monthly income");
-}
+},
+getStatusChart:async() =>{
+  const res = await httpClient.get("/admin/dashboard/status-chart");
+  return res.data.data;
+},
+getDoctorList: async () => {
+  const res = await httpClient.get("/admin/simple-doctors");
+  return res.data.data;
+},
+
+getFilteredEarnings: async (start?: string, end?: string, doctorId?: string) => {
+  const params: any = {};
+  if (start) params.start = start;
+  if (end) params.end = end;
+  if (doctorId) params.doctorId = doctorId;
+
+  const response = await httpClient.get("/admin/earnings/filter", { params });
+  return response.data.data;
+},
+getGrowthStats: async () => {
+  const { data } = await httpClient.get("/admin/growth-stats");
+  return data.data;
+},
+
+
+
 
 };
 

@@ -102,7 +102,6 @@ export function PetSelectDialog({
                 )}
                 <div className="min-w-0">
                   <div className="font-medium truncate">{p.name}</div>
-                  <div className="text-xs text-gray-500 truncate">{p._id}</div>
                 </div>
               </button>
             ))}

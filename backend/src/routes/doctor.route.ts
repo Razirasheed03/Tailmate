@@ -58,6 +58,10 @@ router.post("/stripe-onboarding", asyncHandler(doctorController.createStripeOnbo
 
 router.post("/payout", asyncHandler(doctorController.requestPayout));
 router.get("/payouts", asyncHandler(doctorController.listPayouts));
-router.get("/doctorDashboard",asyncHandler(doctorController.doctorDashboard))
+router.get("/doctorDashboard",asyncHandler(doctorController.doctorDashboard));
+router.get("/dashboard/status-chart",asyncHandler(doctorController.getBookingStatusCounts));
+router.get("/dashboard/stats", asyncHandler(doctorController.getDashboardStats));
+router.get("/dashboard/pet-trends",asyncHandler(doctorController.getPetBookingTrends)
+);
 
 export default router;

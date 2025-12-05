@@ -318,4 +318,50 @@ export class AdminController {
       next(err);
     }
   };
+getBookingStatusChart = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await this._adminService.getBookingStatusChart();
+    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+}
+
+getFilteredEarnings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { start, end, doctorId } = req.query;
+
+    const data = await this._adminService.getFilteredEarnings(
+      start as string,
+      end as string,
+      doctorId as string
+    );
+
+    return ResponseHelper.ok(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+getSimpleDoctorList = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const doctors = await this._adminService.getSimpleDoctorList();
+   return ResponseHelper.ok(res, doctors, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+};
+getGrowthStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await this._adminService.getGrowthStats();
+    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 }

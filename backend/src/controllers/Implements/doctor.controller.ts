@@ -345,4 +345,39 @@ export class DoctorController {
       next(err)
     }
   }
+  getBookingStatusCounts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const doctorId = (req as any).user._id;
+    const data = await this.svc.getBookingStatusCounts(doctorId);
+    return ResponseHelper.ok(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+ getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const doctorId = (req as any).user?._id;
+      if (!doctorId) {
+        return ResponseHelper.unauthorized(res, "Unauthorized");
+      }
+
+      const data = await this.svc.getDashboardStats(doctorId);
+      return ResponseHelper.ok(res, data);
+    } catch (err) {
+      next(err);
+    }
+  };
+  getPetBookingTrends = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const doctorId = (req as any).user._id;
+
+    const trends = await this.svc.getPetBookingTrends(doctorId);
+
+    return ResponseHelper.ok(res, { trends });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 }

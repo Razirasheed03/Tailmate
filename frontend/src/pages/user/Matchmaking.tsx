@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
-import { matchmakingService } from "@/services/matchMakingServices";
+import { matchmakingService } from "@/services/matchmakingServices";
 import CreateMatchmakingModal from "@/components/Modals/createMatchmodal";
 
 

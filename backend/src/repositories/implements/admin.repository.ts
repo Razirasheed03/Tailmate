@@ -4,6 +4,9 @@ import mongoose from "mongoose";
 import { IAdminRepository } from "../interfaces/admin.repository.interface";
 import { PetCategory } from '../../schema/petCategory.schema';
 import { Doctor } from "../../schema/doctor.schema";
+import { Booking } from "../../schema/booking.schema";
+import { PaymentModel } from "../../models/implements/payment.model";
+import { UserModel } from "../../models/implements/user.model";
 
 export class AdminRepository implements IAdminRepository {
   constructor(
@@ -278,4 +281,173 @@ export class AdminRepository implements IAdminRepository {
     const deleted = await this.petCategoryModel.findByIdAndDelete(id).lean();
     return !!deleted;
   }
+async getBookingStatusCounts() {
+  const result = await Booking.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Supported statuses from model
+  const counts: any = {
+    pending: 0,
+    paid: 0,
+    cancelled: 0,
+    failed: 0,
+    refunded: 0
+  };
+
+  result.forEach(r => {
+    counts[r._id] = r.count;
+  });
+
+  return {
+    pending: counts.pending,
+    completed: counts.paid,          // paid = completed
+    cancelled: counts.cancelled,
+    failed: counts.failed,
+    refunded: counts.refunded,
+  };
+}
+async getFilteredEarnings(start?: string, end?: string, doctorId?: string) {
+  const match: any = {};
+
+  // DATE FILTER
+  if (start && end) {
+    match.createdAt = {
+      $gte: new Date(start),
+      $lte: new Date(end + "T23:59:59"),
+    };
+  }
+
+  // DOCTOR FILTER (fixed)
+  if (
+    doctorId &&
+    doctorId !== "null" &&
+    doctorId !== "undefined" &&
+    doctorId.trim() !== ""
+  ) {
+    match.doctorId = new mongoose.Types.ObjectId(doctorId);
+  }
+
+  console.log("APPLIED FILTER:", match);  // Debug
+
+  const result = await PaymentModel.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: "$amount" },
+        totalPlatformFee: { $sum: "$platformFee" },
+        totalDoctorEarnings: { $sum: "$doctorEarning" },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return (
+    result[0] || {
+      totalRevenue: 0,
+      totalPlatformFee: 0,
+      totalDoctorEarnings: 0,
+      count: 0,
+    }
+  );
+}
+ async getSimpleDoctorList() {
+    const list = await PaymentModel.aggregate([
+      {
+        $match: {
+          paymentStatus: "success" // only successful earnings
+        }
+      },
+      {
+        $group: {
+          _id: "$doctorId",
+          count: { $sum: 1 } // number of payments
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "doctor"
+        }
+      },
+      { $unwind: "$doctor" },
+      {
+        $project: {
+          _id: 1,
+          username: "$doctor.username",
+          email: "$doctor.email",
+          count: 1
+        }
+      },
+      { $sort: { username: 1 } }
+    ]);
+
+    return list;
+  }
+ async getGrowthStats() {
+    const now = new Date();
+
+    const startCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startPrevMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
+    );
+    const endPrevMonth = startCurrentMonth;
+
+    const [
+      currentUsers,
+      prevUsers,
+      currentDoctors,
+      prevDoctors,
+      currentBookings,
+      prevBookings,
+    ] = await Promise.all([
+      // New users this month
+      UserModel.countDocuments({ createdAt: { $gte: startCurrentMonth } }),
+
+      // New users previous month
+      UserModel.countDocuments({
+        createdAt: { $gte: startPrevMonth, $lt: endPrevMonth },
+      }),
+
+      // New doctors this month
+      UserModel.countDocuments({
+        role: "doctor",
+        createdAt: { $gte: startCurrentMonth },
+      }),
+
+      // New doctors previous month
+      UserModel.countDocuments({
+        role: "doctor",
+        createdAt: { $gte: startPrevMonth, $lt: endPrevMonth },
+      }),
+
+      // New bookings this month
+      Booking.countDocuments({ createdAt: { $gte: startCurrentMonth } }),
+
+      // New bookings previous month
+      Booking.countDocuments({
+        createdAt: { $gte: startPrevMonth, $lt: endPrevMonth },
+      }),
+    ]);
+
+    return {
+      users: { current: currentUsers, previous: prevUsers },
+      doctors: { current: currentDoctors, previous: prevDoctors },
+      bookings: { current: currentBookings, previous: prevBookings },
+    };
+  }
+
+
+
+
 }

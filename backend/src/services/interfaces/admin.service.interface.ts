@@ -29,4 +29,32 @@ export interface IAdminService {
   updatePetCategory(id: string, payload: UpdatePetCategoryDTO): Promise<PetCategoryDTO | null>;
   deletePetCategory(id: string): Promise<boolean>;
   getEarningsByDoctor(): Promise<EarningsResponseDTO>;
+  getBookingStatusChart(): Promise<{
+    pending: number;
+    completed: number;
+    cancelled: number;
+  }>;
+getFilteredEarnings(
+  start?: string,
+  end?: string,
+  doctorId?: string
+): Promise<{
+  totalRevenue: number;
+  totalPlatformFee: number;
+  totalDoctorEarnings: number;
+  count: number;
+}>;
+
+  getSimpleDoctorList(): Promise<
+    Array<{
+      _id: string;
+      username: string;
+      email?: string;
+    }>
+  >;
+getGrowthStats(): Promise<{
+  users: { current: number; previous: number; percent: number };
+  doctors: { current: number; previous: number; percent: number };
+  bookings: { current: number; previous: number; percent: number };
+}>;
 }

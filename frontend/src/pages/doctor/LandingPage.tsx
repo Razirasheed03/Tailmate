@@ -9,17 +9,19 @@ import {
   Clock,
   Calendar,
   Users,
-  MessageSquare,
-  DollarSign,
   AlertTriangle,
   Send,
+  IndianRupee,
 } from "lucide-react";
 import { doctorService } from "@/services/doctorService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import DoctorNavbar from "@/components/UiComponents/DoctorNavbar";
 import { toast } from "sonner";
+import DoctorStatusPie from "@/components/common/DoctorStatusPie";
+import RevenueBarChart from "@/components/common/RevenueBarChart";
 
 type VerificationStatus = "not_submitted" | "pending" | "verified" | "rejected";
+
 type ProfileData = {
   displayName: string;
   bio: string;
@@ -29,18 +31,42 @@ type ProfileData = {
   consultationFee: number | "";
 };
 
+type DoctorDashboardStats = {
+  appointmentsToday: number;
+  totalPatients: number;
+  earningsThisMonth: number;
+  chart: {
+    months: string[];
+    earnings: number[];
+  };
+};
+
 export default function DoctorLandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-
+  
   const [verificationStatus, setVerificationStatus] =
-    useState<VerificationStatus>("not_submitted");
+  useState<VerificationStatus>("not_submitted");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(
     null
   );
+const [petTrends, setPetTrends] = useState<Array<{ categoryName: string; count: number }>>([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmittedCertificate, setHasSubmittedCertificate] = useState(false);
+
+  const [statusChart, setStatusChart] = useState({
+    pending: 0,
+    completed: 0,
+    cancelled: 0,
+  });
+
+  const [dashboardStats, setDashboardStats] = useState<DoctorDashboardStats>({
+    appointmentsToday: 0,
+    totalPatients: 0,
+    earningsThisMonth: 0,
+    chart: { months: [], earnings: [] },
+  });
 
   const [profile, setProfile] = useState<ProfileData>({
     displayName: "",
@@ -62,6 +88,7 @@ export default function DoctorLandingPage() {
       try {
         const v = await doctorService.getVerification();
         if (!isMounted) return;
+
         const actualStatus: VerificationStatus =
           v.status === "verified"
             ? "verified"
@@ -70,9 +97,13 @@ export default function DoctorLandingPage() {
             : v.certificateUrl
             ? "pending"
             : "not_submitted";
+
         setVerificationStatus(actualStatus);
-        setHasSubmittedCertificate(!!v.certificateUrl);
-        if (v.rejectionReasons?.length) setRejectionReasons(v.rejectionReasons);
+
+        if (v.rejectionReasons?.length) {
+          setRejectionReasons(v.rejectionReasons);
+        }
+
         try {
           const p = await doctorService.getProfile();
           if (!isMounted) return;
@@ -86,40 +117,83 @@ export default function DoctorLandingPage() {
             consultationFee:
               typeof p?.consultationFee === "number" ? p.consultationFee : "",
           });
-        } catch {}
-      } catch {}
+        } catch {
+          // ignore profile error here
+        }
+      } catch {
+        // ignore verification error here
+      }
     })();
     return () => {
       isMounted = false;
     };
   }, []);
+  useEffect(() => {
+    if (verificationStatus !== "verified") return;
+
+    (async () => {
+      try {
+        const stats = await doctorService.getDashboardStats();
+        setDashboardStats(stats);
+      } catch (err) {
+        console.error("Failed to load doctor stats:", err);
+      }
+    })();
+  }, [verificationStatus]);
+
+  useEffect(() => {
+    if (!isVerified) return;
+    (async () => {
+      try {
+        const data = await doctorService.getStatusChart();
+        setStatusChart(data);
+      } catch (err) {
+        console.error("Failed to load doctor chart", err);
+      }
+    })();
+  }, [isVerified]);
+useEffect(() => {
+  if (!isVerified) return;
+
+  (async () => {
+    try {
+      const trends = await doctorService.getPetTrends();
+      setPetTrends(trends);
+    } catch (e) {
+      console.error("Trend load failed", e);
+    }
+  })();
+}, [isVerified]);
 
   const statusBadge = useMemo(() => {
     if (verificationStatus === "verified")
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
           Verified
         </span>
       );
     if (verificationStatus === "pending")
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
           Under Review
         </span>
       );
     if (verificationStatus === "rejected")
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-100">
           Rejected
         </span>
       );
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-100">
         Not Submitted
       </span>
     );
   }, [verificationStatus]);
 
+  // -----------------------------
+  // Handlers
+  // -----------------------------
   const handleChooseFile = (file: File | null) => {
     if (!file) return;
     if (file.type !== "application/pdf") {
@@ -180,7 +254,6 @@ export default function DoctorLandingPage() {
       });
       await doctorService.submitForReview();
       setVerificationStatus("pending");
-      setHasSubmittedCertificate(true);
       setRejectionReasons(null);
       toast.success("Submitted for admin review!");
     } catch (e: any) {
@@ -193,19 +266,26 @@ export default function DoctorLandingPage() {
     }
   };
 
+  // -----------------------------
+  // Render
+  // -----------------------------
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
       <div className="flex">
         <DoctorSidebar isVerified={isVerified} />
+
         <div className="flex-1 min-h-screen">
-          {/* FIXED: Added z-50 to header to ensure it's above all cards */}
+          {/* Header */}
           <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur sticky top-0 z-50">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
               <h1 className="text-lg font-semibold">Doctor Portal</h1>
               <DoctorNavbar />
             </div>
           </header>
-          <main className="container mx-auto px-6 py-8 relative z-0">
+
+          {/* Main */}
+          <main className="container mx-auto px-6 py-8 relative z-0 space-y-6">
+            {/* Pending Banner */}
             {verificationStatus === "pending" && (
               <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                 <CardContent className="p-6">
@@ -221,14 +301,18 @@ export default function DoctorLandingPage() {
               </Card>
             )}
 
+            {/* Rejected Banner */}
             {verificationStatus === "rejected" && (
-              <Card className="border-0 bg-rose-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] mb-6">
+              <Card className="border-0 bg-rose-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                 <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5 text-rose-500" />
-                    <h2 className="text-xl font-semibold">
-                      Verification Rejected
-                    </h2>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-rose-500" />
+                      <h2 className="text-xl font-semibold">
+                        Verification Rejected
+                      </h2>
+                    </div>
+                    {statusBadge}
                   </div>
                   <p className="text-[#6B7280] mb-3">
                     Please fix the issues and resubmit.
@@ -247,57 +331,118 @@ export default function DoctorLandingPage() {
               </Card>
             )}
 
+            {/* VERIFIED DASHBOARD */}
             {isVerified && (
               <section className="space-y-6">
+                {/* Welcome + status */}
                 <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
-                  <CardContent className="p-6 flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h2 className="text-lg font-semibold">
-                        Welcome, {profile.displayName || user?.username}
-                      </h2>
-                      <p className="text-sm text-[#6B7280]">
-                        You're verified. Manage appointments, patients, and
-                        earnings.
-                      </p>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                        <div>
+                          <h2 className="text-lg font-semibold">
+                            Welcome, {profile.displayName || user?.username}
+                          </h2>
+                          <p className="text-sm text-[#6B7280]">
+                            You're verified. Manage appointments, patients, and
+                            earnings from this dashboard.
+                          </p>
+                        </div>
+                      </div>
+                      <div>{statusBadge}</div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Stats + Charts */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Charts Card */}
+                  <Card className="p-5 md:col-span-2 lg:col-span-2 bg-white/90">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold">
+                        Booking & Earnings Overview
+                      </h2>
+                      <span className="text-xs text-slate-500">
+                        Last 6 months
+                      </span>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {/* Pie Chart */}
+                      <div className="h-48">
+                        <DoctorStatusPie
+                          pending={statusChart.pending}
+                          completed={statusChart.completed}
+                          cancelled={statusChart.cancelled}
+                        />
+                      </div>
+
+                      {/* Bar Chart */}
+                      <div className="h-48">
+                        <RevenueBarChart
+                          months={dashboardStats.chart.months}
+                          income={dashboardStats.chart.earnings}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Appointments Today */}
                   <Tile
                     icon={<Calendar className="w-5 h-5 text-[#0EA5E9]" />}
                     title="Appointments"
-                    value="3"
+                    value={String(dashboardStats.appointmentsToday)}
                     hint="Today"
                     onClick={() => navigate("/doctor/appointments")}
                   />
+
+                  {/* Total Patients */}
                   <Tile
                     icon={<Users className="w-5 h-5 text-[#8B5CF6]" />}
                     title="Patients"
-                    value="128"
+                    value={String(dashboardStats.totalPatients)}
                     hint="Total"
                     onClick={() => navigate("/doctor/patients")}
                   />
+
+                  {/* Earnings This Month */}
                   <Tile
-                    icon={<MessageSquare className="w-5 h-5 text-[#F59E0B]" />}
-                    title="Messages"
-                    value="7"
-                    hint="Unread"
-                    onClick={() => navigate("/doctor/messages")}
-                  />
-                  <Tile
-                    icon={<DollarSign className="w-5 h-5 text-[#22C55E]" />}
+                    icon={<IndianRupee className="w-5 h-5 text-[#22C55E]" />}
                     title="Earnings"
-                    value="$2,340"
+                    value={`₹${dashboardStats.earningsThisMonth}`}
                     hint="This month"
                     onClick={() => navigate("/doctor/wallet")}
                   />
+                  
                 </div>
               </section>
+              
             )}
+            <Card className="p-5">
+  <h2 className="text-lg font-semibold mb-3">Most Booked Pet Categories</h2>
 
+  {petTrends.length === 0 ? (
+    <p className="text-sm text-slate-500">No booking trends found.</p>
+  ) : (
+    <ul className="space-y-2">
+      {petTrends.map((t, i) => (
+        <li
+          key={i}
+          className="flex justify-between p-2 bg-slate-50 rounded-lg border"
+        >
+          <span className="font-medium">{t.categoryName}</span>
+          <span className="text-slate-600">{t.count} bookings</span>
+        </li>
+      ))}
+    </ul>
+  )}
+</Card>
+
+
+            {/* VERIFICATION / PROFILE FORM */}
             {canShowForm && (
-              <section className="mt-8">
+              <section className="mt-4">
                 <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
                   <CardContent className="p-6">
                     <h3 className="font-semibold text-lg mb-4">
@@ -306,6 +451,7 @@ export default function DoctorLandingPage() {
                         : "Complete Your Profile"}
                     </h3>
                     <div className="space-y-5">
+                      {/* Certificate Upload */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Medical Certificate (PDF){" "}
@@ -326,6 +472,8 @@ export default function DoctorLandingPage() {
                           />
                         </label>
                       </div>
+
+                      {/* Basic Info */}
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium block mb-2">
@@ -408,6 +556,8 @@ export default function DoctorLandingPage() {
                           />
                         </div>
                       </div>
+
+                      {/* Specialties */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Specialties <span className="text-rose-500">*</span>
@@ -438,6 +588,8 @@ export default function DoctorLandingPage() {
                           />
                         </div>
                       </div>
+
+                      {/* Bio */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Bio <span className="text-rose-500">*</span>
@@ -455,6 +607,8 @@ export default function DoctorLandingPage() {
                           placeholder="Describe your experience and expertise..."
                         />
                       </div>
+
+                      {/* Submit */}
                       <Button
                         onClick={handleSubmitAll}
                         disabled={!isFormComplete() || isSubmitting}

@@ -5,33 +5,6 @@ import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { AdminRepository } from "../../repositories/implements/admin.repository";
 import { PaymentModel } from "../../models/implements/payment.model";
 
-// export type OkMessage = { message: string };
-// export type PageMeta = { total: number; page: number; totalPages: number };
-// export type ListDoctorsParams = {
-//   page: number;
-//   limit: number;
-//   status?: string;
-//   search?: string;
-// };
-// export type DoctorVerified = {
-//   status: "verified";
-//   verifiedAt: string | Date | null;
-// };
-// export type DoctorRejected = { status: "rejected"; rejectionReasons: string[] };
-// export type CreatePetCategoryPayload = {
-//   name: string;
-//   iconKey?: string;
-//   description?: string;
-//   isActive?: boolean;
-//   sortOrder?: number;
-// };
-// export type UpdatePetCategoryPayload = Partial<{
-//   name: string;
-//   iconKey: string;
-//   description: string;
-//   isActive: boolean;
-//   sortOrder: number;
-// }>;
 import {
   UserListResponseDTO,
   UserStatsDTO,
@@ -216,4 +189,64 @@ async updatePetCategory(
     const results = await PaymentModel.aggregate(pipeline);
     return EarningsMapper.toEarningsResponseDTO(results);
   }
+  async getBookingStatusChart() {
+    const data = await this._adminRepo.getBookingStatusCounts();
+    return data;
+  }
+async getFilteredEarnings(start?: string, end?: string, doctorId?: string) {
+  return await this._adminRepo.getFilteredEarnings(start, end, doctorId);
+}
+async getSimpleDoctorList() {
+  const docs = await this._adminRepo.getSimpleDoctorList();
+
+  return docs.map((doc: any) => ({
+    _id: doc._id.toString(),
+    username: doc.username,
+    email: doc.email,
+    count: doc.count
+  }));
+}
+async getGrowthStats() {
+  const counts = await this._adminRepo.getGrowthStats();
+
+  const calcPercent = (current: number, previous: number) => {
+    if (previous === 0) {
+      if (current === 0) return 0;
+      return 100; // or null if you prefer "∞"
+    }
+    return ((current - previous) / previous) * 100;
+  };
+
+  return {
+    users: {
+      current: counts.users.current,
+      previous: counts.users.previous,
+      percent: calcPercent(
+        counts.users.current,
+        counts.users.previous
+      ),
+    },
+    doctors: {
+      current: counts.doctors.current,
+      previous: counts.doctors.previous,
+      percent: calcPercent(
+        counts.doctors.current,
+        counts.doctors.previous
+      ),
+    },
+    bookings: {
+      current: counts.bookings.current,
+      previous: counts.bookings.previous,
+      percent: calcPercent(
+        counts.bookings.current,
+        counts.bookings.previous
+      ),
+    },
+  };
+}
+
+
+
+
+
 }
