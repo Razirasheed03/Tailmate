@@ -1,18 +1,18 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { chatService } from "@/services/chatService";
+import { toast } from "react-hot-toast";
 
 export default function MatchmakingDetail() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const listing = state?.listing;
 
-  const [currentImage, setCurrentImage] = useState(0);
   const [showContact, setShowContact] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isOwnListing, setIsOwnListing] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
 
   // ------------------------------  
   // CHECK IF USER OWNS THIS LISTING  
@@ -23,7 +23,6 @@ export default function MatchmakingDetail() {
 
       if (storedUser) {
         const user = JSON.parse(storedUser);
-        setCurrentUser(user);
 
         const isOwner =
           String(listing?.userId) === String(user._id || user.id);
@@ -62,7 +61,7 @@ export default function MatchmakingDetail() {
           <div className="relative h-72 bg-black flex items-center justify-center">
             {listing.photos?.length > 0 ? (
               <img
-                src={listing.photos[currentImage]}
+                src={listing.photos[0]}
                 className="w-full h-full object-contain"
               />
             ) : (
@@ -110,19 +109,25 @@ export default function MatchmakingDetail() {
             {!isOwnListing && (
               <div className="mt-6">
                 <button
-                  onClick={() => {
-                    // navigation placeholder – later you can implement real chat
-                    navigate("/chat", {
-                      state: {
-                        sellerId: listing.userId,
-                        listingId: listing._id,
-                        listingTitle: listing.title,
-                      }
-                    });
+                  onClick={async () => {
+                    try {
+                      setIsStartingChat(true);
+                      const room = await chatService.startChat(
+                        listing._id,
+                        listing.userId
+                      );
+                      navigate(`/chat?room=${room._id}`);
+                    } catch (err) {
+                      console.error("Failed to start chat:", err);
+                      toast.error("Failed to start chat");
+                    } finally {
+                      setIsStartingChat(false);
+                    }
                   }}
-                  className="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors shadow-md"
+                  disabled={isStartingChat}
+                  className="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
                 >
-                  💬 Chat with Owner
+                  {isStartingChat ? "Starting chat..." : "💬 Chat with Owner"}
                 </button>
               </div>
             )}

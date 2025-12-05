@@ -42,6 +42,7 @@ import DashboardPage from "@/pages/admin/DashboardPage";
 import Matchmaking from "@/pages/user/Matchmaking";
 import MatchmakingDetail from "@/pages/user/matchmakingDetail";
 import MyMatchListings from "@/pages/user/Profile/MyMatchListings";
+import ChatPage from "@/pages/chat/ChatPage";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -129,6 +130,12 @@ export const router = createBrowserRouter([
 
   {path:"/matchmaking/:id",
     element:<MatchmakingDetail/>},
+  {
+    path: "/chat",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <ChatPage /> }],
+  },
   // Admin area
   {
     path: "/admin",

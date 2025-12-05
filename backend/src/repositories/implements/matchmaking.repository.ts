@@ -210,4 +210,15 @@ async listPublic(params: {
 
     return !!res;
   }
+
+  async findById(id: string) {
+    const doc = await this.model
+      .findOne({
+        _id: new Types.ObjectId(id),
+        deletedAt: null,
+      })
+      .lean();
+
+    return doc;
+  }
 }

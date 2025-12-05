@@ -23,9 +23,11 @@ import payoutRoutes from "./routes/payout.route";
 import { paymentsWebhook } from "./controllers/Implements/payment-webhook.controller";
 import notificationRoutes from "./routes/notification.route";
 import matchmakingRoutes from "./routes/matchmaking.route"
+import chatRoutes from "./routes/chat.route";
 
 import http from "http";
 import { Server } from "socket.io";
+import { setupChatSocket } from "./sockets/chat.socket";
 
 const app = express();
 const server = http.createServer(app);
@@ -51,6 +53,9 @@ io.on("connection", (socket) => {
     console.log("Socket.IO: User disconnected", socket.id);
   });
 });
+
+// Setup chat socket handlers
+setupChatSocket(io);
 
 export { io };
 
@@ -91,7 +96,8 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api", paymentReadRoutes);
 app.use("/api/marketplace-payments", marketplacePaymentRoutes);
 app.use("/api", notificationRoutes);
-app.use("/api/matchmaking",matchmakingRoutes)
+app.use("/api/matchmaking", matchmakingRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error("Error handler:", err?.message);
