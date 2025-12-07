@@ -272,18 +272,8 @@ export class ConsultationService {
       durationMinutes,
     });
 
-    // Try to find existing consultation by bookingId
-    const existingByBooking = await this._repo.model.findOne({
-      bookingId: bookingId,
-      status: { $ne: "cancelled" },
-    });
-
-    if (existingByBooking) {
-      console.log("[getOrCreateConsultationFromBooking] Found existing by bookingId:", existingByBooking._id);
-      return await this._repo.findById(existingByBooking._id.toString());
-    }
-
-    // Resolve Doctor profile ID from doctor's User ID
+    // Resolve Doctor profile ID from doctor's User ID FIRST
+    // (we need this to search by doctorId)
     console.log("[getOrCreateConsultationFromBooking] Looking up Doctor with userId:", doctorUserId);
     let doctorProfile = await Doctor.findOne({ userId: new Types.ObjectId(doctorUserId) });
     
@@ -304,32 +294,50 @@ export class ConsultationService {
     const doctorProfileId = doctorProfile._id.toString();
     console.log("[getOrCreateConsultationFromBooking] Resolved doctorProfileId:", doctorProfileId);
 
-    // Try to find by userId, doctorId, and scheduledFor
+    // ATOMIC: Use findOneAndUpdate with upsert on bookingId
+    // This ensures only ONE consultation is created per bookingId, even with concurrent requests
     const scheduledDate = new Date(scheduledFor);
-    const oneMinuteBefore = new Date(scheduledDate.getTime() - 60000);
-    const oneMinuteAfter = new Date(scheduledDate.getTime() + 60000);
+    
+    console.log("[getOrCreateConsultationFromBooking] Using atomic upsert by bookingId:", bookingId);
+    
+    const consultation = await this._repo.model.findOneAndUpdate(
+      { bookingId: bookingId }, // Filter by bookingId - UNIQUE constraint
+      {
+        $setOnInsert: {
+          userId: new Types.ObjectId(patientUserId),
+          doctorId: new Types.ObjectId(doctorProfileId),
+          scheduledFor: scheduledDate,
+          durationMinutes,
+          notes: `Booking: ${bookingId}`,
+          status: "upcoming",
+        },
+      },
+      { upsert: true, new: true }
+    );
 
-    const existingByDetails = await this._repo.model.findOne({
-      userId: new Types.ObjectId(patientUserId),
-      doctorId: new Types.ObjectId(doctorProfileId),
-      scheduledFor: { $gte: oneMinuteBefore, $lte: oneMinuteAfter },
-      status: { $ne: "cancelled" },
-    });
+    console.log("[getOrCreateConsultationFromBooking] Got consultation (created or found):", consultation._id);
 
-    if (existingByDetails) {
-      return await this._repo.findById(existingByDetails._id.toString());
+    // Verify the consultation has correct data
+    const consultationUserId = consultation.userId.toString();
+    if (consultationUserId !== patientUserId) {
+      console.warn("[getOrCreateConsultationFromBooking] ⚠️ FOUND CONSULTATION WITH WRONG userId!");
+      console.warn("[getOrCreateConsultationFromBooking] Expected userId:", patientUserId);
+      console.warn("[getOrCreateConsultationFromBooking] Actual userId:", consultationUserId);
+      console.warn("[getOrCreateConsultationFromBooking] Deleting and recreating...");
+      
+      // Delete the corrupted consultation
+      await this._repo.model.deleteOne({ _id: consultation._id });
+      
+      // Recursively call to create new one
+      return this.getOrCreateConsultationFromBooking(
+        bookingId,
+        patientUserId,
+        doctorUserId,
+        scheduledFor,
+        durationMinutes
+      );
     }
 
-    // Create new consultation with correct IDs
-    const newConsultation = await this._repo.model.create({
-      userId: new Types.ObjectId(patientUserId),
-      doctorId: new Types.ObjectId(doctorProfileId),
-      bookingId: bookingId,
-      scheduledFor: scheduledDate,
-      durationMinutes,
-      notes: `Booking: ${bookingId}`,
-    });
-
-    return await this._repo.findById(newConsultation._id.toString());
+    return await this._repo.findById(consultation._id.toString());
   }
 }

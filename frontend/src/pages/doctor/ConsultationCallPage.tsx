@@ -49,8 +49,13 @@ export default function DoctorConsultationCallPage() {
         console.log("LOCAL USER (Doctor):", user?._id);
         console.log("REMOTE USER (Patient):", data?.userId?._id);
 
-        // Start the call
+        // Doctor needs to call prepareCall to authorize themselves
         if (!callStarted) {
+          console.log("[Doctor] Calling prepareCall...");
+          await consultationService.prepareCall(consultationId);
+          console.log("[Doctor] PrepareCall successful");
+          
+          // Start the call
           await webRTC.startCall();
           setCallStarted(true);
         }

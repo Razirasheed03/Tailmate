@@ -1,4 +1,3 @@
-//pages/user/Profile/Bookings.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";

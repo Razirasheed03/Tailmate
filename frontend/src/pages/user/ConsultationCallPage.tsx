@@ -58,8 +58,9 @@ export default function UserConsultationCallPage() {
           await consultationService.prepareCall(consultationId);
           console.log("[Patient] PrepareCall successful");
           
-          // Start the call
-          await webRTC.startCall();
+          // Patient does NOT start the call - they wait for doctor's offer
+          // The WebRTC hook will handle incoming offer and create answer automatically
+          console.log("[Patient] Waiting for doctor's offer...");
           setCallStarted(true);
         }
       } catch (err) {

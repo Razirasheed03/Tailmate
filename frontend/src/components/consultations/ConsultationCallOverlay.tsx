@@ -1,4 +1,3 @@
-//components/consultations/ConsultationCallOverlay.tsx
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, Phone, PhoneOff } from 'lucide-react';
 

@@ -144,25 +144,29 @@ export default function SessionDetailPage() {
                             setStartingCall(true);
                             // Ensure all values are properly formatted
                             const bookingId = String(id).trim();
-                            const doctorId = String(row.doctorId).trim();
-                            const scheduledFor = new Date(row.date + "T" + row.time).toISOString();
-                            const durationMinutes = Number(row.durationMins);
                             
-                            console.log("[SessionDetail] Calling getOrCreateFromBooking with:", {
-                              bookingId,
-                              doctorId,
-                              scheduledFor,
-                              durationMinutes,
-                            });
+                            console.log("[SessionDetail] Searching for consultation by bookingId:", bookingId);
                             
-                            // Get or create consultation from booking
-                            const consultation = await consultationService.getOrCreateFromBooking(
-                              bookingId,
-                              doctorId,
-                              scheduledFor,
-                              durationMinutes
-                            );
-                            console.log("[SessionDetail] Got consultation:", consultation._id);
+                            // Search for existing consultation by bookingId
+                            const consultations = await consultationService.getDoctorConsultations();
+                            let consultation = consultations.find((c: any) => c.bookingId === bookingId);
+                            
+                            // If not found, try to get or create from booking
+                            if (!consultation) {
+                              console.log("[SessionDetail] No existing consultation found, creating from booking...");
+                              const doctorId = String(row.doctorId).trim();
+                              const scheduledFor = new Date(row.date + "T" + row.time).toISOString();
+                              const durationMinutes = Number(row.durationMins);
+                              
+                              consultation = await consultationService.getOrCreateFromBooking(
+                                bookingId,
+                                doctorId,
+                                scheduledFor,
+                                durationMinutes
+                              );
+                            }
+                            
+                            console.log("[SessionDetail] Found consultation:", consultation._id);
                             
                             setConsultationId(consultation._id);
                             // Prepare call to generate videoRoomId and set status to in_progress

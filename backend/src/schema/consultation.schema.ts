@@ -32,8 +32,8 @@ const ConsultationSchema = new Schema(
 // Index for finding consultations by user and doctor
 ConsultationSchema.index({ userId: 1, doctorId: 1 });
 ConsultationSchema.index({ scheduledFor: 1, status: 1 });
-// Index for bookingId (to find consultation by booking) - sparse to allow null
-ConsultationSchema.index({ bookingId: 1 }, { sparse: true });
+// UNIQUE Index for bookingId (to ensure only one consultation per booking) - sparse to allow null
+ConsultationSchema.index({ bookingId: 1 }, { sparse: true, unique: true });
 // Index for videoRoomId (non-unique to allow multiple null values)
 ConsultationSchema.index({ videoRoomId: 1 }, { sparse: true });
 
