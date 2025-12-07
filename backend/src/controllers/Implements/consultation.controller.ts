@@ -162,9 +162,28 @@ export class ConsultationController {
 
       console.log("[getOrCreateFromBooking] Validated:", { bookingId, doctorId, scheduledFor, durationMinutes });
 
+      // CRITICAL FIX: Fetch the booking to get the actual patientId
+      // This ensures we use the correct patient ID, not the current user's ID
+      // (which could be the doctor if doctor initiates the call)
+      const Booking = require("../../schema/booking.schema").Booking;
+      const booking = await Booking.findById(bookingId);
+      
+      if (!booking) {
+        return ResponseHelper.notFound(res, "Booking not found");
+      }
+
+      const patientId = booking.patientId.toString();
+      
+      console.log("[getOrCreateFromBooking] Fetched booking:", { 
+        bookingId, 
+        patientId, 
+        doctorId: booking.doctorId.toString(),
+        currentUserId: userId 
+      });
+
       const consultation = await svc.getOrCreateConsultationFromBooking(
         bookingId,
-        userId,
+        patientId,  // Use patientId from booking, not from JWT
         doctorId,
         scheduledFor,
         durationMinutes

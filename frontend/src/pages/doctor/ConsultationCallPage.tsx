@@ -19,12 +19,19 @@ export default function DoctorConsultationCallPage() {
   const [callStarted, setCallStarted] = useState(false);
 
   // Extract patient's USER ID (for WebRTC peer connection)
+  // consultation.userId can be either a populated User object or just the ID string
   const patientUserId =
     consultation?.userId
       ? typeof consultation.userId === "object"
         ? (consultation.userId as any)._id
-        : consultation.userId
+        : (consultation.userId as any).toString()
       : "";
+
+  console.log("[DoctorConsultationCallPage] Extracted IDs:", {
+    localUserId: user?._id,
+    patientUserId: patientUserId,
+    consultationUserId: consultation?.userId,
+  });
 
   const webRTC = useConsultationWebRTC({
     videoRoomId: videoRoomId || '',

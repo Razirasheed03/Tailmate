@@ -145,26 +145,20 @@ export default function SessionDetailPage() {
                             // Ensure all values are properly formatted
                             const bookingId = String(id).trim();
                             
-                            console.log("[SessionDetail] Searching for consultation by bookingId:", bookingId);
+                            console.log("[SessionDetail] Getting or creating consultation for bookingId:", bookingId);
                             
-                            // Search for existing consultation by bookingId
-                            const consultations = await consultationService.getDoctorConsultations();
-                            let consultation = consultations.find((c: any) => c.bookingId === bookingId);
+                            // Get or create consultation from booking
+                            // This is atomic and ensures only ONE consultation per booking
+                            const doctorId = String(row.doctorId).trim();
+                            const scheduledFor = new Date(row.date + "T" + row.time).toISOString();
+                            const durationMinutes = Number(row.durationMins);
                             
-                            // If not found, try to get or create from booking
-                            if (!consultation) {
-                              console.log("[SessionDetail] No existing consultation found, creating from booking...");
-                              const doctorId = String(row.doctorId).trim();
-                              const scheduledFor = new Date(row.date + "T" + row.time).toISOString();
-                              const durationMinutes = Number(row.durationMins);
-                              
-                              consultation = await consultationService.getOrCreateFromBooking(
-                                bookingId,
-                                doctorId,
-                                scheduledFor,
-                                durationMinutes
-                              );
-                            }
+                            const consultation = await consultationService.getOrCreateFromBooking(
+                              bookingId,
+                              doctorId,
+                              scheduledFor,
+                              durationMinutes
+                            );
                             
                             console.log("[SessionDetail] Found consultation:", consultation._id);
                             
