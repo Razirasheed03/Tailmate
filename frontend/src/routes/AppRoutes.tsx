@@ -43,6 +43,10 @@ import Matchmaking from "@/pages/user/Matchmaking";
 import MatchmakingDetail from "@/pages/user/matchmakingDetail";
 import MyMatchListings from "@/pages/user/Profile/MyMatchListings";
 import ChatPage from "@/pages/chat/ChatPage";
+import UserConsultationsPage from "@/pages/user/Consultations";
+import DoctorConsultationsPage from "@/pages/doctor/Consultations";
+import UserConsultationCallPage from "@/pages/user/ConsultationCallPage";
+import DoctorConsultationCallPage from "@/pages/doctor/ConsultationCallPage";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -136,6 +140,18 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorElement />,
     children: [{ index: true, element: <ChatPage /> }],
   },
+  {
+    path: "/consultations",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <UserConsultationsPage /> }],
+  },
+  {
+    path: "/consultation-call/:id",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <UserConsultationCallPage /> }],
+  },
   // Admin area
   {
     path: "/admin",
@@ -198,6 +214,22 @@ export const router = createBrowserRouter([
         element: (
           <VerifiedDoctorRoute>
             <DoctorWallet />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "consultations",
+        element: (
+          <VerifiedDoctorRoute>
+            <DoctorConsultationsPage />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "consultation-call/:id",
+        element: (
+          <VerifiedDoctorRoute>
+            <DoctorConsultationCallPage />
           </VerifiedDoctorRoute>
         ),
       },

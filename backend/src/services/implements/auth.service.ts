@@ -11,6 +11,8 @@ import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { OAuth2Client } from "google-auth-library";
+import { DoctorModel } from "../../models/implements/doctor.model";
+import { Doctor } from "../../schema/doctor.schema";
 
 const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -75,12 +77,20 @@ export class AuthService implements IAuthService {
       Date.now() - parsed.createdAt
     );
 
-    const accessToken = generateAccessToken(createdUser.id.toString());
-    const refreshToken = generateRefreshToken(createdUser.id.toString());
+    const userId = createdUser.id.toString();
+    const role = createdUser.role;
+    // Find doctorId by looking up Doctor with this userId
+    let doctorId: string | undefined = undefined;
+    if (role === "doctor") {
+      const doctor = await DoctorModel.findOne({ userId: createdUser._id });
+      doctorId = doctor?._id?.toString();
+    }
+    const accessToken = generateAccessToken(userId, role, doctorId);
+    const refreshToken = generateRefreshToken(userId);
 
     // Store refreshToken in Redis for validation/revocation
     await redisClient.setEx(
-      `refresh:${createdUser.id}`,
+      `refresh:${userId}`,
       7 * 24 * 60 * 60, // 7 days in seconds
       refreshToken
     );
@@ -132,34 +142,49 @@ export class AuthService implements IAuthService {
     const accessToken = generateAccessToken(userId);
     return { accessToken };
   };
-  login = async (
-    email: string,
-    password: string
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: IUserModel;
-  }> => {
-    const user = await this._userRepo.findByEmail(email);
-    if (!user) throw new Error("Invalid email or password");
+login = async (
+  email: string,
+  password: string
+): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  user: IUserModel;
+}> => {
+  const user = await this._userRepo.findByEmail(email);
+  if (!user) throw new Error("Invalid email or password");
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new Error("Invalid email or password");
-    if (user.isBlocked) {
-      throw new Error("You are banned and cannot login.");
-    }
-    const userId = user.id.toString();
-    const accessToken = generateAccessToken(userId);
-    const refreshToken = generateRefreshToken(userId);
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw new Error("Invalid email or password");
 
-    await redisClient.setEx(
-      `refresh:${userId}`,
-      7 * 24 * 60 * 60,
-      refreshToken
-    );
+  if (user.isBlocked) {
+    throw new Error("You are banned and cannot login.");
+  }
 
-    return { accessToken, refreshToken, user };
-  };
+  const userId = user.id.toString();
+  const role = user.role;
+
+  // 🔥 THE REAL FIX: Fetch doctor profile to attach correct doctorId to JWT
+  let doctorId: string | undefined = undefined;
+
+  if (role === "doctor") {
+    const doctor = await Doctor.findOne({ userId: user._id }).select("_id");
+    doctorId = doctor?._id?.toString();
+  }
+
+  // Generate tokens with correct doctorId included
+  const accessToken = generateAccessToken(userId, role, doctorId);
+  const refreshToken = generateRefreshToken(userId);
+
+  // Save refresh token in Redis
+  await redisClient.setEx(
+    `refresh:${userId}`,
+    7 * 24 * 60 * 60,
+    refreshToken
+  );
+
+  return { accessToken, refreshToken, user };
+};
+
   googleLogin = async (
     idToken: string
   ): Promise<{
@@ -204,7 +229,14 @@ export class AuthService implements IAuthService {
     }
 
     const userId = user.id.toString();
-    const accessToken = generateAccessToken(userId);
+    const role = user.role;
+    // Find doctorId by looking up Doctor with this userId
+    let doctorId: string | undefined = undefined;
+    if (role === "doctor") {
+      const doctor = await DoctorModel.findOne({ userId: user._id });
+      doctorId = doctor?._id?.toString();
+    }
+    const accessToken = generateAccessToken(userId, role, doctorId);
     const refreshToken = generateRefreshToken(userId);
 
     await redisClient.setEx(

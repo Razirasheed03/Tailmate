@@ -1,3 +1,4 @@
+//middlewares/authJwt.ts
 import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/implements/user.model";
@@ -8,13 +9,29 @@ export const authJwt: RequestHandler = async (req, res, next) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ success: false, message: "Access denied. No token provided." });
     }
+
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      id: string;
+      role?: string;
+      doctorId?: string | null;
+    };
+
+    // Fetch user from database
     const user = await UserModel.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid token user." });
     }
-    (req as any).user = user;
+
+    // Attach normalized user data to request
+    const userId = (user as any)._id?.toString() || decoded.id;
+    (req as any).user = {
+      _id: userId,                     // User._id as string
+      id: userId,                      // Alias
+      role: decoded.role || (user as any).role, // From token or fallback to user
+      doctorId: decoded.doctorId || null, // Doctor._id if doctor, else null
+    };
+
     next();
   } catch (error: any) {
     if (error?.name === "TokenExpiredError") {

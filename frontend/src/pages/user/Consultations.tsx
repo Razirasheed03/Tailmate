@@ -1,0 +1,269 @@
+import { useEffect, useState } from 'react';
+import { Calendar, Clock, AlertCircle, Loader } from 'lucide-react';
+import { consultationService, type Consultation } from '@/services/consultationService';
+import { ConsultationCallOverlay } from '@/components/consultations/ConsultationCallOverlay';
+import { IncomingCallModal } from '@/components/consultations/IncomingCallModal';
+import { useConsultationWebRTC } from '@/hooks/useConsultationWebRTC';
+import { useAuth } from '@/context/AuthContext';
+
+export default function UserConsultationsPage() {
+  const { user } = useAuth();
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
+  const [videoRoomId, setVideoRoomId] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+
+  const webRTC = useConsultationWebRTC({
+    videoRoomId: videoRoomId || '',
+    consultationId: selectedConsultation?._id || '',
+    isDoctor: false,
+    localUserId: user?._id || '',
+    remoteUserId: selectedConsultation?.doctorId._id || '',
+  });
+
+  useEffect(() => {
+    fetchConsultations();
+  }, []);
+
+  const fetchConsultations = async () => {
+    try {
+      setLoading(true);
+      const data = await consultationService.getUserConsultations();
+      setConsultations(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load consultations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinCall = async (consultation: Consultation) => {
+    try {
+      setPreparing(true);
+      setSelectedConsultation(consultation);
+
+      // Prepare call and get videoRoomId
+      const result = await consultationService.prepareCall(consultation._id);
+      setVideoRoomId(result.videoRoomId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to prepare call');
+      setSelectedConsultation(null);
+    } finally {
+      setPreparing(false);
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    try {
+      await webRTC.acceptCall();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to accept call');
+    }
+  };
+
+  const handleRejectCall = () => {
+    webRTC.rejectCall();
+    setSelectedConsultation(null);
+    setVideoRoomId(null);
+  };
+
+  const handleEndCall = async () => {
+    try {
+      webRTC.endCall();
+      if (selectedConsultation) {
+        await consultationService.endCall(selectedConsultation._id);
+      }
+      setSelectedConsultation(null);
+      setVideoRoomId(null);
+      await fetchConsultations();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to end call');
+    }
+  };
+
+  const isConsultationActive = (consultation: Consultation) => {
+    if (consultation.status === 'cancelled' || consultation.status === 'completed') {
+      return false;
+    }
+
+    const now = new Date();
+    const scheduledTime = new Date(consultation.scheduledFor);
+    const endTime = new Date(
+      scheduledTime.getTime() + consultation.durationMinutes * 60000
+    );
+    const windowStart = new Date(scheduledTime.getTime() - 10 * 60000);
+    const windowEnd = new Date(endTime.getTime() + 10 * 60000);
+
+    return now >= windowStart && now <= windowEnd;
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // Show call overlay if in call
+  if (webRTC.isInCall && selectedConsultation && videoRoomId) {
+    return (
+      <ConsultationCallOverlay
+        localStream={webRTC.localStream}
+        remoteStream={webRTC.remoteStream}
+        isLocalMuted={webRTC.isLocalMuted}
+        isLocalCameraOff={webRTC.isLocalCameraOff}
+        doctorName={selectedConsultation.doctorId.name}
+        userName={user?.username || 'User'}
+        isDoctor={false}
+        onToggleMute={webRTC.toggleMute}
+        onToggleCamera={webRTC.toggleCamera}
+        onEndCall={handleEndCall}
+      />
+    );
+  }
+
+  // Show incoming call modal if receiving call
+  if (webRTC.isReceivingCall && selectedConsultation) {
+    return (
+      <IncomingCallModal
+        doctorName={selectedConsultation.doctorId.name}
+        doctorSpecialization={selectedConsultation.doctorId.specialization}
+        onAccept={handleAcceptCall}
+        onReject={handleRejectCall}
+        isLoading={preparing}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Consultations</h1>
+          <p className="text-gray-600 mt-2">Manage your scheduled consultations with doctors</p>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <div>
+              <p className="text-red-800 font-semibold">Error</p>
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Consultations list */}
+        {consultations.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">No consultations scheduled yet</p>
+            <p className="text-gray-500 text-sm mt-2">
+              Book a consultation with a doctor to get started
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {consultations.map((consultation) => {
+              const isActive = isConsultationActive(consultation);
+              const statusColor = {
+                upcoming: 'bg-blue-50 border-blue-200',
+                in_progress: 'bg-green-50 border-green-200',
+                completed: 'bg-gray-50 border-gray-200',
+                cancelled: 'bg-red-50 border-red-200',
+              };
+
+              const statusBadgeColor = {
+                upcoming: 'bg-blue-100 text-blue-800',
+                in_progress: 'bg-green-100 text-green-800',
+                completed: 'bg-gray-100 text-gray-800',
+                cancelled: 'bg-red-100 text-red-800',
+              };
+
+              return (
+                <div
+                  key={consultation._id}
+                  className={`border rounded-lg p-6 ${statusColor[consultation.status]}`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Dr. {consultation.doctorId.name}
+                        </h3>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            statusBadgeColor[consultation.status]
+                          }`}
+                        >
+                          {consultation.status.charAt(0).toUpperCase() +
+                            consultation.status.slice(1)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {consultation.doctorId.specialization}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Consultation details */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <Calendar className="w-4 h-4" />
+                      <span>{formatDate(consultation.scheduledFor)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <Clock className="w-4 h-4" />
+                      <span>{consultation.durationMinutes} minutes</span>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  {consultation.notes && (
+                    <div className="mb-4 p-3 bg-white bg-opacity-50 rounded text-sm text-gray-700">
+                      <p className="font-semibold mb-1">Notes:</p>
+                      <p>{consultation.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-3">
+                    {isActive && consultation.status === 'upcoming' && (
+                      <button
+                        onClick={() => handleJoinCall(consultation)}
+                        disabled={preparing}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-colors"
+                      >
+                        {preparing ? 'Preparing...' : 'Join Call'}
+                      </button>
+                    )}
+                    {!isActive && consultation.status === 'upcoming' && (
+                      <div className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">
+                        Available 10 min before
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
