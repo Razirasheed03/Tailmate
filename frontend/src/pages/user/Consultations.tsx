@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Calendar, Clock, AlertCircle, Loader } from 'lucide-react';
 import { consultationService, type Consultation } from '@/services/consultationService';
-import { ConsultationCallOverlay } from '@/components/consultations/ConsultationCallOverlay';
-import { IncomingCallModal } from '@/components/consultations/IncomingCallModal';
-import { useConsultationWebRTC } from '@/hooks/useConsultationWebRTC';
 import { useAuth } from '@/context/AuthContext';
 
 export default function UserConsultationsPage() {
@@ -11,17 +8,6 @@ export default function UserConsultationsPage() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
-  const [videoRoomId, setVideoRoomId] = useState<string | null>(null);
-  const [preparing, setPreparing] = useState(false);
-
-  const webRTC = useConsultationWebRTC({
-    videoRoomId: videoRoomId || '',
-    consultationId: selectedConsultation?._id || '',
-    isDoctor: false,
-    localUserId: user?._id || '',
-    remoteUserId: selectedConsultation?.doctorId._id || '',
-  });
 
   useEffect(() => {
     fetchConsultations();
@@ -41,45 +27,13 @@ export default function UserConsultationsPage() {
 
   const handleJoinCall = async (consultation: Consultation) => {
     try {
-      setPreparing(true);
-      setSelectedConsultation(consultation);
-
       // Prepare call and get videoRoomId
       const result = await consultationService.prepareCall(consultation._id);
-      setVideoRoomId(result.videoRoomId);
+      
+      // Navigate to call page
+      window.location.href = `/consultations/${consultation._id}?room=${result.videoRoomId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to prepare call');
-      setSelectedConsultation(null);
-    } finally {
-      setPreparing(false);
-    }
-  };
-
-  const handleAcceptCall = async () => {
-    try {
-      await webRTC.acceptCall();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept call');
-    }
-  };
-
-  const handleRejectCall = () => {
-    webRTC.rejectCall();
-    setSelectedConsultation(null);
-    setVideoRoomId(null);
-  };
-
-  const handleEndCall = async () => {
-    try {
-      webRTC.endCall();
-      if (selectedConsultation) {
-        await consultationService.endCall(selectedConsultation._id);
-      }
-      setSelectedConsultation(null);
-      setVideoRoomId(null);
-      await fetchConsultations();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to end call');
     }
   };
 
@@ -114,37 +68,6 @@ export default function UserConsultationsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <Loader className="w-8 h-8 animate-spin text-blue-600" />
       </div>
-    );
-  }
-
-  // Show call overlay if in call
-  if (webRTC.isInCall && selectedConsultation && videoRoomId) {
-    return (
-      <ConsultationCallOverlay
-        localStream={webRTC.localStream}
-        remoteStream={webRTC.remoteStream}
-        isLocalMuted={webRTC.isLocalMuted}
-        isLocalCameraOff={webRTC.isLocalCameraOff}
-        doctorName={selectedConsultation.doctorId.name}
-        userName={user?.username || 'User'}
-        isDoctor={false}
-        onToggleMute={webRTC.toggleMute}
-        onToggleCamera={webRTC.toggleCamera}
-        onEndCall={handleEndCall}
-      />
-    );
-  }
-
-  // Show incoming call modal if receiving call
-  if (webRTC.isReceivingCall && selectedConsultation) {
-    return (
-      <IncomingCallModal
-        doctorName={selectedConsultation.doctorId.name}
-        doctorSpecialization={selectedConsultation.doctorId.specialization}
-        onAccept={handleAcceptCall}
-        onReject={handleRejectCall}
-        isLoading={preparing}
-      />
     );
   }
 
@@ -246,10 +169,9 @@ export default function UserConsultationsPage() {
                     {isActive && consultation.status === 'upcoming' && (
                       <button
                         onClick={() => handleJoinCall(consultation)}
-                        disabled={preparing}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-colors"
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
                       >
-                        {preparing ? 'Preparing...' : 'Join Call'}
+                        Join Call
                       </button>
                     )}
                     {!isActive && consultation.status === 'upcoming' && (

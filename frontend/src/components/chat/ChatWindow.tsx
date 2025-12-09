@@ -54,7 +54,7 @@ export default function ChatWindow({
     const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     
     if (isAtBottom) {
-      socket.emit('mark_seen', { roomId });
+      socket.emit('chat:mark_seen', { roomId });
     }
   };
 
@@ -62,7 +62,7 @@ export default function ChatWindow({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && socket && roomId) {
-        socket.emit('mark_seen', { roomId });
+        socket.emit('chat:mark_seen', { roomId });
       }
     };
 

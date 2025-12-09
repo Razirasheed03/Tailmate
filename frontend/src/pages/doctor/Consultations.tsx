@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Calendar, Clock, AlertCircle, Loader, Phone } from 'lucide-react';
 import { consultationService, type Consultation } from '@/services/consultationService';
-import { ConsultationCallOverlay } from '@/components/consultations/ConsultationCallOverlay';
-import { useConsultationWebRTC } from '@/hooks/useConsultationWebRTC';
 import { useAuth } from '@/context/AuthContext';
 
 export default function DoctorConsultationsPage() {
@@ -10,17 +8,6 @@ export default function DoctorConsultationsPage() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
-  const [videoRoomId, setVideoRoomId] = useState<string | null>(null);
-  const [preparing, setPreparing] = useState(false);
-
-  const webRTC = useConsultationWebRTC({
-    videoRoomId: videoRoomId || '',
-    consultationId: selectedConsultation?._id || '',
-    isDoctor: true,
-    localUserId: user?._id || '',
-    remoteUserId: selectedConsultation?.userId._id || '',
-  });
 
   useEffect(() => {
     fetchConsultations();
@@ -42,34 +29,16 @@ export default function DoctorConsultationsPage() {
 
   const handleStartCall = async (consultation: Consultation) => {
     try {
-      setPreparing(true);
-      setSelectedConsultation(consultation);
-
       // Prepare call and get videoRoomId
       const result = await consultationService.prepareCall(consultation._id);
-      setVideoRoomId(result.videoRoomId);
 
       // Start the call
       await consultationService.startCall(consultation._id);
+
+      // Navigate to call page
+      window.location.href = `/doctor/consultations/${consultation._id}?room=${result.videoRoomId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start call');
-      setSelectedConsultation(null);
-    } finally {
-      setPreparing(false);
-    }
-  };
-
-  const handleEndCall = async () => {
-    try {
-      webRTC.endCall();
-      if (selectedConsultation) {
-        await consultationService.endCall(selectedConsultation._id);
-      }
-      setSelectedConsultation(null);
-      setVideoRoomId(null);
-      await fetchConsultations();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to end call');
     }
   };
 
@@ -104,24 +73,6 @@ export default function DoctorConsultationsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <Loader className="w-8 h-8 animate-spin text-blue-600" />
       </div>
-    );
-  }
-
-  // Show call overlay if in call
-  if (webRTC.isInCall && selectedConsultation && videoRoomId) {
-    return (
-      <ConsultationCallOverlay
-        localStream={webRTC.localStream}
-        remoteStream={webRTC.remoteStream}
-        isLocalMuted={webRTC.isLocalMuted}
-        isLocalCameraOff={webRTC.isLocalCameraOff}
-        doctorName={user?.username || 'Doctor'}
-        userName={selectedConsultation.userId.name}
-        isDoctor={true}
-        onToggleMute={webRTC.toggleMute}
-        onToggleCamera={webRTC.toggleCamera}
-        onEndCall={handleEndCall}
-      />
     );
   }
 
@@ -223,11 +174,10 @@ export default function DoctorConsultationsPage() {
                     {isActive && consultation.status === 'upcoming' && (
                       <button
                         onClick={() => handleStartCall(consultation)}
-                        disabled={preparing}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
                       >
                         <Phone className="w-4 h-4" />
-                        {preparing ? 'Starting...' : 'Start Video Call'}
+                        Start Video Call
                       </button>
                     )}
                     {!isActive && consultation.status === 'upcoming' && (

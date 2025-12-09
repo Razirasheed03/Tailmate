@@ -30,8 +30,7 @@ import consultationRoutes from "./routes/consultation.route";
 
 import http from "http";
 import { Server } from "socket.io";
-import { setupChatSocket } from "./sockets/chat.socket";
-import { setupWebRTCConsultationSocket } from "./sockets/webrtc.consultation";
+import { initializeSocketServer } from "./sockets/index";
 
 const app = express();
 const server = http.createServer(app);
@@ -44,22 +43,7 @@ const io = new Server(server, {
   },
 });
 
-io.on("connection", (socket) => {
-  console.log("Socket.IO: New user connected", socket.id);
-
-  socket.on("identify_as_doctor", (doctorId: string) => {
-    const room = `doctor_${doctorId}`;
-    socket.join(room);
-    console.log("Doctor joined room:", room, socket.id);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Socket.IO: User disconnected", socket.id);
-  });
-});
-
-setupChatSocket(io);
-setupWebRTCConsultationSocket(io);
+initializeSocketServer(io);
 
 export { io };
 

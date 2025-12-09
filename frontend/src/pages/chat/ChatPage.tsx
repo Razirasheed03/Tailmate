@@ -51,11 +51,11 @@ export default function ChatPage() {
       console.log('Chat socket connected');
     });
 
-    newSocket.on('receive_message', (message) => {
+    newSocket.on('chat:receive_message', (message) => {
       setMessages((prev) => [...prev, message]);
     });
 
-    newSocket.on('delivered', (data) => {
+    newSocket.on('chat:delivered', (data) => {
       console.log('Messages delivered:', data);
       setMessages((prev) =>
         prev.map((msg) =>
@@ -69,7 +69,7 @@ export default function ChatPage() {
       );
     });
 
-    newSocket.on('message_seen', (data) => {
+    newSocket.on('chat:message_seen', (data) => {
       console.log('Message seen by:', data);
       setMessages((prev) =>
         prev.map((msg) => {
@@ -87,7 +87,7 @@ export default function ChatPage() {
       );
     });
 
-    newSocket.on('typing_status', (data) => {
+    newSocket.on('chat:typing_status', (data) => {
       console.log('Typing status:', data);
     });
 
@@ -138,7 +138,7 @@ export default function ChatPage() {
 
         // Join room via socket (but don't mark as seen yet)
         if (socket) {
-          socket.emit('join_room', selectedRoomId);
+          socket.emit('chat:join_room', selectedRoomId);
         }
       } catch (err) {
         console.error('Failed to load messages:', err);
@@ -152,7 +152,7 @@ export default function ChatPage() {
     // Cleanup: leave room when unmounting or switching rooms
     return () => {
       if (socket) {
-        socket.emit('leave_room', selectedRoomId);
+        socket.emit('chat:leave_room', selectedRoomId);
       }
     };
   }, [selectedRoomId, currentUserId, socket]);
@@ -166,7 +166,7 @@ export default function ChatPage() {
 
       // Send via socket for real-time
       if (socket) {
-        socket.emit('send_message', {
+        socket.emit('chat:send_message', {
           roomId: selectedRoomId,
           content,
         });

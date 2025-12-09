@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader, AlertCircle } from 'lucide-react';
 import { consultationService, type Consultation } from '@/services/consultationService';
-import { useConsultationWebRTC } from '@/hooks/useConsultationWebRTC';
+import { useWebRTC } from '@/hooks/useWebRTC';
 import { ConsultationCallOverlay } from '@/components/consultations/ConsultationCallOverlay';
-import { IncomingCallModal } from '@/components/consultations/IncomingCallModal';
 import { useAuth } from '@/context/AuthContext';
 
 export default function UserConsultationCallPage() {
@@ -17,31 +16,19 @@ export default function UserConsultationCallPage() {
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [callStarted, setCallStarted] = useState(false);
 
-  // Extract doctor's USER ID from nested doctorId.userId (for WebRTC peer connection)
-  const doctorUserId =
-    consultation?.doctorId
-      ? typeof consultation.doctorId === "object"
-        ? typeof (consultation.doctorId as any).userId === "object"
-          ? (consultation.doctorId as any).userId._id?.toString() || ""
-          : (consultation.doctorId as any).userId?.toString() || ""
-        : ""
-      : "";
-
-  console.log("[UserConsultationCallPage] IDs:", {
-    localUserId: user?._id,
-    doctorUserId,
-    videoRoomId,
-    consultationId,
-  });
-
-  const webRTC = useConsultationWebRTC({
+  const {
+    localStream,
+    remoteStream,
+    connectionState,
+    isReady,
+    toggleAudio,
+    toggleVideo,
+    endCall,
+  } = useWebRTC({
     videoRoomId: videoRoomId || '',
     consultationId: consultationId || '',
-    isDoctor: false,
-    localUserId: user?._id || '',
-    remoteUserId: doctorUserId,
+    isInitiator: false,
   });
 
   useEffect(() => {
@@ -60,24 +47,7 @@ export default function UserConsultationCallPage() {
         setConsultation(data);
         
         console.log("[Patient] Consultation loaded");
-        console.log("LOCAL USER (Patient):", user?._id);
-        console.log("REMOTE USER (Doctor):", data?.doctorId?.userId);
-
-        if (!callStarted) {
-          // Patient needs to call prepareCall to authorize themselves
-          console.log("[Patient] Calling prepareCall...");
-          await consultationService.prepareCall(consultationId);
-          console.log("[Patient] PrepareCall successful");
-          
-          // CRITICAL: Patient MUST call startCall() to initialize WebRTC socket
-          // This connects to Socket.IO and joins the video room
-          // Patient will then wait for doctor's offer via socket events
-          console.log("[Patient] Starting WebRTC (initializing socket and waiting for doctor)...");
-          await webRTC.startCall();
-          console.log("[Patient] WebRTC initialized - now listening for doctor's offer");
-          
-          setCallStarted(true);
-        }
+        console.log("[Patient] Connection state:", connectionState);
       } catch (err) {
         console.error("[Patient] Error initializing call:", err);
         setError(err instanceof Error ? err.message : 'Failed to load consultation');
@@ -87,27 +57,12 @@ export default function UserConsultationCallPage() {
     };
 
     initCall();
-  }, [consultationId, videoRoomId, callStarted]);
-
-  const handleAcceptCall = async () => {
-    try {
-      console.log("[Patient] Accepting call");
-      await webRTC.acceptCall();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept call');
-    }
-  };
-
-  const handleRejectCall = () => {
-    console.log("[Patient] Rejecting call");
-    webRTC.rejectCall();
-    navigate('/consultations');
-  };
+  }, [consultationId, videoRoomId]);
 
   const handleEndCall = async () => {
     try {
       console.log("[Patient] Ending call");
-      webRTC.endCall();
+      endCall();
       if (consultationId) {
         await consultationService.endCall(consultationId);
       }
@@ -158,53 +113,31 @@ export default function UserConsultationCallPage() {
       : 'Doctor'
   ) : 'Doctor';
 
-  const doctorSpecialization = consultation ? (
-    typeof consultation.doctorId === 'object'
-      ? (consultation.doctorId as any)?.profile?.specialties?.[0] || 
-        (consultation.doctorId as any)?.specialization || 
-        ''
-      : ''
-  ) : '';
-
-  // Show incoming call modal if receiving call
-  if (webRTC.isReceivingCall) {
-    console.log("[Patient] Showing incoming call modal");
-    return (
-      <IncomingCallModal
-        doctorName={doctorName}
-        doctorSpecialization={doctorSpecialization}
-        onAccept={handleAcceptCall}
-        onReject={handleRejectCall}
-      />
-    );
-  }
-
-  // Show call overlay if in call
-  if (webRTC.isInCall) {
+  // Show call overlay if connected
+  if (remoteStream && connectionState === 'connected') {
     console.log("[Patient] In call, showing overlay");
     return (
       <ConsultationCallOverlay
-        localStream={webRTC.localStream}
-        remoteStream={webRTC.remoteStream}
-        isLocalMuted={webRTC.isLocalMuted}
-        isLocalCameraOff={webRTC.isLocalCameraOff}
+        localStream={localStream}
+        remoteStream={remoteStream}
+        isLocalMuted={false}
+        isLocalCameraOff={false}
         doctorName={doctorName}
         userName={user?.username || 'User'}
         isDoctor={false}
-        onToggleMute={webRTC.toggleMute}
-        onToggleCamera={webRTC.toggleCamera}
+        onToggleMute={toggleAudio}
+        onToggleCamera={toggleVideo}
         onEndCall={handleEndCall}
       />
     );
   }
 
   // Waiting for call
-  console.log("[Patient] Waiting state - WebRTC status:", {
-    isInCall: webRTC.isInCall,
-    isReceivingCall: webRTC.isReceivingCall,
-    isCalling: webRTC.isCalling,
-    localStream: !!webRTC.localStream,
-    remoteStream: !!webRTC.remoteStream,
+  console.log("[Patient] Waiting state - Connection:", {
+    connectionState,
+    hasLocalStream: !!localStream,
+    hasRemoteStream: !!remoteStream,
+    isReady,
   });
 
   return (
@@ -219,10 +152,11 @@ export default function UserConsultationCallPage() {
             The doctor will connect to the call shortly
           </p>
           
-          {/* Debug info - remove in production */}
+          {/* Debug info */}
           <div className="mt-4 text-xs text-gray-400">
-            <p>Socket: {webRTC.localStream ? 'Connected' : 'Connecting...'}</p>
+            <p>Socket: {isReady ? 'Connected' : 'Connecting...'}</p>
             <p>Room: {videoRoomId?.slice(0, 15)}...</p>
+            <p>State: {connectionState}</p>
           </div>
           
           <button
