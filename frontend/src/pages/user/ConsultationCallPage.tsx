@@ -73,14 +73,23 @@ export default function UserConsultationCallPage() {
 
   const handleEndCall = async () => {
     try {
-      console.log("[Patient] Ending call");
+      console.log("[Patient] Ending call...");
       endCall();
       if (consultationId) {
+        console.log("[Patient] Calling endCall API for consultation:", consultationId);
         await consultationService.endCall(consultationId);
+        console.log("[Patient] Call ended successfully");
       }
-      navigate('/consultations');
+      // Use replace: true to prevent back button returning to call page
+      navigate('/consultations', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to end call');
+      console.error("[Patient] Error ending call:", err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to end call';
+      setError(errorMsg);
+      // Still navigate away even if API call fails, but show error first
+      setTimeout(() => {
+        navigate('/consultations', { replace: true });
+      }, 2000);
     }
   };
 

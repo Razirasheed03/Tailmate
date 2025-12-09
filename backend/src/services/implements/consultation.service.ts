@@ -198,7 +198,7 @@ export class ConsultationService {
     };
   }
 
-  async endConsultationCall(consultationId: string, userId: string) {
+  async endConsultationCall(consultationId: string, userId: string, doctorId?: string) {
     const consultation = await this._repo.findById(consultationId);
     if (!consultation) {
       throw Object.assign(new Error("Consultation not found"), { status: 404 });
@@ -212,15 +212,32 @@ export class ConsultationService {
       ? (consultation.doctorId as any)._id?.toString()
       : consultation.doctorId?.toString();
 
-    // Only patient or doctor can end the call
-    const isPatient = userId === patientUserId;
-    const isDoctor = userId === doctorProfileId;
+    // Normalize IDs for comparison
+    const normalizedUserId = userId?.toString() || "";
+    const normalizedDoctorId = doctorId?.toString() || "";
+
+    // Authorization: Patient OR Doctor
+    // Patient: userId matches consultation.userId (User._id)
+    // Doctor: doctorId matches consultation.doctorId (Doctor._id)
+    const isPatient = normalizedUserId === patientUserId;
+    const isDoctor = normalizedDoctorId && normalizedDoctorId === doctorProfileId;
+
+    console.log("[endConsultationCall] Authorization check:", {
+      userId: normalizedUserId,
+      doctorId: normalizedDoctorId,
+      patientUserId,
+      doctorProfileId,
+      isPatient,
+      isDoctor,
+    });
 
     if (!isPatient && !isDoctor) {
       throw Object.assign(new Error("Unauthorized"), { status: 403 });
     }
 
+    // If already completed, return it (idempotent)
     if (consultation.status === "completed") {
+      console.log("[endConsultationCall] Call already completed, returning existing");
       return consultation;
     }
 

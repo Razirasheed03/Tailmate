@@ -101,12 +101,13 @@ export class ConsultationController {
   endCall = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?._id?.toString() || req.user?.id?.toString();
+      const doctorId = req.user?.doctorId?.toString() || undefined;
       if (!userId) {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
       }
 
       const { id } = req.params;
-      const consultation = await svc.endConsultationCall(id, userId);
+      const consultation = await svc.endConsultationCall(id, userId, doctorId);
       return ResponseHelper.ok(res, consultation, "Call ended");
     } catch (err) {
       next(err);
