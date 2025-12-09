@@ -16,6 +16,8 @@ export default function DoctorConsultationCallPage() {
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
 
   const {
     localStream,
@@ -30,6 +32,16 @@ export default function DoctorConsultationCallPage() {
     consultationId: consultationId || '',
     isInitiator: true,
   });
+
+  const handleToggleMute = () => {
+    const newState = toggleAudio();
+    setIsAudioMuted(!newState);
+  };
+
+  const handleToggleCamera = () => {
+    const newState = toggleVideo();
+    setIsVideoOff(!newState);
+  };
 
   useEffect(() => {
     if (!consultationId || !videoRoomId) {
@@ -113,13 +125,13 @@ export default function DoctorConsultationCallPage() {
     <ConsultationCallOverlay
       localStream={localStream}
       remoteStream={remoteStream}
-      isLocalMuted={false}
-      isLocalCameraOff={false}
+      isLocalMuted={isAudioMuted}
+      isLocalCameraOff={isVideoOff}
       doctorName={user?.username || 'Doctor'}
       userName={userName}
       isDoctor={true}
-      onToggleMute={toggleAudio}
-      onToggleCamera={toggleVideo}
+      onToggleMute={handleToggleMute}
+      onToggleCamera={handleToggleCamera}
       onEndCall={handleEndCall}
     />
   );

@@ -64,26 +64,27 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
   };
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Remote video (full screen) */}
-      <div className="flex-1 relative">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden">
+      {/* Video Container - Takes all available space minus control bar */}
+      <div className="flex-1 relative w-full h-full overflow-hidden">
+        {/* Remote video (full screen background) */}
         <video
           ref={remoteVideoRef}
           autoPlay
           playsInline
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
         />
 
         {/* Call info overlay */}
-        <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg">
+        <div className="absolute top-4 left-4 z-20 bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg pointer-events-none">
           <div className="text-sm font-semibold">
             {isDoctor ? `Consulting with ${userName}` : `Consulting with Dr. ${doctorName}`}
           </div>
           <div className="text-xs text-gray-300">{formatDuration(callDuration)}</div>
         </div>
 
-        {/* Local video (picture-in-picture) */}
-        <div className="absolute bottom-20 right-4 w-32 h-40 bg-black rounded-lg overflow-hidden border-2 border-white shadow-lg">
+        {/* Local video (picture-in-picture) - Fixed positioning */}
+        <div className="absolute bottom-24 right-4 z-10 w-32 h-40 bg-black rounded-lg overflow-hidden border-2 border-white shadow-lg">
           <video
             ref={localVideoRef}
             autoPlay
@@ -100,12 +101,12 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
         </div>
       </div>
 
-      {/* Control bar */}
-      <div className="bg-gray-900 border-t border-gray-700 px-4 py-4 flex justify-center gap-4">
+      {/* Control bar - Fixed at bottom, always visible and clickable */}
+      <div className="relative z-30 bg-gray-900 border-t border-gray-700 px-4 py-4 flex justify-center gap-4 pointer-events-auto">
         {/* Mute button */}
         <button
           onClick={onToggleMute}
-          className={`p-3 rounded-full transition-colors ${
+          className={`p-3 rounded-full transition-colors cursor-pointer ${
             isLocalMuted
               ? 'bg-red-500 hover:bg-red-600'
               : 'bg-gray-700 hover:bg-gray-600'
@@ -122,7 +123,7 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
         {/* Camera button */}
         <button
           onClick={onToggleCamera}
-          className={`p-3 rounded-full transition-colors ${
+          className={`p-3 rounded-full transition-colors cursor-pointer ${
             isLocalCameraOff
               ? 'bg-red-500 hover:bg-red-600'
               : 'bg-gray-700 hover:bg-gray-600'
@@ -139,7 +140,7 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
         {/* End call button */}
         <button
           onClick={onEndCall}
-          className="p-3 rounded-full bg-red-600 hover:bg-red-700 transition-colors"
+          className="p-3 rounded-full bg-red-600 hover:bg-red-700 transition-colors cursor-pointer"
           title="End call"
         >
           <PhoneOff className="w-6 h-6 text-white" />
