@@ -1,4 +1,3 @@
-//useConsultationWebRTC.ts
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
@@ -37,8 +36,6 @@ export const useConsultationWebRTC = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
-  
-  // StrictMode guards: prevent double initialization
   const socketInitializedRef = useRef(false);
   const peerConnectionInitializedRef = useRef(false);
 
@@ -52,23 +49,21 @@ export const useConsultationWebRTC = ({
     isLocalCameraOff: false,
   });
 
-  // Initialize socket connection - ONLY ONCE
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token || !videoRoomId || !consultationId) {
       return;
     }
 
-    // Guard: prevent double initialization in StrictMode
     if (socketInitializedRef.current && socketRef.current) {
-      return;  // Already initialized, skip
+      return;
     }
-
-    // Derive backend base URL
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
     const backendUrl = apiBase.replace(/\/api\/?$/, '');
 
     console.log(`[WebRTC] Initializing socket for ${isDoctor ? 'DOCTOR' : 'PATIENT'}`);
+    console.log('[SOCKET DEBUG] Connecting to:', backendUrl);
+    console.log('[SOCKET DEBUG] Token present:', !!token);
 
     socketRef.current = io(backendUrl, {
       auth: { token },
@@ -83,17 +78,19 @@ export const useConsultationWebRTC = ({
 
     socketRef.current.on('connect', () => {
       console.log(`[WebRTC] ✅ Socket connected (${isDoctor ? 'DOCTOR' : 'PATIENT'}):`, socketRef.current?.id);
-      socketRef.current?.emit('join_consultation_room', {
+      console.log('[SOCKET DEBUG] Connected! Socket ID:', socketRef.current?.id);
+      console.log('[SOCKET DEBUG] Transport:', socketRef.current?.io?.engine?.transport?.name);
+      socketRef.current?.emit('consultation:join', {
         consultationId,
         videoRoomId,
       });
     });
 
-    socketRef.current.on('joined_room', () => {
+    socketRef.current.on('consultation:joined', () => {
       console.log('[WebRTC] ✅ Successfully joined room');
     });
 
-    socketRef.current.on('user_joined', () => {
+    socketRef.current.on('consultation:user-joined', () => {
       console.log('[WebRTC] Other user joined');
     });
 
@@ -105,18 +102,15 @@ export const useConsultationWebRTC = ({
       console.log('[WebRTC] Socket disconnected');
     });
 
-    // No cleanup here - cleanup happens in the unmount useEffect
     return undefined;
   }, [videoRoomId, consultationId, isDoctor]);
 
 
-  // Setup WebRTC peer connection - ONLY ONCE
   const setupPeerConnection = useCallback(() => {
     if (peerConnectionRef.current) {
       return peerConnectionRef.current;
     }
 
-    // Guard: prevent double initialization in StrictMode
     if (peerConnectionInitializedRef.current) {
       return peerConnectionRef.current || undefined;
     }
@@ -128,7 +122,6 @@ export const useConsultationWebRTC = ({
 
     peerConnectionInitializedRef.current = true;
 
-    // Add local stream tracks
     if (localStreamRef.current) {
       console.log('[WebRTC] Adding local tracks to peer connection');
       localStreamRef.current.getTracks().forEach((track) => {
@@ -136,7 +129,6 @@ export const useConsultationWebRTC = ({
       });
     }
 
-    // Handle remote stream
     peerConnection.ontrack = (event) => {
       console.log('[WebRTC] ✅ Received remote track:', event.track.kind);
       
@@ -150,17 +142,15 @@ export const useConsultationWebRTC = ({
       }
     };
 
-    // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        socketRef.current?.emit('webrtc_ice_candidate', {
+        socketRef.current?.emit('consultation:webrtc-ice-candidate', {
           videoRoomId,
           candidate: event.candidate,
         });
       }
     };
 
-    // Handle connection state changes
     peerConnection.onconnectionstatechange = () => {
       console.log('[WebRTC] Connection state:', peerConnection.connectionState);
       if (peerConnection.connectionState === 'connected') {
@@ -180,7 +170,6 @@ export const useConsultationWebRTC = ({
     return peerConnection;
   }, [videoRoomId]);
 
-  // Get local media
   const getLocalMedia = useCallback(async () => {
     if (localStreamRef.current) {
       console.log('[WebRTC] Reusing existing local stream');
@@ -211,7 +200,6 @@ export const useConsultationWebRTC = ({
     }
   }, []);
 
-  // Start call
   const startCall = useCallback(async () => {
     try {
       console.log(`[WebRTC] Starting call as ${isDoctor ? 'DOCTOR' : 'PATIENT'}`);
@@ -225,8 +213,6 @@ export const useConsultationWebRTC = ({
 
       if (isDoctor) {
         setState((prev) => ({ ...prev, isCalling: true }));
-        console.log('[WebRTC] Doctor creating offer...');
-        
         const offer = await peerConnection.createOffer({
           offerToReceiveAudio: true,
           offerToReceiveVideo: true,
@@ -235,7 +221,7 @@ export const useConsultationWebRTC = ({
         await peerConnection.setLocalDescription(offer);
         console.log('[WebRTC] Offer created and sent');
 
-        socketRef.current?.emit('webrtc_offer', {
+        socketRef.current?.emit('consultation:webrtc-offer', {
           videoRoomId,
           offer,
         });
@@ -245,9 +231,6 @@ export const useConsultationWebRTC = ({
           isInCall: true,
           isCalling: false,
         }));
-      } else {
-        // PATIENT: setup peer connection and wait for doctor's offer
-        console.log('[WebRTC] Patient ready - waiting for doctor\'s offer');
       }
     } catch (error) {
       console.error('[WebRTC] Error starting call:', error);
@@ -256,7 +239,6 @@ export const useConsultationWebRTC = ({
     }
   }, [getLocalMedia, setupPeerConnection, videoRoomId, isDoctor]);
 
-  // Accept call (for patient - creates answer)
   const acceptCall = useCallback(async () => {
     try {
       console.log('[WebRTC] Patient accepting call...');
@@ -274,7 +256,7 @@ export const useConsultationWebRTC = ({
       await peerConnection.setLocalDescription(answer);
       console.log('[WebRTC] Answer created and sent');
 
-      socketRef.current?.emit('webrtc_answer', {
+      socketRef.current?.emit('consultation:webrtc-answer', {
         videoRoomId,
         answer,
       });
@@ -290,10 +272,9 @@ export const useConsultationWebRTC = ({
     }
   }, [getLocalMedia, setupPeerConnection, videoRoomId]);
 
-  // Reject call
   const rejectCall = useCallback(() => {
     console.log('[WebRTC] Rejecting call');
-    socketRef.current?.emit('reject_consultation_call', {
+    socketRef.current?.emit('consultation:reject', {
       videoRoomId,
     });
 
@@ -303,20 +284,17 @@ export const useConsultationWebRTC = ({
     }));
   }, [videoRoomId]);
 
-  // End call
   const endCall = useCallback(() => {
     console.log('[WebRTC] Ending call');
-    socketRef.current?.emit('end_consultation_call', {
+    socketRef.current?.emit('consultation:end', {
       videoRoomId,
     });
 
-    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
 
-    // Stop local stream
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -335,7 +313,6 @@ export const useConsultationWebRTC = ({
     });
   }, [videoRoomId]);
 
-  // Toggle mute
   const toggleMute = useCallback(() => {
     if (localStreamRef.current) {
       const audioTracks = localStreamRef.current.getAudioTracks();
@@ -350,7 +327,6 @@ export const useConsultationWebRTC = ({
     }
   }, []);
 
-  // Toggle camera
   const toggleCamera = useCallback(() => {
     if (localStreamRef.current) {
       const videoTracks = localStreamRef.current.getVideoTracks();
@@ -365,14 +341,13 @@ export const useConsultationWebRTC = ({
     }
   }, []);
 
-  // Listen for WebRTC signaling
   useEffect(() => {
     if (!socketRef.current) return;
 
-    // Handle incoming offer (patient receives this)
     const handleOffer = async (data: any) => {
       try {
         console.log('[WebRTC] 📥 Received offer from doctor');
+        console.log('[WebRTC] Offer data:', { fromUserId: data.fromUserId, hasOffer: !!data.offer });
         
         if (!localStreamRef.current) {
           await getLocalMedia();
@@ -393,7 +368,7 @@ export const useConsultationWebRTC = ({
         await peerConnection.setLocalDescription(answer);
 
         console.log('[WebRTC] Sending answer to doctor');
-        socketRef.current?.emit('webrtc_answer', {
+        socketRef.current?.emit('webrtc:answer', {
           videoRoomId,
           answer,
         });
@@ -408,7 +383,6 @@ export const useConsultationWebRTC = ({
       }
     };
 
-    // Handle incoming answer (doctor receives this)
     const handleAnswer = async (data: any) => {
       try {
         console.log('[WebRTC] 📥 Received answer from patient');
@@ -424,13 +398,15 @@ export const useConsultationWebRTC = ({
       }
     };
 
-    // Handle ICE candidates
     const handleIceCandidate = async (data: any) => {
       try {
+        console.log('[WebRTC] 📥 Received ICE candidate from:', data.fromUserId);
         if (peerConnectionRef.current && data.candidate) {
+          console.log('[WebRTC] Adding ICE candidate');
           await peerConnectionRef.current.addIceCandidate(
             new RTCIceCandidate(data.candidate)
           );
+          console.log('[WebRTC] ✅ ICE candidate added');
         }
       } catch (error) {
         console.error('[WebRTC] Error adding ICE candidate:', error);
@@ -450,35 +426,29 @@ export const useConsultationWebRTC = ({
       }));
     };
 
-    socketRef.current.on('webrtc_offer', handleOffer);
-    socketRef.current.on('webrtc_answer', handleAnswer);
-    socketRef.current.on('webrtc_ice_candidate', handleIceCandidate);
-    socketRef.current.on('consultation_call_ended', handleCallEnded);
-    socketRef.current.on('consultation_call_rejected', handleCallRejected);
+    socketRef.current.on('consultation:webrtc-offer', handleOffer);
+    socketRef.current.on('consultation:webrtc-answer', handleAnswer);
+    socketRef.current.on('consultation:webrtc-ice-candidate', handleIceCandidate);
+    socketRef.current.on('consultation:call-ended', handleCallEnded);
+    socketRef.current.on('consultation:call-rejected', handleCallRejected);
 
     return () => {
-      socketRef.current?.off('webrtc_offer', handleOffer);
-      socketRef.current?.off('webrtc_answer', handleAnswer);
-      socketRef.current?.off('webrtc_ice_candidate', handleIceCandidate);
-      socketRef.current?.off('consultation_call_ended', handleCallEnded);
-      socketRef.current?.off('consultation_call_rejected', handleCallRejected);
+      socketRef.current?.off('consultation:webrtc-offer', handleOffer);
+      socketRef.current?.off('consultation:webrtc-answer', handleAnswer);
+      socketRef.current?.off('consultation:webrtc-ice-candidate', handleIceCandidate);
+      socketRef.current?.off('consultation:call-ended', handleCallEnded);
+      socketRef.current?.off('consultation:call-rejected', handleCallRejected);
     };
   }, [videoRoomId, getLocalMedia, setupPeerConnection, endCall]);
 
-  // Cleanup on unmount - disconnect socket and cleanup resources
   useEffect(() => {
     return () => {
       console.log('[WebRTC] Cleaning up on unmount');
       
-      // End call and cleanup WebRTC
       endCall();
-      
-      // Disconnect socket only if it's actually connected
-      // Don't disconnect during StrictMode cleanup if socket is still connecting
       if (socketRef.current && socketRef.current.connected) {
         socketRef.current.disconnect();
       }
-      
       socketRef.current = null;
       socketInitializedRef.current = false;
       peerConnectionInitializedRef.current = false;

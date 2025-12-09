@@ -58,10 +58,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Setup chat socket handlers
 setupChatSocket(io);
-
-// Setup WebRTC consultation socket handlers
 setupWebRTCConsultationSocket(io);
 
 export { io };

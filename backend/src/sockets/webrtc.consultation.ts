@@ -1,4 +1,3 @@
-//webrtc.consultation.ts
 import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { ConsultationService } from "../services/implements/consultation.service";
@@ -11,15 +10,10 @@ interface ConsultationSocket extends Socket {
 }
 
 export function setupWebRTCConsultationSocket(io: Server) {
-  // CRITICAL: Create /consultation namespace
-  const consultationNamespace = io.of("/consultation");
-  
-  console.log("[WebRTC] ✅ Consultation namespace created at /consultation");
+  // NO NAMESPACE - use the root connection
+  io.on("connection", (socket: ConsultationSocket) => {
+    console.log("[WebRTC] 🔌 New socket connected:", socket.id);
 
-  consultationNamespace.on("connection", (socket: ConsultationSocket) => {
-    console.log("[WebRTC] 🔌 New socket connected to /consultation:", socket.id);
-
-    // ---- AUTH USING JWT ----
     let userId: string | null = null;
 
     const token =
@@ -47,9 +41,8 @@ export function setupWebRTCConsultationSocket(io: Server) {
       return;
     }
 
-    // ---- JOIN CONSULTATION ROOM ----
     socket.on(
-      "join_consultation_room",
+      "consultation:join",
       async (data: { consultationId: string; videoRoomId: string }) => {
         try {
           if (!userId) {
@@ -66,12 +59,10 @@ export function setupWebRTCConsultationSocket(io: Server) {
             consultationId
           );
 
-          // Extract IDs properly (handles populated and plain ObjectIds)
           let doctorProfileId: string | undefined;
           let doctorUserId: string | undefined;
           let patientUserId: string | undefined;
 
-          // Doctor side (profile + user)
           if (consultation.doctorId) {
             if (
               typeof consultation.doctorId === "object" &&
@@ -91,7 +82,6 @@ export function setupWebRTCConsultationSocket(io: Server) {
             }
           }
 
-          // Patient side (userId)
           if (consultation.userId) {
             if (
               typeof consultation.userId === "object" &&
@@ -133,21 +123,24 @@ export function setupWebRTCConsultationSocket(io: Server) {
           }
 
           socket.consultationId = consultationId;
-          socket.join(videoRoomId);
+          const consultationRoom = `consultation-${videoRoomId}`;
+          socket.join(consultationRoom);
 
-          console.log(
-            `[WebRTC] ✅ User ${userId} (${isDoctor ? "DOCTOR" : "PATIENT"}) joined room ${videoRoomId}`
-          );
+          console.log('[WebRTC] ✅ Socket joined room:', {
+            socketId: socket.id,
+            userId,
+            room: consultationRoom,
+            roomMembers: Array.from(io.sockets.adapter.rooms.get(consultationRoom) || [])
+          });
 
-          // Notify others in room
-          socket.to(videoRoomId).emit("user_joined", {
+          socket.to(consultationRoom).emit("consultation:user-joined", {
             userId,
             isDoctor,
             isPatient,
             timestamp: new Date(),
           });
 
-          socket.emit("joined_room", {
+          socket.emit("consultation:joined", {
             videoRoomId,
             consultationId,
             success: true,
@@ -159,102 +152,120 @@ export function setupWebRTCConsultationSocket(io: Server) {
       }
     );
 
-    // ---- WEBRTC OFFER ----
     socket.on(
-      "webrtc_offer",
+      "consultation:webrtc-offer",
       (data: { videoRoomId: string; offer: RTCSessionDescriptionInit }) => {
+        console.log("[WebRTC] 📥 Received consultation:webrtc-offer event");
+        console.log("[WebRTC] Socket ID:", socket.id);
+        console.log("[WebRTC] Socket rooms:", socket.rooms);
+        console.log("[WebRTC] Data:", { videoRoomId: data.videoRoomId, hasOffer: !!data.offer });
+        
         if (!userId) {
+          console.log("[WebRTC] ❌ Offer rejected - no userId");
           socket.emit("error", "Unauthorized");
           return;
         }
 
-        console.log(
-          `[WebRTC] 📤 User ${userId} sending OFFER to room ${data.videoRoomId}`
-        );
-        socket.to(data.videoRoomId).emit("webrtc_offer", {
+        const consultationRoom = `consultation-${data.videoRoomId}`;
+        console.log('[WebRTC] 📤 Emitting offer:', {
+          fromUser: userId,
+          socketId: socket.id,
+          toRoom: consultationRoom,
+          roomMembers: Array.from(io.sockets.adapter.rooms.get(consultationRoom) || [])
+        });
+        
+        socket.to(consultationRoom).emit("consultation:webrtc-offer", {
           fromUserId: userId,
           offer: data.offer,
         });
-        console.log(`[WebRTC] ✅ Offer forwarded to room ${data.videoRoomId}`);
+        console.log(`[WebRTC] ✅ Offer forwarded to room ${consultationRoom}`);
       }
     );
 
-    // ---- WEBRTC ANSWER ----
     socket.on(
-      "webrtc_answer",
+      "consultation:webrtc-answer",
       (data: { videoRoomId: string; answer: RTCSessionDescriptionInit }) => {
+        console.log("[WebRTC] 📥 Received consultation:webrtc-answer event");
+        console.log("[WebRTC] Answer data:", { videoRoomId: data.videoRoomId, hasAnswer: !!data.answer });
+        
         if (!userId) {
+          console.log("[WebRTC] ❌ Answer rejected - no userId");
           socket.emit("error", "Unauthorized");
           return;
         }
 
-        console.log(
-          `[WebRTC] 📤 User ${userId} sending ANSWER to room ${data.videoRoomId}`
-        );
-        socket.to(data.videoRoomId).emit("webrtc_answer", {
+        const consultationRoom = `consultation-${data.videoRoomId}`;
+        console.log('[WebRTC] 📤 Emitting answer:', {
+          fromUser: userId,
+          socketId: socket.id,
+          toRoom: consultationRoom,
+        });
+        
+        socket.to(consultationRoom).emit("consultation:webrtc-answer", {
           fromUserId: userId,
           answer: data.answer,
         });
-        console.log(`[WebRTC] ✅ Answer forwarded to room ${data.videoRoomId}`);
+        console.log(`[WebRTC] ✅ Answer forwarded to room ${consultationRoom}`);
       }
     );
 
-    // ---- ICE CANDIDATE ----
     socket.on(
-      "webrtc_ice_candidate",
+      "consultation:webrtc-ice-candidate",
       (data: { videoRoomId: string; candidate: RTCIceCandidateInit }) => {
+        console.log("[WebRTC] 📥 Received consultation:webrtc-ice-candidate event");
+        console.log("[WebRTC] ICE candidate data:", { videoRoomId: data.videoRoomId, hasCandidate: !!data.candidate });
+        
         if (!userId) {
+          console.log("[WebRTC] ❌ ICE candidate rejected - no userId");
           socket.emit("error", "Unauthorized");
           return;
         }
 
-        console.log(
-          `[WebRTC] 📤 User ${userId} sending ICE candidate to room ${data.videoRoomId}`
-        );
-        socket.to(data.videoRoomId).emit("webrtc_ice_candidate", {
+        const consultationRoom = `consultation-${data.videoRoomId}`;
+        socket.to(consultationRoom).emit("consultation:webrtc-ice-candidate", {
           fromUserId: userId,
           candidate: data.candidate,
         });
+        console.log(`[WebRTC] ✅ ICE candidate forwarded to room ${consultationRoom}`);
       }
     );
 
-    // ---- END CALL ----
-    socket.on("end_consultation_call", (data: { videoRoomId: string }) => {
+    socket.on("consultation:end", (data: { videoRoomId: string }) => {
       if (!userId) {
         socket.emit("error", "Unauthorized");
         return;
       }
 
+      const consultationRoom = `consultation-${data.videoRoomId}`;
       console.log(
-        `[WebRTC] User ${userId} ending call in room ${data.videoRoomId}`
+        `[WebRTC] User ${userId} ending call in room ${consultationRoom}`
       );
-      socket.to(data.videoRoomId).emit("consultation_call_ended", {
+      socket.to(consultationRoom).emit("consultation:call-ended", {
         fromUserId: userId,
         timestamp: new Date(),
       });
 
-      socket.leave(data.videoRoomId);
+      socket.leave(consultationRoom);
     });
 
-    // ---- REJECT CALL ----
-    socket.on("reject_consultation_call", (data: { videoRoomId: string }) => {
+    socket.on("consultation:reject", (data: { videoRoomId: string }) => {
       if (!userId) {
         socket.emit("error", "Unauthorized");
         return;
       }
 
+      const consultationRoom = `consultation-${data.videoRoomId}`;
       console.log(
-        `[WebRTC] User ${userId} rejecting call in room ${data.videoRoomId}`
+        `[WebRTC] User ${userId} rejecting call in room ${consultationRoom}`
       );
-      socket.to(data.videoRoomId).emit("consultation_call_rejected", {
+      socket.to(consultationRoom).emit("consultation:call-rejected", {
         fromUserId: userId,
         timestamp: new Date(),
       });
 
-      socket.leave(data.videoRoomId);
+      socket.leave(consultationRoom);
     });
 
-    // ---- DISCONNECT ----
     socket.on("disconnect", () => {
       console.log("[WebRTC] Socket disconnected:", socket.id, "user:", userId);
       if (socket.consultationId) {
