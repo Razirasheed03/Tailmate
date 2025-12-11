@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { toast } from 'sonner';
 
 interface UseWebRTCProps {
   videoRoomId: string;
@@ -7,6 +8,7 @@ interface UseWebRTCProps {
   isInitiator: boolean;
   onRemoteStream?: (stream: MediaStream) => void;
   onConnectionChange?: (state: RTCPeerConnectionState) => void;
+  onRemotePeerLeft?: () => void;
 }
 
 const ICE_SERVERS = [
@@ -20,6 +22,7 @@ export function useWebRTC({
   isInitiator,
   onRemoteStream,
   onConnectionChange,
+  onRemotePeerLeft,
 }: UseWebRTCProps) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -78,10 +81,26 @@ export function useWebRTC({
 
     socket.on('consultation:peer-joined', (data) => {
       console.log('[WebRTC] 👥 Peer joined:', data);
+      toast.success('User joined the call');
     });
 
     socket.on('consultation:error', (data) => {
       console.error('[WebRTC] ❌ Error:', data.message);
+      toast.error(data.message || 'An error occurred');
+    });
+
+    socket.on('consultation:peer-left', (data) => {
+      console.log('[WebRTC] 👋 Remote peer left:', data);
+      setRemoteStream(null);
+      onRemotePeerLeft?.();
+      toast.info('The other user has left the call');
+    });
+
+    socket.on('consultation:call-ended', (data) => {
+      console.log('[WebRTC] 📞 Doctor ended the call:', data);
+      if (data.endedBy === 'doctor') {
+        toast.warning('The doctor has ended the call');
+      }
     });
 
     socket.on('disconnect', () => {

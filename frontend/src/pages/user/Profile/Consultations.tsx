@@ -3,7 +3,7 @@ import { Calendar, Clock, AlertCircle, Loader } from 'lucide-react';
 import { consultationService, type Consultation } from '@/services/consultationService';
 import { useAuth } from '@/context/AuthContext';
 
-export default function UserConsultationsPage() {
+export default function Consultations() {
   const { user } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);

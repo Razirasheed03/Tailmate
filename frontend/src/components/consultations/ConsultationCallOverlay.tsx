@@ -29,6 +29,7 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [isSelfViewPrimary, setIsSelfViewPrimary] = useState(false);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -63,16 +64,29 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleSwapVideos = () => {
+    setIsSelfViewPrimary(!isSelfViewPrimary);
+  };
+
+  // Determine which stream goes where based on swap state
+  const mainVideoRef = isSelfViewPrimary ? localVideoRef : remoteVideoRef;
+  const miniVideoRef = isSelfViewPrimary ? remoteVideoRef : localVideoRef;
+  const mainStream = isSelfViewPrimary ? localStream : remoteStream;
+  const miniStream = isSelfViewPrimary ? remoteStream : localStream;
+  const miniLabel = isSelfViewPrimary ? 'Doctor' : 'You';
+
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden">
       {/* Video Container - Takes all available space minus control bar */}
       <div className="flex-1 relative w-full h-full overflow-hidden">
-        {/* Remote video (full screen background) */}
+        {/* Main video (full screen) - Tap to swap */}
         <video
-          ref={remoteVideoRef}
+          ref={mainVideoRef}
           autoPlay
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          muted={isSelfViewPrimary}
+          onClick={handleSwapVideos}
+          className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-opacity hover:opacity-90"
         />
 
         {/* Call info overlay */}
@@ -83,21 +97,39 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
           <div className="text-xs text-gray-300">{formatDuration(callDuration)}</div>
         </div>
 
-        {/* Local video (picture-in-picture) - Fixed positioning */}
-        <div className="absolute bottom-24 right-4 z-10 w-32 h-40 bg-black rounded-lg overflow-hidden border-2 border-white shadow-lg">
+        {/* Mini video (picture-in-picture) - Tap to swap */}
+        <div 
+          onClick={handleSwapVideos}
+          className="absolute bottom-24 right-4 z-10 w-32 h-40 bg-black rounded-lg overflow-hidden border-2 border-white shadow-lg cursor-pointer hover:border-blue-400 transition-colors"
+          title="Tap to swap videos"
+        >
           <video
-            ref={localVideoRef}
+            ref={miniVideoRef}
             autoPlay
             playsInline
-            muted
+            muted={!isSelfViewPrimary}
             className="w-full h-full object-cover"
           />
 
-          {isLocalCameraOff && (
+          {!isSelfViewPrimary && isLocalCameraOff && (
             <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
               <VideoOff className="w-8 h-8 text-gray-500" />
             </div>
           )}
+
+          {isSelfViewPrimary && !remoteStream && (
+            <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+              <div className="text-center text-gray-400">
+                <p className="text-xs">Waiting for</p>
+                <p className="text-xs font-semibold">{miniLabel}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Mini video label */}
+          <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded pointer-events-none">
+            {miniLabel}
+          </div>
         </div>
       </div>
 

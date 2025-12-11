@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { consultationService, type Consultation } from '@/services/consultationService';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { ConsultationCallOverlay } from '@/components/consultations/ConsultationCallOverlay';
@@ -23,7 +24,6 @@ export default function DoctorConsultationCallPage() {
     localStream,
     remoteStream,
     connectionState,
-    isReady,
     toggleAudio,
     toggleVideo,
     endCall,
@@ -31,6 +31,9 @@ export default function DoctorConsultationCallPage() {
     videoRoomId: videoRoomId || '',
     consultationId: consultationId || '',
     isInitiator: true,
+    onRemotePeerLeft: () => {
+      console.log("[Doctor] Remote peer left");
+    },
   });
 
   const handleToggleMute = () => {
@@ -45,7 +48,9 @@ export default function DoctorConsultationCallPage() {
 
   useEffect(() => {
     if (!consultationId || !videoRoomId) {
-      setError('Invalid consultation or room ID');
+      const msg = 'Invalid consultation or room ID';
+      setError(msg);
+      toast.error(msg);
       setLoading(false);
       return;
     }
@@ -54,19 +59,30 @@ export default function DoctorConsultationCallPage() {
       try {
         setLoading(true);
         const data = await consultationService.getConsultation(consultationId);
+        
+        // Check if consultation is already completed
+        if (data.status === 'completed') {
+          const msg = 'This consultation has already been completed';
+          setError(msg);
+          toast.error(msg);
+          setTimeout(() => navigate('/doctor/consultations', { replace: true }), 2000);
+          return;
+        }
+        
         setConsultation(data);
         console.log("[Doctor] Consultation loaded");
-        console.log("[Doctor] Connection state:", connectionState);
       } catch (err) {
         console.error("[Doctor] Error initializing call:", err);
-        setError(err instanceof Error ? err.message : 'Failed to start call');
+        const errorMsg = err instanceof Error ? err.message : 'Failed to start call';
+        setError(errorMsg);
+        toast.error(errorMsg);
       } finally {
         setLoading(false);
       }
     };
 
     initCall();
-  }, [consultationId, videoRoomId]);
+  }, [consultationId, videoRoomId, navigate]);
 
   const handleEndCall = async () => {
     try {
@@ -76,6 +92,7 @@ export default function DoctorConsultationCallPage() {
         console.log("[Doctor] Calling endCall API for consultation:", consultationId);
         await consultationService.endCall(consultationId);
         console.log("[Doctor] Call ended successfully");
+        toast.success('Call ended successfully');
       }
       // Use replace: true to prevent back button returning to call page
       navigate('/doctor/consultations', { replace: true });
@@ -83,6 +100,7 @@ export default function DoctorConsultationCallPage() {
       console.error("[Doctor] Error ending call:", err);
       const errorMsg = err instanceof Error ? err.message : 'Failed to end call';
       setError(errorMsg);
+      toast.error(errorMsg);
       // Still navigate away even if API call fails, but show error first
       setTimeout(() => {
         navigate('/doctor/consultations', { replace: true });

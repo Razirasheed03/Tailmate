@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { consultationService, type Consultation } from '@/services/consultationService';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { ConsultationCallOverlay } from '@/components/consultations/ConsultationCallOverlay';
@@ -19,6 +20,8 @@ export default function UserConsultationCallPage() {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
 
+  const [showRejoinButton, setShowRejoinButton] = useState(false);
+
   const {
     localStream,
     remoteStream,
@@ -31,6 +34,10 @@ export default function UserConsultationCallPage() {
     videoRoomId: videoRoomId || '',
     consultationId: consultationId || '',
     isInitiator: false,
+    onRemotePeerLeft: () => {
+      console.log("[Patient] Remote peer (doctor) left");
+      setShowRejoinButton(true);
+    },
   });
 
   const handleToggleMute = () => {
@@ -45,7 +52,9 @@ export default function UserConsultationCallPage() {
 
   useEffect(() => {
     if (!consultationId || !videoRoomId) {
-      setError('Invalid consultation or room ID');
+      const msg = 'Invalid consultation or room ID';
+      setError(msg);
+      toast.error(msg);
       setLoading(false);
       return;
     }
@@ -56,37 +65,46 @@ export default function UserConsultationCallPage() {
         console.log("[Patient] Loading consultation:", consultationId);
         
         const data = await consultationService.getConsultation(consultationId);
-        setConsultation(data);
         
+        // Check if consultation is already completed
+        if (data.status === 'completed') {
+          const msg = 'This consultation has already been completed. You cannot rejoin.';
+          setError(msg);
+          toast.error(msg);
+          setTimeout(() => navigate('/consultations', { replace: true }), 2000);
+          return;
+        }
+        
+        setConsultation(data);
         console.log("[Patient] Consultation loaded");
-        console.log("[Patient] Connection state:", connectionState);
       } catch (err) {
         console.error("[Patient] Error initializing call:", err);
-        setError(err instanceof Error ? err.message : 'Failed to load consultation');
+        const errorMsg = err instanceof Error ? err.message : 'Failed to load consultation';
+        setError(errorMsg);
+        toast.error(errorMsg);
       } finally {
         setLoading(false);
       }
     };
 
     initCall();
-  }, [consultationId, videoRoomId]);
+  }, [consultationId, videoRoomId, navigate]);
 
   const handleEndCall = async () => {
     try {
-      console.log("[Patient] Ending call...");
+      console.log("[Patient] Leaving call...");
       endCall();
-      if (consultationId) {
-        console.log("[Patient] Calling endCall API for consultation:", consultationId);
-        await consultationService.endCall(consultationId);
-        console.log("[Patient] Call ended successfully");
-      }
+      // Patient leaving - just disconnect locally, don't mark consultation as ended
+      // Only doctor can end the consultation
+      toast.info('You have left the call. The doctor can still end the consultation.');
       // Use replace: true to prevent back button returning to call page
       navigate('/consultations', { replace: true });
     } catch (err) {
-      console.error("[Patient] Error ending call:", err);
-      const errorMsg = err instanceof Error ? err.message : 'Failed to end call';
+      console.error("[Patient] Error leaving call:", err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to leave call';
       setError(errorMsg);
-      // Still navigate away even if API call fails, but show error first
+      toast.error(errorMsg);
+      // Still navigate away even if there's an error
       setTimeout(() => {
         navigate('/consultations', { replace: true });
       }, 2000);

@@ -198,7 +198,7 @@ export class ConsultationService {
     };
   }
 
-  async endConsultationCall(consultationId: string, userId: string, doctorId?: string) {
+  async endConsultationCall(consultationId: string, userId: string, doctorId?: string, io?: any) {
     const consultation = await this._repo.findById(consultationId);
     if (!consultation) {
       throw Object.assign(new Error("Consultation not found"), { status: 404 });
@@ -235,16 +235,38 @@ export class ConsultationService {
       throw Object.assign(new Error("Unauthorized"), { status: 403 });
     }
 
+    // RULE: Only doctor can end the consultation
+    // Patient can leave but consultation stays in_progress
+    if (isPatient && !isDoctor) {
+      console.log("[endConsultationCall] Patient attempted to end call - not allowed, only doctor can end");
+      throw Object.assign(
+        new Error("Only the doctor can end the consultation. You can rejoin if the doctor is still available."),
+        { status: 403, isPatientLeaving: true }
+      );
+    }
+
     // If already completed, return it (idempotent)
     if (consultation.status === "completed") {
       console.log("[endConsultationCall] Call already completed, returning existing");
       return consultation;
     }
 
+    // Doctor ending call - mark as completed
     const updated = await this._repo.findByIdAndUpdate(consultationId, {
       status: "completed",
       callEndedAt: new Date(),
     });
+
+    // Emit socket event to notify all participants that doctor ended the call
+    if (io && consultation.videoRoomId) {
+      const roomName = `consultation:${consultation.videoRoomId}`;
+      console.log("[endConsultationCall] Emitting consultation_call_ended to room:", roomName);
+      io.to(roomName).emit("consultation:call-ended", {
+        consultationId,
+        endedBy: "doctor",
+        timestamp: new Date(),
+      });
+    }
 
     return updated;
   }

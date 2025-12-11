@@ -107,7 +107,9 @@ export class ConsultationController {
       }
 
       const { id } = req.params;
-      const consultation = await svc.endConsultationCall(id, userId, doctorId);
+      // Import io from server
+      const { io } = require("../../server");
+      const consultation = await svc.endConsultationCall(id, userId, doctorId, io);
       return ResponseHelper.ok(res, consultation, "Call ended");
     } catch (err) {
       next(err);
