@@ -1,3 +1,4 @@
+//server.ts
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -6,6 +7,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./config/mongodb";
 import { env } from "./config/env";
+import { Consultation } from "./schema/consultation.schema";
 
 import authRoutes from "./routes/auth.route";
 import adminRoutes from "./routes/admin.route";
@@ -23,9 +25,12 @@ import payoutRoutes from "./routes/payout.route";
 import { paymentsWebhook } from "./controllers/Implements/payment-webhook.controller";
 import notificationRoutes from "./routes/notification.route";
 import matchmakingRoutes from "./routes/matchmaking.route"
+import chatRoutes from "./routes/chat.route";
+import consultationRoutes from "./routes/consultation.route";
 
 import http from "http";
 import { Server } from "socket.io";
+import { initializeSocketServer } from "./sockets/index";
 
 const app = express();
 const server = http.createServer(app);
@@ -38,19 +43,7 @@ const io = new Server(server, {
   },
 });
 
-io.on("connection", (socket) => {
-  console.log("Socket.IO: New user connected", socket.id);
-
-  socket.on("identify_as_doctor", (doctorId: string) => {
-    const room = `doctor_${doctorId}`;
-    socket.join(room);
-    console.log("Doctor joined room:", room, socket.id);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Socket.IO: User disconnected", socket.id);
-  });
-});
+initializeSocketServer(io);
 
 export { io };
 
@@ -70,11 +63,50 @@ app.post(
 app.use(express.json());
 app.use(cookieParser());
 
-connectDB().then(() => {
+// Initialize database and drop old indexes BEFORE registering routes
+let dbReady = false;
+
+connectDB().then(async () => {
   console.log("Mongo connected");
+  
+  // Drop old unique index on videoRoomId if it exists
+  try {
+    const indexes = await Consultation.collection.getIndexes();
+    console.log("Current indexes:", Object.keys(indexes));
+    
+    if (indexes.videoRoomId_1) {
+      console.log("Dropping old videoRoomId unique index...");
+      await Consultation.collection.dropIndex("videoRoomId_1");
+      console.log("✅ Old videoRoomId index dropped");
+    } else {
+      console.log("✅ No old videoRoomId index found");
+    }
+    
+    // Rebuild indexes from schema
+    console.log("Rebuilding indexes from schema...");
+    await Consultation.collection.dropIndexes();
+    await Consultation.syncIndexes();
+    console.log("✅ Indexes rebuilt successfully");
+  } catch (err: any) {
+    if (err.message.includes("index not found") || err.message.includes("cannot drop")) {
+      console.log("✅ Index cleanup completed");
+    } else {
+      console.error("⚠️ Error managing indexes:", err.message);
+    }
+  }
+  
+  dbReady = true;
 }).catch((err) => {
   console.error("Mongo connect error:", err);
   process.exit(1);
+});
+
+// Middleware to ensure DB is ready before processing requests
+app.use((req, res, next) => {
+  if (!dbReady) {
+    return res.status(503).json({ success: false, message: "Database initializing..." });
+  }
+  next();
 });
 
 app.use("/api/marketplace", marketplaceRoutes);
@@ -91,7 +123,9 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api", paymentReadRoutes);
 app.use("/api/marketplace-payments", marketplacePaymentRoutes);
 app.use("/api", notificationRoutes);
-app.use("/api/matchmaking",matchmakingRoutes)
+app.use("/api/matchmaking", matchmakingRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/consultations", consultationRoutes);
 
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error("Error handler:", err?.message);

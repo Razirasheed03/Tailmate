@@ -42,6 +42,12 @@ import DashboardPage from "@/pages/admin/DashboardPage";
 import Matchmaking from "@/pages/user/Matchmaking";
 import MatchmakingDetail from "@/pages/user/matchmakingDetail";
 import MyMatchListings from "@/pages/user/Profile/MyMatchListings";
+import ChatPage from "@/pages/chat/ChatPage";
+import Consultations from "@/pages/user/Profile/Consultations";
+import DoctorConsultationsPage from "@/pages/doctor/Consultations";
+import UserConsultationCallPage from "@/pages/user/ConsultationCallPage";
+import DoctorConsultationCallPage from "@/pages/doctor/ConsultationCallPage";
+import About from "@/pages/user/About";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -93,6 +99,7 @@ export const router = createBrowserRouter([
           { path: "pets", element: <PetProfiles /> },
           { path: "listings", element: <Listings /> },
           {path:"bookings",element:<Bookings/>},
+          {path:"consultations",element:<Consultations/>},
           {path:"matchmaking",element:<MyMatchListings/>},
           {path:"wallet",element:<Wallet/>}
         ],
@@ -102,6 +109,10 @@ export const router = createBrowserRouter([
   {
     path: "/vets",
     element: <Vets />
+  },
+  {
+    path:"/about",
+    element:<About/>
   },
   {
     path: "/vets/:id",
@@ -129,6 +140,24 @@ export const router = createBrowserRouter([
 
   {path:"/matchmaking/:id",
     element:<MatchmakingDetail/>},
+  {
+    path: "/chat",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <ChatPage /> }],
+  },
+  {
+    path: "/consultations",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <Consultations /> }],
+  },
+  {
+    path: "/consultation-call/:id",
+    element: <ProtectedRoute allowedRoles={["user"]} />,
+    errorElement: <RouteErrorElement />,
+    children: [{ index: true, element: <UserConsultationCallPage /> }],
+  },
   // Admin area
   {
     path: "/admin",
@@ -191,6 +220,22 @@ export const router = createBrowserRouter([
         element: (
           <VerifiedDoctorRoute>
             <DoctorWallet />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "consultations",
+        element: (
+          <VerifiedDoctorRoute>
+            <DoctorConsultationsPage />
+          </VerifiedDoctorRoute>
+        ),
+      },
+      {
+        path: "consultation-call/:id",
+        element: (
+          <VerifiedDoctorRoute>
+            <DoctorConsultationCallPage />
           </VerifiedDoctorRoute>
         ),
       },

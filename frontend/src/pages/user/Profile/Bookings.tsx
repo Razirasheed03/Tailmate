@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Phone, Loader } from "lucide-react";
 import userService from "@/services/userService";
 import type { BookingRow, BookingStatus, UIMode } from "@/types/booking.types";
 import { Button } from "@/components/UiComponents/button";
+import { consultationService } from "@/services/consultationService";
+import { isConsultationActive } from "@/utils/consultationHelpers";
 
 const Bookings = () => {
+  const nav = useNavigate();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -16,6 +21,7 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "">("");
   const [modeFilter, setModeFilter] = useState<UIMode | "">("");
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [joiningCall, setJoiningCall] = useState<string | null>(null);
 
   const limit = 10;
 
@@ -306,14 +312,68 @@ const Bookings = () => {
                   {/* Actions */}
                   <div className="flex gap-2">
                     {booking.status === "paid" && (
-                      <Button
-                        onClick={() => setCancelId(booking._id)}
-                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium"
-                      >
-                        Cancel
-                      </Button>
+                      <>
+                        {(booking.mode === "video" || booking.mode === "audio") && (
+                          <Button
+                            onClick={async () => {
+                              try {
+                                setJoiningCall(booking._id);
+                                // Ensure all values are properly formatted
+                                const bookingId = String(booking._id).trim();
+                                const doctorId = String(booking.doctorId).trim();
+                                const scheduledFor = new Date(booking.date + "T" + booking.time).toISOString();
+                                const durationMinutes = Number(booking.durationMins);
+                                
+                                console.log("[Bookings] Calling getOrCreateFromBooking with:", {
+                                  bookingId,
+                                  doctorId,
+                                  scheduledFor,
+                                  durationMinutes,
+                                });
+                                
+                                // Get or create consultation from booking
+                                const consultation = await consultationService.getOrCreateFromBooking(
+                                  bookingId,
+                                  doctorId,
+                                  scheduledFor,
+                                  durationMinutes
+                                );
+                                console.log("[Bookings] Got consultation:", consultation._id);
+                                
+                                // Prepare call to generate videoRoomId and set status to in_progress
+                                const result = await consultationService.prepareCall(consultation._id);
+                                console.log("[Bookings] Prepared call with room:", result.videoRoomId);
+                                
+                                nav(`/consultation-call/${result.consultationId}?room=${result.videoRoomId}`);
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : "Failed to join call");
+                                setJoiningCall(null);
+                              }
+                            }}
+                            disabled={joiningCall === booking._id}
+                            className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 disabled:bg-gray-200 disabled:text-gray-500 rounded-lg text-sm font-medium flex items-center gap-2 disabled:cursor-not-allowed"
+                          >
+                            {joiningCall === booking._id ? (
+                              <>
+                                <Loader className="w-4 h-4 animate-spin" />
+                                Joining...
+                              </>
+                            ) : (
+                              <>
+                                <Phone className="w-4 h-4" />
+                                Join {booking.mode === "video" ? "Video" : "Audio"} Call
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => setCancelId(booking._id)}
+                          className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium"
+                        >
+                          Cancel
+                        </Button>
+                      </>
                     )}
-    
                   </div>
                 </div>
               </div>

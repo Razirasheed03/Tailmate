@@ -1,10 +1,13 @@
 // src/pages/doctor/SessionDetail.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Phone, Loader } from "lucide-react";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { doctorService } from "@/services/doctorService";
 import type { SessionDetail } from "@/types/doctor.types";
 import httpClient from "@/services/httpClient";
+import { consultationService } from "@/services/consultationService";
+import { isConsultationActive } from "@/utils/consultationHelpers";
 
 type PaymentView = {
   _id: string;
@@ -30,6 +33,8 @@ export default function SessionDetailPage() {
   const [loading, setLoading] = useState(false);
   const [row, setRow] = useState<SessionDetail | null>(null);
   const [payment, setPayment] = useState<PaymentView | null>(null);
+  const [startingCall, setStartingCall] = useState(false);
+  const [consultationId, setConsultationId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -132,6 +137,58 @@ export default function SessionDetailPage() {
                   <div className="mt-6 flex gap-2">
                     <button className="px-3 py-2 rounded border">Copy meeting link</button>
                     <button className="px-3 py-2 rounded border">Message patient</button>
+                    {(row.mode === "video" || row.mode === "audio") && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            setStartingCall(true);
+                            // Ensure all values are properly formatted
+                            const bookingId = String(id).trim();
+                            
+                            console.log("[SessionDetail] Getting or creating consultation for bookingId:", bookingId);
+                            
+                            // Get or create consultation from booking
+                            // This is atomic and ensures only ONE consultation per booking
+                            const doctorId = String(row.doctorId).trim();
+                            const scheduledFor = new Date(row.date + "T" + row.time).toISOString();
+                            const durationMinutes = Number(row.durationMins);
+                            
+                            const consultation = await consultationService.getOrCreateFromBooking(
+                              bookingId,
+                              doctorId,
+                              scheduledFor,
+                              durationMinutes
+                            );
+                            
+                            console.log("[SessionDetail] Found consultation:", consultation._id);
+                            
+                            setConsultationId(consultation._id);
+                            // Prepare call to generate videoRoomId and set status to in_progress
+                            const result = await consultationService.prepareCall(consultation._id);
+                            console.log("[SessionDetail] Prepared call with room:", result.videoRoomId);
+                            
+                            nav(`/doctor/consultation-call/${result.consultationId}?room=${result.videoRoomId}`);
+                          } catch (err) {
+                            console.error("Failed to start call:", err);
+                            setStartingCall(false);
+                          }
+                        }}
+                        disabled={startingCall}
+                        className="px-3 py-2 rounded bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white flex items-center gap-2 disabled:cursor-not-allowed"
+                      >
+                        {startingCall ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            <Phone className="w-4 h-4" />
+                            Start Video Call
+                          </>
+                        )}
+                      </button>
+                    )}
                     <button className="px-3 py-2 rounded bg-black text-white">Open session</button>
                   </div>
                 </>

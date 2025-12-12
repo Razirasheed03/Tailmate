@@ -1,4 +1,4 @@
-//doctor.schema.ts ///removing the any in each pages
+//doctor.schema.ts 
 import { Schema, model } from "mongoose";
 
 const VerificationSchema = new Schema(

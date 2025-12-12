@@ -44,14 +44,17 @@ type DoctorDashboardStats = {
 export default function DoctorLandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [verificationStatus, setVerificationStatus] =
-  useState<VerificationStatus>("not_submitted");
+    useState<VerificationStatus>("not_submitted");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [rejectionReasons, setRejectionReasons] = useState<string[] | null>(
     null
   );
-const [petTrends, setPetTrends] = useState<Array<{ categoryName: string; count: number }>>([]);
+
+  const [petTrends, setPetTrends] = useState<
+    Array<{ categoryName: string; count: number }>
+  >([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,12 +79,14 @@ const [petTrends, setPetTrends] = useState<Array<{ categoryName: string; count: 
     licenseNumber: "",
     consultationFee: "",
   });
+
   const [specialtyInput, setSpecialtyInput] = useState("");
 
   const isVerified = verificationStatus === "verified";
   const canShowForm =
     verificationStatus === "not_submitted" || verificationStatus === "rejected";
 
+  // FETCH VERIFICATION + PROFILE
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -117,53 +122,47 @@ const [petTrends, setPetTrends] = useState<Array<{ categoryName: string; count: 
             consultationFee:
               typeof p?.consultationFee === "number" ? p.consultationFee : "",
           });
-        } catch {
-          // ignore profile error here
-        }
-      } catch {
-        // ignore verification error here
-      }
+        } catch {}
+      } catch {}
     })();
+
     return () => {
       isMounted = false;
     };
   }, []);
-  useEffect(() => {
-    if (verificationStatus !== "verified") return;
 
+  // FETCH DASHBOARD STATS
+  useEffect(() => {
+    if (!isVerified) return;
     (async () => {
       try {
         const stats = await doctorService.getDashboardStats();
         setDashboardStats(stats);
-      } catch (err) {
-        console.error("Failed to load doctor stats:", err);
-      }
+      } catch (err) {}
     })();
-  }, [verificationStatus]);
+  }, [isVerified]);
 
+  // FETCH STATUS PIE CHART
   useEffect(() => {
     if (!isVerified) return;
     (async () => {
       try {
         const data = await doctorService.getStatusChart();
         setStatusChart(data);
-      } catch (err) {
-        console.error("Failed to load doctor chart", err);
-      }
+      } catch (err) {}
     })();
   }, [isVerified]);
-useEffect(() => {
-  if (!isVerified) return;
 
-  (async () => {
-    try {
-      const trends = await doctorService.getPetTrends();
-      setPetTrends(trends);
-    } catch (e) {
-      console.error("Trend load failed", e);
-    }
-  })();
-}, [isVerified]);
+  // FETCH PET TRENDS
+  useEffect(() => {
+    if (!isVerified) return;
+    (async () => {
+      try {
+        const trends = await doctorService.getPetTrends();
+        setPetTrends(trends);
+      } catch (e) {}
+    })();
+  }, [isVerified]);
 
   const statusBadge = useMemo(() => {
     if (verificationStatus === "verified")
@@ -191,9 +190,7 @@ useEffect(() => {
     );
   }, [verificationStatus]);
 
-  // -----------------------------
-  // Handlers
-  // -----------------------------
+  // Certificate Upload
   const handleChooseFile = (file: File | null) => {
     if (!file) return;
     if (file.type !== "application/pdf") {
@@ -257,7 +254,6 @@ useEffect(() => {
       setRejectionReasons(null);
       toast.success("Submitted for admin review!");
     } catch (e: any) {
-      console.error("Submission error:", e);
       toast.error(
         e?.response?.data?.message || e?.message || "Submission failed"
       );
@@ -266,44 +262,37 @@ useEffect(() => {
     }
   };
 
-  // -----------------------------
-  // Render
-  // -----------------------------
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
       <div className="flex">
         <DoctorSidebar isVerified={isVerified} />
 
         <div className="flex-1 min-h-screen">
-          {/* Header */}
-          <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur sticky top-0 z-50">
+          <header className="border-b bg-white sticky top-0 z-50">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
               <h1 className="text-lg font-semibold">Doctor Portal</h1>
               <DoctorNavbar />
             </div>
           </header>
 
-          {/* Main */}
-          <main className="container mx-auto px-6 py-8 relative z-0 space-y-6">
-            {/* Pending Banner */}
+          <main className="container mx-auto px-6 py-8 space-y-6">
             {verificationStatus === "pending" && (
-              <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
+              <Card className="bg-white">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="w-5 h-5 text-amber-500" />
                     <h2 className="text-xl font-semibold">Under Review</h2>
                   </div>
-                  <p className="text-[#6B7280]">
-                    Your profile and certificate are being reviewed. You'll be
-                    notified once verified.
+                  <p className="text-slate-600">
+                    Your profile is under review. You’ll be notified once
+                    verified.
                   </p>
                 </CardContent>
               </Card>
             )}
 
-            {/* Rejected Banner */}
             {verificationStatus === "rejected" && (
-              <Card className="border-0 bg-rose-50 rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
+              <Card className="bg-rose-50">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -314,16 +303,11 @@ useEffect(() => {
                     </div>
                     {statusBadge}
                   </div>
-                  <p className="text-[#6B7280] mb-3">
+                  <p className="text-slate-600 mb-3">
                     Please fix the issues and resubmit.
                   </p>
-                  <ul className="space-y-2 text-sm text-[#374151] list-disc list-inside">
-                    {(
-                      rejectionReasons ?? [
-                        "Document unclear",
-                        "Missing information",
-                      ]
-                    ).map((r, i) => (
+                  <ul className="text-sm list-disc list-inside">
+                    {(rejectionReasons ?? []).map((r, i) => (
                       <li key={i}>{r}</li>
                     ))}
                   </ul>
@@ -331,133 +315,133 @@ useEffect(() => {
               </Card>
             )}
 
-            {/* VERIFIED DASHBOARD */}
             {isVerified && (
-              <section className="space-y-6">
-                {/* Welcome + status */}
-                <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
-                        <div>
-                          <h2 className="text-lg font-semibold">
-                            Welcome, {profile.displayName || user?.username}
-                          </h2>
-                          <p className="text-sm text-[#6B7280]">
-                            You're verified. Manage appointments, patients, and
-                            earnings from this dashboard.
-                          </p>
+              <>
+                <section className="space-y-6">
+                  <Card className="bg-white">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                          <div>
+                            <h2 className="text-lg font-semibold">
+                              Welcome, {profile.displayName || user?.username}
+                            </h2>
+                            <p className="text-sm text-slate-600">
+                              Manage appointments, patients and earnings.
+                            </p>
+                          </div>
                         </div>
+                        {statusBadge}
                       </div>
-                      <div>{statusBadge}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Stats + Charts */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Charts Card */}
-                  <Card className="p-5 md:col-span-2 lg:col-span-2 bg-white/90">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold">
-                        Booking & Earnings Overview
-                      </h2>
-                      <span className="text-xs text-slate-500">
-                        Last 6 months
-                      </span>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      {/* Pie Chart */}
-                      <div className="h-48">
-                        <DoctorStatusPie
-                          pending={statusChart.pending}
-                          completed={statusChart.completed}
-                          cancelled={statusChart.cancelled}
-                        />
-                      </div>
-
-                      {/* Bar Chart */}
-                      <div className="h-48">
-                        <RevenueBarChart
-                          months={dashboardStats.chart.months}
-                          income={dashboardStats.chart.earnings}
-                        />
-                      </div>
-                    </div>
+                    </CardContent>
                   </Card>
 
-                  {/* Appointments Today */}
-                  <Tile
-                    icon={<Calendar className="w-5 h-5 text-[#0EA5E9]" />}
-                    title="Appointments"
-                    value={String(dashboardStats.appointmentsToday)}
-                    hint="Today"
-                    onClick={() => navigate("/doctor/appointments")}
-                  />
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <Card className="p-5 md:col-span-2 lg:col-span-2 bg-white">
+                      <div className="flex justify-between mb-4">
+                        <h2 className="text-lg font-semibold">
+                          Booking & Earnings Overview
+                        </h2>
+                        <span className="text-xs text-slate-500">
+                          Last 6 months
+                        </span>
+                      </div>
 
-                  {/* Total Patients */}
-                  <Tile
-                    icon={<Users className="w-5 h-5 text-[#8B5CF6]" />}
-                    title="Patients"
-                    value={String(dashboardStats.totalPatients)}
-                    hint="Total"
-                    onClick={() => navigate("/doctor/patients")}
-                  />
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="h-48">
+                          <DoctorStatusPie
+                            pending={statusChart.pending}
+                            completed={statusChart.completed}
+                            cancelled={statusChart.cancelled}
+                          />
+                        </div>
 
-                  {/* Earnings This Month */}
-                  <Tile
-                    icon={<IndianRupee className="w-5 h-5 text-[#22C55E]" />}
-                    title="Earnings"
-                    value={`₹${dashboardStats.earningsThisMonth}`}
-                    hint="This month"
-                    onClick={() => navigate("/doctor/wallet")}
-                  />
-                  
-                </div>
-              </section>
-              
+                        <div className="h-48">
+                          <RevenueBarChart
+                            months={dashboardStats.chart.months}
+                            income={dashboardStats.chart.earnings}
+                          />
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Tile
+                      icon={<Calendar className="w-5 h-5 text-blue-500" />}
+                      title="Appointments"
+                      value={`${dashboardStats.appointmentsToday}`}
+                      hint="Today"
+                      onClick={() => navigate("/doctor/appointments")}
+                    />
+
+                    <Tile
+                      icon={<Users className="w-5 h-5 text-purple-500" />}
+                      title="Patients"
+                      value={`${dashboardStats.totalPatients}`}
+                      hint="Total"
+                      onClick={() => navigate("/doctor/patients")}
+                    />
+
+                    <Tile
+                      icon={
+                        <IndianRupee className="w-5 h-5 text-green-500" />
+                      }
+                      title="Earnings"
+                      value={`₹${dashboardStats.earningsThisMonth}`}
+                      hint="This month"
+                      onClick={() => navigate("/doctor/wallet")}
+                    />
+                  </div>
+                </section>
+
+                {/* ✅ PET TRENDS ONLY FOR VERIFIED DOCTORS */}
+                <Card className="p-5">
+                  <h2 className="text-lg font-semibold mb-3">
+                    Most Booked Pet Categories
+                  </h2>
+
+                  {petTrends.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No booking trends found.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {petTrends.map((t, i) => (
+                        <li
+                          key={i}
+                          className="flex justify-between p-2 bg-slate-50 rounded-lg border"
+                        >
+                          <span className="font-medium">
+                            {t.categoryName}
+                          </span>
+                          <span className="text-slate-600">
+                            {t.count} bookings
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+              </>
             )}
-            <Card className="p-5">
-  <h2 className="text-lg font-semibold mb-3">Most Booked Pet Categories</h2>
 
-  {petTrends.length === 0 ? (
-    <p className="text-sm text-slate-500">No booking trends found.</p>
-  ) : (
-    <ul className="space-y-2">
-      {petTrends.map((t, i) => (
-        <li
-          key={i}
-          className="flex justify-between p-2 bg-slate-50 rounded-lg border"
-        >
-          <span className="font-medium">{t.categoryName}</span>
-          <span className="text-slate-600">{t.count} bookings</span>
-        </li>
-      ))}
-    </ul>
-  )}
-</Card>
-
-
-            {/* VERIFICATION / PROFILE FORM */}
             {canShowForm && (
               <section className="mt-4">
-                <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
+                <Card className="bg-white">
                   <CardContent className="p-6">
                     <h3 className="font-semibold text-lg mb-4">
                       {verificationStatus === "rejected"
                         ? "Update Your Profile"
                         : "Complete Your Profile"}
                     </h3>
+
                     <div className="space-y-5">
-                      {/* Certificate Upload */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Medical Certificate (PDF){" "}
                           <span className="text-rose-500">*</span>
                         </label>
-                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-[#E5E7EB] bg-white cursor-pointer hover:bg-gray-50">
+                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed bg-white cursor-pointer hover:bg-gray-50">
                           <Upload className="w-4 h-4" />
                           <span className="text-sm">
                             {certificateFile?.name || "Choose PDF"}
@@ -473,7 +457,6 @@ useEffect(() => {
                         </label>
                       </div>
 
-                      {/* Basic Info */}
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium block mb-2">
@@ -490,9 +473,9 @@ useEffect(() => {
                               }))
                             }
                             className="w-full border rounded-lg px-3 py-2 text-sm"
-                            placeholder="Dr. Jane Doe"
                           />
                         </div>
+
                         <div>
                           <label className="text-sm font-medium block mb-2">
                             License Number{" "}
@@ -508,9 +491,9 @@ useEffect(() => {
                               }))
                             }
                             className="w-full border rounded-lg px-3 py-2 text-sm"
-                            placeholder="TCMC/123456"
                           />
                         </div>
+
                         <div>
                           <label className="text-sm font-medium block mb-2">
                             Experience (years){" "}
@@ -530,9 +513,9 @@ useEffect(() => {
                               }))
                             }
                             className="w-full border rounded-lg px-3 py-2 text-sm"
-                            placeholder="8"
                           />
                         </div>
+
                         <div>
                           <label className="text-sm font-medium block mb-2">
                             Consultation Fee (₹){" "}
@@ -552,12 +535,10 @@ useEffect(() => {
                               }))
                             }
                             className="w-full border rounded-lg px-3 py-2 text-sm"
-                            placeholder="1200"
                           />
                         </div>
                       </div>
 
-                      {/* Specialties */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Specialties <span className="text-rose-500">*</span>
@@ -578,6 +559,7 @@ useEffect(() => {
                               </button>
                             </span>
                           ))}
+
                           <input
                             type="text"
                             value={specialtyInput}
@@ -589,7 +571,6 @@ useEffect(() => {
                         </div>
                       </div>
 
-                      {/* Bio */}
                       <div>
                         <label className="text-sm font-medium block mb-2">
                           Bio <span className="text-rose-500">*</span>
@@ -608,11 +589,10 @@ useEffect(() => {
                         />
                       </div>
 
-                      {/* Submit */}
                       <Button
                         onClick={handleSubmitAll}
                         disabled={!isFormComplete() || isSubmitting}
-                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 inline-flex items-center gap-2"
+                        className="bg-green-600 text-white p-2 rounded-lg"
                       >
                         <Send className="w-4 h-4" />
                         {isSubmitting ? "Submitting..." : "Submit for Review"}
@@ -645,19 +625,19 @@ function Tile({
   return (
     <button
       onClick={onClick}
-      className="text-left group rounded-2xl w-full border-0 bg-white/80 backdrop-blur shadow-[0_10px_25px_rgba(16,24,40,0.06)] ring-1 ring-black/5 p-5 hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition"
+      className="text-left rounded-2xl w-full bg-white shadow p-5 hover:shadow-xl transition"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#F3F4F6] flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
             {icon}
           </div>
           <div>
-            <p className="text-sm text-[#6B7280]">{title}</p>
+            <p className="text-sm text-gray-600">{title}</p>
             <p className="text-xl font-semibold">{value}</p>
           </div>
         </div>
-        <span className="text-xs text-[#9CA3AF]">{hint}</span>
+        <span className="text-xs text-gray-400">{hint}</span>
       </div>
     </button>
   );

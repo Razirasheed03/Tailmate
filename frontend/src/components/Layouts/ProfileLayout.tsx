@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { NavLink, Outlet } from "react-router-dom";
-import { User, Shield, PawPrint, Menu, X,CalendarRange, Wallet } from "lucide-react";
+import { User, Shield, PawPrint, Menu, X,CalendarRange, Wallet, List } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import clsx from "clsx";
 
@@ -89,12 +89,13 @@ export default function ProfileLayout() {
             
             <nav className="p-3 flex flex-col gap-1.5">
               <SideNavItem to="personal" icon={User} label="Personal" end />
-              <SideNavItem to="security" icon={Shield} label="Security" />
+              {/* <SideNavItem to="security" icon={Shield} label="Security" /> */}
               <SideNavItem to="pets" icon={PawPrint} label="Pet Profiles" />
               <SideNavItem to="listings" icon={PawPrint} label="Listings" />
-              <SideNavItem to="Bookings" icon={CalendarRange} label="Bookings" />
-    <SideNavItem to="matchmaking" icon={PawPrint} label="Matchmaking" />
-              <SideNavItem to="Wallet" icon={Wallet} label="Wallet" />
+              <SideNavItem to="bookings" icon={CalendarRange} label="Bookings" />
+              <SideNavItem to="consultations" icon={List} label="Consultations" />
+              <SideNavItem to="matchmaking" icon={PawPrint} label="Matchmaking" />
+              <SideNavItem to="wallet" icon={Wallet} label="Wallet" />
             </nav>
           </div>
         </aside>
@@ -161,6 +162,36 @@ export default function ProfileLayout() {
                 to="pets"
                 icon={PawPrint}
                 label="Pet Profiles"
+                onClick={() => setOpen(false)}
+              />
+              <SideNavItem
+                to="listings"
+                icon={PawPrint}
+                label="Listings"
+                onClick={() => setOpen(false)}
+              />
+              <SideNavItem
+                to="bookings"
+                icon={CalendarRange}
+                label="Bookings"
+                onClick={() => setOpen(false)}
+              />
+              <SideNavItem
+                to="consultations"
+                icon={List}
+                label="Consultations"
+                onClick={() => setOpen(false)}
+              />
+              <SideNavItem
+                to="matchmaking"
+                icon={PawPrint}
+                label="Matchmaking"
+                onClick={() => setOpen(false)}
+              />
+              <SideNavItem
+                to="wallet"
+                icon={Wallet}
+                label="Wallet"
                 onClick={() => setOpen(false)}
               />
             </nav>

@@ -5,8 +5,8 @@ import {
     Layers,
     Calendar,
     DollarSign,
-    Star,
     Settings,
+    List,
 } from "lucide-react";
 
 type SidebarItem = {
@@ -19,11 +19,11 @@ type SidebarItem = {
 
 const items: SidebarItem[] = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: "/doctor" },
-    { key: "profile", label: "Profile", icon: Settings, to: "/doctor/profile" }, // Always accessible
+    { key: "profile", label: "Profile", icon: Settings, to: "/doctor/profile" },
     { key: "sessions", label: "Sessions", icon: Layers, to: "/doctor/appointments", requiresVerified: true },
     { key: "bookings", label: "Bookings", icon: Calendar, to: "/doctor/sessions", requiresVerified: true },
     { key: "wallet", label: "Earnings", icon: DollarSign, to: "/doctor/wallet", requiresVerified: true },
-    { key: "reviews", label: "Reviews", icon: Star, to: "/doctor/reviews", requiresVerified: true },
+    { key: "consultations", label: "consultations", icon: List, to: "/doctor/consultations", requiresVerified: true },
 ];
 
 export default function DoctorSidebar({ isVerified }: { isVerified: boolean }) {

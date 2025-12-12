@@ -1,7 +1,7 @@
 // src/components/layout/Navbar.tsx
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { PawPrint, ChevronDown, LogOut, User } from "lucide-react";
+import { PawPrint, ChevronDown, LogOut, User, MessageSquare } from "lucide-react";
 import { Button } from "@/components/UiComponents/button";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
@@ -101,6 +101,15 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => navigate("/chat")}
+                  className="flex items-center gap-2 text-[#374151]"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Messages
+                </Button>
                 <div className="relative">
                   <Button
                     size="sm"
@@ -201,6 +210,16 @@ export default function Navbar() {
 
               {isAuthenticated ? (
                 <>
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/chat");
+                    }}
+                    className="px-3 py-2 rounded-md text-left text-sm hover:bg-white/60 flex items-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Messages
+                  </button>
                   <button
                     onClick={() => {
                       setOpen(false);
