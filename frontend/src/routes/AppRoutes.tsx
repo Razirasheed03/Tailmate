@@ -47,6 +47,7 @@ import Consultations from "@/pages/user/Profile/Consultations";
 import DoctorConsultationsPage from "@/pages/doctor/Consultations";
 import UserConsultationCallPage from "@/pages/user/ConsultationCallPage";
 import DoctorConsultationCallPage from "@/pages/doctor/ConsultationCallPage";
+import About from "@/pages/user/About";
 
 export const router = createBrowserRouter([
   // Public routes
@@ -108,6 +109,10 @@ export const router = createBrowserRouter([
   {
     path: "/vets",
     element: <Vets />
+  },
+  {
+    path:"/about",
+    element:<About/>
   },
   {
     path: "/vets/:id",
