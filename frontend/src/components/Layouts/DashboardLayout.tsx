@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import Sidebar from '@/components/UiComponents/Sidebar';
-import Navbar from '@/components/UiComponents/AdminNavbar';
+// src/components/Layouts/DashboardLayout.tsx
+
+import React, { useState } from "react";
+import Sidebar from "@/components/UiComponents/Sidebar";
+import Navbar from "@/components/UiComponents/AdminNavbar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -8,24 +10,21 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Content area */}
       <div className="lg:ml-64 flex flex-col min-h-screen">
-        <Navbar 
+        <Navbar
           title={title}
-          onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onMobileMenuToggle={() => setSidebarOpen(true)}
         />
-        
-        <main className="flex-1 p-4 lg:p-6">
+
+        <main className="flex-1 p-4 lg:p-6 pt-24 lg:pt-28">
           {children}
         </main>
       </div>
