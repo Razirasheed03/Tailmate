@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { paymentService } from "@/services/paymentService";
-import { doctorService } from "@/services/doctorService";
+// import { doctorService } from "@/services/doctorService";
 import { payoutService } from "@/services/payoutService";
 
 function formatINR(amount: number) {
@@ -22,98 +22,98 @@ type PaymentRow = {
   createdAt: string;
 };
 
-type PayoutRecord = {
-  _id: string;
-  amount: number;
-  createdAt: string;
-  status: "pending" | "paid" | "failed";
-};
+// type PayoutRecord = {
+//   _id: string;
+//   amount: number;
+//   createdAt: string;
+//   status: "pending" | "paid" | "failed";
+// };
 
-function PayoutSection({
-  balance,
-  onPayout,
-}: {
-  balance: number;
-  onPayout: () => void;
-}) {
-  const [amount, setAmount] = useState(Math.floor(balance));
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+// function PayoutSection({
+//   balance,
+//   onPayout,
+// }: {
+//   balance: number;
+//   onPayout: () => void;
+// }) {
+//   const [amount, setAmount] = useState(Math.floor(balance));
+//   const [loading, setLoading] = useState(false);
+//   const [success, setSuccess] = useState<string | null>(null);
+//   const [error, setError] = useState<string | null>(null);
 
-  async function handleWithdraw() {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      await payoutService.requestPayout(amount);
-      setSuccess("Withdrawal initiated!");
-      setAmount(Math.floor(balance));
-      onPayout();
-    } catch (err: any) {
-      setError(err?.message || "Failed to withdraw");
-    } finally {
-      setLoading(false);
-    }
-  }
+//   async function handleWithdraw() {
+//     setLoading(true);
+//     setError(null);
+//     setSuccess(null);
+//     try {
+//       await payoutService.requestPayout(amount);
+//       setSuccess("Withdrawal initiated!");
+//       setAmount(Math.floor(balance));
+//       onPayout();
+//     } catch (err: any) {
+//       setError(err?.message || "Failed to withdraw");
+//     } finally {
+//       setLoading(false);
+//     }
+//   }
 
-  return (
-    <div className="bg-white border rounded p-4 mb-6">
-      <h3 className="text-sm font-semibold mb-3">Withdraw Earnings</h3>
-      <div className="mb-2">
-        <input
-          type="number"
-          min={0}
-          max={balance}
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-          className="border px-2 py-1 rounded w-32"
-        />
-      </div>
-      <button
-        className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium"
-        disabled={loading || amount < 1 || amount > balance}
-        onClick={handleWithdraw}
-      >
-        {loading ? "Processing..." : "Withdraw"}
-      </button>
-      {error && <div className="mt-2 text-sm text-rose-600">{error}</div>}
-      {success && (
-        <div className="mt-2 text-sm text-emerald-600">{success}</div>
-      )}
-    </div>
-  );
-}
+//   return (
+//     <div className="bg-white border rounded p-4 mb-6">
+//       <h3 className="text-sm font-semibold mb-3">Withdraw Earnings</h3>
+//       <div className="mb-2">
+//         <input
+//           type="number"
+//           min={0}
+//           max={balance}
+//           value={amount}
+//           onChange={(e) => setAmount(Number(e.target.value))}
+//           className="border px-2 py-1 rounded w-32"
+//         />
+//       </div>
+//       <button
+//         className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium"
+//         disabled={loading || amount < 1 || amount > balance}
+//         onClick={handleWithdraw}
+//       >
+//         {loading ? "Processing..." : "Withdraw"}
+//       </button>
+//       {error && <div className="mt-2 text-sm text-rose-600">{error}</div>}
+//       {success && (
+//         <div className="mt-2 text-sm text-emerald-600">{success}</div>
+//       )}
+//     </div>
+//   );
+// }
 
-function PayoutHistory({ records }: { records: PayoutRecord[] }) {
-  return (
-    <div className="bg-white border rounded p-4 mb-6">
-      <div className="text-sm font-semibold mb-2">Payout History</div>
-      <ul className="divide-y">
-        {records.map((it) => (
-          <li key={it._id} className="py-3 flex items-center justify-between">
-            <span className="text-sm">
-              {new Date(it.createdAt).toLocaleString()}
-            </span>
-            <span className="font-medium">
-              {formatINR(it.amount)}{" "}
-              {it.status === "paid"
-                ? "✅"
-                : it.status === "failed"
-                ? "❌"
-                : "⏳"}
-            </span>
-          </li>
-        ))}
-        {records.length === 0 && (
-          <li className="py-6 text-sm text-gray-500 text-center">
-            No payout history yet
-          </li>
-        )}
-      </ul>
-    </div>
-  );
-}
+// function PayoutHistory({ records }: { records: PayoutRecord[] }) {
+//   return (
+//     <div className="bg-white border rounded p-4 mb-6">
+//       <div className="text-sm font-semibold mb-2">Payout History</div>
+//       <ul className="divide-y">
+//         {records.map((it) => (
+//           <li key={it._id} className="py-3 flex items-center justify-between">
+//             <span className="text-sm">
+//               {new Date(it.createdAt).toLocaleString()}
+//             </span>
+//             <span className="font-medium">
+//               {formatINR(it.amount)}{" "}
+//               {it.status === "paid"
+//                 ? "✅"
+//                 : it.status === "failed"
+//                 ? "❌"
+//                 : "⏳"}
+//             </span>
+//           </li>
+//         ))}
+//         {records.length === 0 && (
+//           <li className="py-6 text-sm text-gray-500 text-center">
+//             No payout history yet
+//           </li>
+//         )}
+//       </ul>
+//     </div>
+//   );
+// }
 
 export default function DoctorWallet() {
   const [items, setItems] = useState<PaymentRow[]>([]);
@@ -121,12 +121,10 @@ export default function DoctorWallet() {
   const [err, setErr] = useState<string | null>(null);
 
   // Stripe onboarding state
-  const [stripeUrl, setStripeUrl] = useState<string | null>(null);
-  const [alreadyConnected, setAlreadyConnected] = useState<boolean>(false);
-  const [checkingStripe, setCheckingStripe] = useState<boolean>(false);
-
-  // Payout history
-  const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
+  // const [stripeUrl, setStripeUrl] = useState<string | null>(null);
+  // const [alreadyConnected, setAlreadyConnected] = useState<boolean>(false);
+  // const [checkingStripe, setCheckingStripe] = useState<boolean>(false);
+  // const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const total = useMemo(
@@ -162,34 +160,34 @@ export default function DoctorWallet() {
     };
   }, [refreshKey]);
 
-  // Check Stripe connection status
-  useEffect(() => {
-    setCheckingStripe(true);
-    doctorService
-      .startStripeOnboarding()
-      .then((result) => {
-        setStripeUrl(result.url);
-        setAlreadyConnected(result.alreadyConnected);
-        setCheckingStripe(false);
-      })
-      .catch((error) => {
-        setCheckingStripe(false);
-      });
-  }, []);
+  // // Check Stripe connection status
+  // useEffect(() => {
+  //   setCheckingStripe(true);
+  //   doctorService
+  //     .startStripeOnboarding()
+  //     .then((result) => {
+  //       setStripeUrl(result.url);
+  //       setAlreadyConnected(result.alreadyConnected);
+  //       setCheckingStripe(false);
+  //     })
+  //     .catch((error) => {
+  //       setCheckingStripe(false);
+  //     });
+  // }, []);
 
-  // Load payout history
-  useEffect(() => {
-    (async () => {
-      try {
-        const out = await payoutService.listPayouts();
-        setPayouts(Array.isArray(out) ? out : []);
-      } catch {}
-    })();
-  }, [refreshKey]);
+  // // Load payout history
+  // useEffect(() => {
+  //   (async () => {
+  //     try {
+  //       const out = await payoutService.listPayouts();
+  //       setPayouts(Array.isArray(out) ? out : []);
+  //     } catch {}
+  //   })();
+  // }, [refreshKey]);
 
-  function handlePayoutComplete() {
-    setRefreshKey((k) => k + 1); // reload both payments and payouts
-  }
+  // function handlePayoutComplete() {
+  //   setRefreshKey((k) => k + 1); // reload both payments and payouts
+  // }
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
@@ -215,8 +213,8 @@ export default function DoctorWallet() {
             </div>
 
             {/* Stripe Onboarding Section */}
-            {/* Stripe Onboarding Section */}
-            <div className="mb-6 bg-white border rounded p-4">
+
+            {/* <div className="mb-6 bg-white border rounded p-4">
               <h3 className="text-sm font-semibold mb-3">Payout Setup</h3>
 
               {checkingStripe ? (
@@ -268,19 +266,27 @@ export default function DoctorWallet() {
                 </div>
               ) : null}
             </div>
-
-            {/* Payout/Withdraw Section - Only show if Stripe is connected */}
             {alreadyConnected && (
               <PayoutSection balance={total} onPayout={handlePayoutComplete} />
             )}
             {alreadyConnected && <PayoutHistory records={payouts} />}
-
-            {/* Payout/Withdraw Section - Only show if Stripe is connected */}
             {alreadyConnected && (
               <PayoutSection balance={total} onPayout={handlePayoutComplete} />
             )}
-            {/* Payout History */}
-            {alreadyConnected && <PayoutHistory records={payouts} />}
+  
+            {alreadyConnected && <PayoutHistory records={payouts} />} */}
+            {/* Payout Setup (Temporarily Disabled) */}
+<div className="mb-6 bg-white border rounded p-4">
+  <h3 className="text-sm font-semibold mb-3">Payout Setup</h3>
+
+  <div className="text-amber-700 text-sm bg-amber-50 border border-amber-200 rounded px-3 py-2">
+    Payouts are currently unavailable.  
+    We are in the Stripe registration and verification process.
+    <br />
+    Please check back later.
+  </div>
+</div>
+
 
             {/* Recent Payments */}
             <div className="bg-white border rounded p-4">

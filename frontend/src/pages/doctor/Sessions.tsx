@@ -81,6 +81,7 @@ export default function DoctorSessions() {
           <div className="max-w-6xl mx-auto px-4 py-6">
             <header className="flex items-center gap-3 mb-4">
               <h1 className="text-xl font-semibold">My Sessions</h1>
+              
               <nav className="flex gap-2 ml-6">
                 {(["upcoming", "today", "past"] as TabKey[]).map((t) => (
                   <button

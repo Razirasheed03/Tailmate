@@ -6,6 +6,7 @@ import { doctorService } from "@/services/doctorService";
 import { useAuth } from "@/context/AuthContext";
 import { Info, Loader2, Camera, Pencil, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import DoctorNavbar from "@/components/UiComponents/DoctorNavbar";
 
 type VerificationStatus = "pending" | "verified" | "rejected";
 
@@ -228,12 +229,7 @@ export default function Profile() {
           <header className="border-b border-[#EEF2F7] bg-white/70 backdrop-blur">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
               <h1 className="text-lg font-semibold">Profile</h1>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-[#6B7280]">
-                  {user?.username ?? "doctor"}
-                </span>
-                {statusBadge}
-              </div>
+               <DoctorNavbar />
             </div>
           </header>
 
