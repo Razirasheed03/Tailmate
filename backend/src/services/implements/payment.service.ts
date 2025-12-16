@@ -4,7 +4,12 @@ import Stripe from "stripe";
 import { stripe } from "../../utils/stripe";
 import { PaymentRepository } from "../../repositories/implements/payment.repository";
 import { Booking } from "../../schema/booking.schema";
-
+interface PaginationQuery {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+}
 export type CreateCheckoutSessionResponse = { url: string | null }; // session.url may be null in some cases [Stripe]
 export type WebhookProcessResult =
   | { handled: true; type: "checkout.session.completed"; paymentId?: string }
@@ -98,7 +103,8 @@ export class PaymentService {
     return { handled: false, type: event.type };
   }
 
-  async doctorPayments(doctorId: string): Promise<any> {
-    return await this.repo.byDoctor(doctorId);
-  }
+
+async doctorPayments(doctorId: string, query: PaginationQuery = {}): Promise<any> {
+  return await this.repo.byDoctorPaginated(doctorId, query);
+}
 }

@@ -27,10 +27,23 @@ export const PaymentController = {
     }
   },
 
-  doctorPayments: async (req: Request, res: Response) => {
-    const did = (req as any)?.user?._id?.toString() || (req as any)?.user?.id;
-    if (!did) return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
-    const data = await svc.doctorPayments(did);
-    return ResponseHelper.ok(res, data, HttpResponse.RESOURCE_FOUND);
-  },
+doctorPayments: async (req: Request, res: Response) => {
+  const did = (req as any)?.user?._id?.toString() || (req as any)?.user?.id;
+  if (!did) return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+
+  // Extract pagination params from query
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const sortBy = (req.query.sortBy as string) || 'createdAt';
+  const order = (req.query.order as 'asc' | 'desc') || 'desc';
+
+  const result = await svc.doctorPayments(did, {
+    page,
+    limit,
+    sortBy,
+    order
+  });
+
+  return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
+},
 };
