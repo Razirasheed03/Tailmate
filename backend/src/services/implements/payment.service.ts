@@ -1,22 +1,21 @@
 // services/implements/payment.service.ts
+
 import { Request } from "express";
 import Stripe from "stripe";
 import { stripe } from "../../utils/stripe";
-import { PaymentRepository } from "../../repositories/implements/payment.repository";
+import { IPaymentRepository } from "../../repositories/interfaces/payment.repository.interface";
 import { Booking } from "../../schema/booking.schema";
-interface PaginationQuery {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  order?: 'asc' | 'desc';
-}
-export type CreateCheckoutSessionResponse = { url: string | null }; // session.url may be null in some cases [Stripe]
-export type WebhookProcessResult =
-  | { handled: true; type: "checkout.session.completed"; paymentId?: string }
-  | { handled: false; type: string }
+import { 
+  IPaymentService, 
+  CreateCheckoutSessionResponse, 
+  WebhookProcessResult,
+  PaginationQuery 
+} from "../interfaces/payment.service.interface";
+import { PaginatedResult } from "../../repositories/interfaces/payment.repository.interface";
+import { IPayment } from "../../models/implements/payment.model";
 
-export class PaymentService {
-  constructor(private repo = new PaymentRepository()) {}
+export class PaymentService implements IPaymentService {
+  constructor(private repo: IPaymentRepository) {}
 
   async createCheckoutSession(
     payload: { bookingId: string },
@@ -24,7 +23,9 @@ export class PaymentService {
   ): Promise<CreateCheckoutSessionResponse> {
     const booking = await Booking.findById(payload.bookingId).lean();
     if (!booking) throw new Error("Booking not found");
-    if (String(booking.patientId) !== String(userId)) throw new Error("Forbidden");
+    if (String(booking.patientId) !== String(userId)) {
+      throw new Error("Forbidden");
+    }
 
     const amount = Number(booking.amount || 0);
     const platformFee = Math.round(amount * 0.20);
@@ -74,6 +75,7 @@ export class PaymentService {
   async processWebhook(req: Request): Promise<WebhookProcessResult> {
     const sig = req.headers["stripe-signature"] as string;
     let event: Stripe.Event;
+    
     try {
       event = stripe.webhooks.constructEvent(
         req.body,
@@ -88,6 +90,7 @@ export class PaymentService {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentId = session.metadata?.paymentDbId as string | undefined;
+      
       if (paymentId) {
         const paymentIntentId = String(session.payment_intent || "");
         await this.repo.update(paymentId, {
@@ -96,15 +99,21 @@ export class PaymentService {
           receiptUrl: session.url || "",
         });
       }
-      return { handled: true, type: "checkout.session.completed", paymentId };
+      
+      return { 
+        handled: true, 
+        type: "checkout.session.completed", 
+        paymentId 
+      };
     }
-
 
     return { handled: false, type: event.type };
   }
 
-
-async doctorPayments(doctorId: string, query: PaginationQuery = {}): Promise<any> {
-  return await this.repo.byDoctorPaginated(doctorId, query);
-}
+  async doctorPayments(
+    doctorId: string, 
+    query: PaginationQuery = {}
+  ): Promise<PaginatedResult<IPayment>> {
+    return await this.repo.byDoctorPaginated(doctorId, query);
+  }
 }
