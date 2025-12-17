@@ -1,8 +1,9 @@
 //repositories/implements/marketplace.repository.ts
 import { Model, Types } from 'mongoose';
 import { MarketplaceListing } from '../../schema/marketplaceListing.schema';
+import { IMarketplaceRepository } from '../interfaces/marketplace.repository.interface';
 
-export class MarketplaceRepository {
+export class MarketplaceRepository implements IMarketplaceRepository {
   constructor(private readonly model: Model<any> = MarketplaceListing) {}
 
   async create(userId: string, body: any) {

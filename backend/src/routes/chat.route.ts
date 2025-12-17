@@ -1,18 +1,17 @@
 import { Router } from "express";
 import { authJwt } from "../middlewares/authJwt";
 import { asyncHandler } from "../utils/asyncHandler";
-import { ChatController } from "../controllers/Implements/chat.controller";
+import { chatController } from "../dependencies/chat.di";
 
 const router = Router();
-const c = new ChatController();
 
 router.use(authJwt);
 
-router.post("/start", asyncHandler(c.startChat));
-router.get("/rooms", asyncHandler(c.listRooms));
-router.get("/messages/:roomId", asyncHandler(c.listMessages));
-router.post("/send", asyncHandler(c.sendMessage));
-router.post("/delivered/:roomId", asyncHandler(c.markDelivered));
-router.post("/seen/:roomId", asyncHandler(c.markSeen));
+router.post("/start", asyncHandler(chatController.startChat));
+router.get("/rooms", asyncHandler(chatController.listRooms));
+router.get("/messages/:roomId", asyncHandler(chatController.listMessages));
+router.post("/send", asyncHandler(chatController.sendMessage));
+router.post("/delivered/:roomId", asyncHandler(chatController.markDelivered));
+router.post("/seen/:roomId", asyncHandler(chatController.markSeen));
 
 export default router;

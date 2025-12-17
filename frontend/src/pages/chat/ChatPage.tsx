@@ -52,7 +52,12 @@ export default function ChatPage() {
     });
 
     newSocket.on('chat:receive_message', (message) => {
-      setMessages((prev) => [...prev, message]);
+      // Add duplicate detection - check if message already exists by _id
+      setMessages((prev) => {
+        const exists = prev.some(m => m._id === message._id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
     });
 
     newSocket.on('chat:delivered', (data) => {
@@ -134,11 +139,12 @@ export default function ChatPage() {
       try {
         setIsLoadingMessages(true);
         const data = await chatService.listMessages(selectedRoomId, 1, 50);
-        setMessages(data.data || []);
+        // Backend returns { messages: [], total, page, limit }
+        setMessages(data.messages || []);
 
         // Join room via socket (but don't mark as seen yet)
         if (socket) {
-          socket.emit('chat:join_room', selectedRoomId);
+          socket.emit('chat:join', { roomId: selectedRoomId });
         }
       } catch (err) {
         console.error('Failed to load messages:', err);
@@ -152,7 +158,7 @@ export default function ChatPage() {
     // Cleanup: leave room when unmounting or switching rooms
     return () => {
       if (socket) {
-        socket.emit('chat:leave_room', selectedRoomId);
+        socket.emit('chat:leave', { roomId: selectedRoomId });
       }
     };
   }, [selectedRoomId, currentUserId, socket]);

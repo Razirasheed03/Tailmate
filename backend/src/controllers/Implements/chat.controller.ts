@@ -2,10 +2,16 @@ import { Request, Response, NextFunction } from "express";
 import { ChatService } from "../../services/implements/chat.service";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
-
-const svc = new ChatService();
+import { IChatService } from "../../services/interfaces/chat.service.interface";
 
 export class ChatController {
+  constructor(private readonly chatService: IChatService) {}
+  
+  // Public getter for DI access (socket layer)
+  public getService(): IChatService {
+    return this.chatService;
+  }
+
   startChat = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?._id?.toString();
@@ -21,7 +27,7 @@ export class ChatController {
         );
       }
 
-      const room = await svc.startChat(userId, listingId, receiverId);
+      const room = await this.chatService.startChat(userId, listingId, receiverId);
       return ResponseHelper.ok(res, room, "Chat room created or retrieved");
     } catch (err) {
       next(err);
@@ -34,7 +40,7 @@ export class ChatController {
       if (!userId)
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
 
-      const rooms = await svc.listRooms(userId);
+      const rooms = await this.chatService.listRooms(userId);
       return ResponseHelper.ok(res, rooms, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -55,7 +61,7 @@ export class ChatController {
         return ResponseHelper.badRequest(res, "roomId is required");
       }
 
-      const result = await svc.listMessages(userId, roomId, page, limit);
+      const result = await this.chatService.listMessages(userId, roomId, page, limit);
       return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -77,7 +83,7 @@ export class ChatController {
         );
       }
 
-      const message = await svc.sendMessage(userId, roomId, content);
+      const message = await this.chatService.sendMessage(userId, roomId, content);
       return ResponseHelper.created(res, message, "Message sent");
     } catch (err) {
       next(err);
@@ -96,7 +102,7 @@ export class ChatController {
         return ResponseHelper.badRequest(res, "roomId is required");
       }
 
-      const result = await svc.markDelivered(userId, roomId);
+      const result = await this.chatService.markDelivered(userId, roomId);
       return ResponseHelper.ok(res, result, "Messages marked as delivered");
     } catch (err) {
       next(err);
@@ -115,7 +121,7 @@ export class ChatController {
         return ResponseHelper.badRequest(res, "roomId is required");
       }
 
-      const result = await svc.markSeen(userId, roomId);
+      const result = await this.chatService.markSeen(userId, roomId);
       return ResponseHelper.ok(res, result, "Messages marked as seen");
     } catch (err) {
       next(err);

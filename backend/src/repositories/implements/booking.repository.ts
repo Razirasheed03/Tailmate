@@ -1,8 +1,9 @@
 // backend/src/repositories/implements/booking.repository.ts
 import { Model, Types } from "mongoose";
 import { Booking, type BookingAttrs, type BookingLean } from "../../schema/booking.schema";
+import { IBookingRepository } from "../interfaces/booking.repository.interface";
 
-export class BookingRepository {
+export class BookingRepository implements IBookingRepository{
   constructor(private readonly model: Model<BookingAttrs> = Booking) {}
 
   async create(attrs: {

@@ -1,5 +1,6 @@
 // backend/src/services/implements/marketplace.service.ts
 import { MarketplaceRepository } from "../../repositories/implements/marketplace.repository";
+import { IMarketplaceService } from "../interfaces/marketplace.service.interface";
 
 export type MarketplaceCreatePayload = {
   petId: string;
@@ -41,7 +42,7 @@ export type MarketStatus =
   | "sold"
   | "adopted";
 
-export class MarketplaceService {
+export class MarketplaceService implements IMarketplaceService{
   constructor(private readonly _repo = new MarketplaceRepository()) {}
 
 async create(userId: string, payload: MarketplaceCreatePayload): Promise<any> {

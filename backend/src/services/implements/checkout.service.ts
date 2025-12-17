@@ -1,11 +1,18 @@
-// backend/src/services/implements/checkout.service.ts
+// services/implements/checkout.service.ts
+
 import { Types } from "mongoose";
-import { DoctorPublicRepository } from "../../repositories/implements/doctorPublic.repository";
+import { IDoctorPublicRepository } from "../../repositories/interfaces/doctorPublic.repository.interface";
 import { generateBookingNumber } from "../../utils/generateBookingNumber";
 import { Booking } from "../../schema/booking.schema";
 import { stripe } from "../../utils/stripe";
-
-type UIMode = "video" | "audio" | "inPerson";
+import {
+  ICheckoutService,
+  QuoteInput,
+  QuoteOutput,
+  CreateCheckoutInput,
+  CreateCheckoutResult,
+  UIMode,
+} from "../interfaces/checkout.service.interface";
 
 function toUTCDate(date: string, time: string) {
   const d = new Date(`${date}T00:00:00Z`);
@@ -13,42 +20,7 @@ function toUTCDate(date: string, time: string) {
   d.setUTCHours(h || 0, m || 0, 0, 0);
   return d;
 }
-type QuoteRequest = {
-  doctorId: string;
-  date: string; // ISO-YYYY-MM-DD
-  time: string; // HH:mm
-  durationMins: number;
-  mode: UIMode;
-  baseFee?: number;
-};
-type QuoteResponse = {
-  amount: number;
-  tax: number;
-  discount: number;
-  totalAmount: number;
-  currency: "INR";
-};
-type CreateCheckoutRequest = {
-  doctorId: string;
-  date: string; // ISO-YYYY-MM-DD
-  time: string; // HH:mm
-  durationMins: number;
-  mode: UIMode;
-  amount: number; // expected fee
-  currency: string; // e.g., 'INR'
-  petName: string;
-  notes?: string;
-  paymentMethod: string;
-  petId?: string;
-};
-type CreateCheckoutResponse = {
-  bookingId: string;
-  redirectUrl: string | null;
-};
-type MockPayResponse = {
-  bookingId: string;
-  status: "pending" | "paid" | "canceled" | "expired";
-};
+
 type GeneratedSlot = {
   date: string;
   time: string;
@@ -56,8 +28,9 @@ type GeneratedSlot = {
   modes: UIMode[];
   fee?: number;
 };
-export class CheckoutService {
-  constructor(private readonly pub = new DoctorPublicRepository()) {}
+
+export class CheckoutService implements ICheckoutService {
+  constructor(private readonly pub: IDoctorPublicRepository) {}
 
   private async verifyGeneratedSlot(
     doctorId: string,
@@ -72,13 +45,10 @@ export class CheckoutService {
       if (diffMin < opts.minLeadMinutes) return null;
     }
 
-    const gen: GeneratedSlot[] = await this.pub.listGeneratedAvailability(
-      doctorId,
-      {
-        from: sel.date,
-        to: sel.date,
-      }
-    );
+    const gen = await this.pub.listGeneratedAvailability(doctorId, {
+      from: sel.date,
+      to: sel.date,
+    });
 
     const match = gen.find(
       (s) =>
@@ -100,16 +70,11 @@ export class CheckoutService {
     return conflict ? null : match;
   }
 
-  async getQuote(
-    userId: string,
-    payload: QuoteRequest
-  ): Promise<QuoteResponse> {
-    const { doctorId, date, time, durationMins, mode, baseFee } =
-      payload || ({} as QuoteRequest);
+  async getQuote(userId: string, payload: QuoteInput): Promise<QuoteOutput> {
+    const { doctorId, date, time, durationMins, mode, baseFee } = payload || ({} as QuoteInput);
+    
     if (!doctorId || !date || !time || !durationMins || !mode) {
-      throw Object.assign(new Error("Missing required fields"), {
-        status: 400,
-      });
+      throw Object.assign(new Error("Missing required fields"), { status: 400 });
     }
 
     const match = await this.verifyGeneratedSlot(
@@ -117,10 +82,9 @@ export class CheckoutService {
       { date, time, durationMins: Number(durationMins), mode },
       { minLeadMinutes: 30 }
     );
+    
     if (!match) {
-      throw Object.assign(new Error("Selected slot is not available"), {
-        status: 400,
-      });
+      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
     }
 
     const fee = Number(match.fee ?? baseFee ?? 0);
@@ -133,8 +97,8 @@ export class CheckoutService {
 
   async createCheckout(
     userId: string,
-    payload: CreateCheckoutRequest
-  ): Promise<CreateCheckoutResponse> {
+    payload: CreateCheckoutInput
+  ): Promise<CreateCheckoutResult> {
     const {
       doctorId,
       date,
@@ -146,8 +110,7 @@ export class CheckoutService {
       petName,
       notes,
       paymentMethod,
-      petId,
-    } = payload || ({} as CreateCheckoutRequest);
+    } = payload || ({} as CreateCheckoutInput);
 
     if (
       !doctorId ||
@@ -160,9 +123,7 @@ export class CheckoutService {
       !petName ||
       !paymentMethod
     ) {
-      throw Object.assign(new Error("Missing required fields"), {
-        status: 400,
-      });
+      throw Object.assign(new Error("Missing required fields"), { status: 400 });
     }
 
     const match = await this.verifyGeneratedSlot(
@@ -170,36 +131,34 @@ export class CheckoutService {
       { date, time, durationMins: Number(durationMins), mode },
       { minLeadMinutes: 30 }
     );
+    
     if (!match) {
-      throw Object.assign(new Error("Selected slot is not available"), {
-        status: 400,
-      });
+      throw Object.assign(new Error("Selected slot is not available"), { status: 400 });
     }
 
-
-
     const now = new Date();
-const day = String(now.getDate()).padStart(2, "0");
-const month = String(now.getMonth() + 1).padStart(2, "0");
-const year = now.getFullYear();
-const today = `${day}${month}${year}`;
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    const today = `${day}${month}${year}`;
 
-const lastBooking = await Booking.findOne({
-  bookingNumber: { $regex: `^BK-${today}-` }
-})
-.sort({ createdAt: -1 })
-.lean();
+    const lastBooking = await Booking.findOne({
+      bookingNumber: { $regex: `^BK-${today}-` },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
-let lastSerial = 0;
-if (lastBooking && lastBooking.bookingNumber) {
-  const parts = lastBooking.bookingNumber.split("-");
-  lastSerial = Number(parts[2]) || 0;
-}
+    let lastSerial = 0;
+    if (lastBooking && lastBooking.bookingNumber) {
+      const parts = lastBooking.bookingNumber.split("-");
+      lastSerial = Number(parts[2]) || 0;
+    }
+
     const fee = Number(match.fee ?? amount ?? 0);
-const bookingNumber = generateBookingNumber(lastSerial);
-    // 1) Create booking as pending
+    const bookingNumber = generateBookingNumber(lastSerial);
+
     const booking = await Booking.create({
-      bookingNumber,       
+      bookingNumber,
       patientId: new Types.ObjectId(userId),
       doctorId: new Types.ObjectId(doctorId),
       slotId: null,
@@ -217,7 +176,6 @@ const bookingNumber = generateBookingNumber(lastSerial);
     } as any);
 
     try {
-      // 2) Create Stripe Checkout Session (no Connect split)
       const unitAmountMinor = Math.round(fee * 100);
       const session = await stripe.checkout.sessions.create(
         {
@@ -242,6 +200,7 @@ const bookingNumber = generateBookingNumber(lastSerial);
         },
         { idempotencyKey: `chk:${booking._id}:${userId}` }
       );
+
       await Booking.updateOne(
         { _id: booking._id },
         {
@@ -251,31 +210,14 @@ const bookingNumber = generateBookingNumber(lastSerial);
           },
         }
       );
+
       return {
         bookingId: String(booking._id),
-        redirectUrl: session.url ?? null,
+        redirectUrl: session.url ?? undefined,
       };
     } catch (err) {
       await Booking.deleteOne({ _id: booking._id });
-      throw Object.assign(new Error("Failed to create payment session"), {
-        status: 502,
-      });
+      throw Object.assign(new Error("Failed to create payment session"), { status: 502 });
     }
   }
-
-  // async mockPay(userId: string, bookingId: string): Promise<MockPayResponse> {
-  //   const updated = await Booking.findOneAndUpdate(
-  //     {
-  //       _id: new Types.ObjectId(bookingId),
-  //       patientId: new Types.ObjectId(userId),
-  //     },
-  //     { $set: { status: "paid" } },
-  //     { new: true }
-  //   ).lean();
-
-  //   if (!updated)
-  //     throw Object.assign(new Error("Booking not found"), { status: 404 });
-
-  //   return { bookingId: String(updated._id), status: updated.status as MockPayResponse["status"] };
-  // }
 }

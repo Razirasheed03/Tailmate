@@ -1,7 +1,9 @@
-import { MatchmakingRepository } from "../../repositories/implements/matchmaking.repository";
+//matchmaking.service.ts
+import { IMatchmakingRepository } from "../../repositories/interfaces/matchmaking.repository.interface";
+import { IMatchmakingService } from "../interfaces/matchmaking.service.interface";
 
-export class MatchmakingService {
-  constructor(private readonly _repo = new MatchmakingRepository()) {}
+export class MatchmakingService implements IMatchmakingService {
+  constructor(private readonly _repo: IMatchmakingRepository) {}
 
   async create(userId: string, payload: any) {
     if (!payload.petId)

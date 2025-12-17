@@ -1,11 +1,17 @@
+//controllers/consultation.controller.ts
 import { Request, Response, NextFunction } from "express";
-import { ConsultationService } from "../../services/implements/consultation.service";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
-
-const svc = new ConsultationService();
+import { IConsultationService } from "../../services/interfaces/consultation.service.interface";
 
 export class ConsultationController {
+  constructor(private readonly consultationService: IConsultationService) {}
+  
+  // Public getter for DI access (socket layer)
+  public getService(): IConsultationService {
+    return this.consultationService;
+  }
+  
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?._id?.toString() || req.user?.id?.toString();
@@ -14,7 +20,7 @@ export class ConsultationController {
       }
 
       const { doctorId } = req.body;
-      const consultation = await svc.create(userId, doctorId, req.body || {});
+      const consultation = await this.consultationService.create(userId, doctorId, req.body || {});
       return ResponseHelper.created(res, consultation, "Consultation created");
     } catch (err) {
       next(err);
@@ -24,7 +30,7 @@ export class ConsultationController {
   getConsultation = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const consultation = await svc.getConsultation(id);
+      const consultation = await this.consultationService.getConsultation(id);
       return ResponseHelper.ok(res, consultation, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -43,7 +49,7 @@ export class ConsultationController {
       }
 
       const status = (req.query.status as string) || undefined;
-      const consultations = await svc.getUserConsultations(userId, status);
+      const consultations = await this.consultationService.getUserConsultations(userId, status);
       return ResponseHelper.ok(res, consultations, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -62,7 +68,7 @@ export class ConsultationController {
       }
 
       const status = (req.query.status as string) || undefined;
-      const consultations = await svc.getDoctorConsultations(doctorId, status);
+      const consultations = await this.consultationService.getDoctorConsultations(doctorId, status);
       return ResponseHelper.ok(res, consultations, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -89,7 +95,7 @@ export class ConsultationController {
         consultationId: id,
       });
 
-      const result = await svc.prepareConsultationCall(id, userId, doctorId, role);
+      const result = await this.consultationService.prepareConsultationCall(id, userId, doctorId, role);
 
       return ResponseHelper.ok(res, result, "Call prepared");
     } catch (err) {
@@ -109,7 +115,7 @@ export class ConsultationController {
       const { id } = req.params;
       // Import io from server
       const { io } = require("../../server");
-      const consultation = await svc.endConsultationCall(id, userId, doctorId, io);
+      const consultation = await this.consultationService.endConsultationCall(id, userId, doctorId, io);
       return ResponseHelper.ok(res, consultation, "Call ended");
     } catch (err) {
       next(err);
@@ -125,7 +131,7 @@ export class ConsultationController {
 
       const { id } = req.params;
       const { reason } = req.body;
-      const consultation = await svc.cancelConsultation(id, userId, reason || "");
+      const consultation = await this.consultationService.cancelConsultation(id, userId, reason || "");
       return ResponseHelper.ok(res, consultation, "Consultation cancelled");
     } catch (err) {
       next(err);
@@ -184,7 +190,7 @@ export class ConsultationController {
         currentUserId: userId 
       });
 
-      const consultation = await svc.getOrCreateConsultationFromBooking(
+      const consultation = await this.consultationService.getOrCreateConsultationFromBooking(
         bookingId,
         patientId,  // Use patientId from booking, not from JWT
         doctorId,

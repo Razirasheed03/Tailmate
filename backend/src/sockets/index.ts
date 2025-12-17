@@ -1,14 +1,19 @@
+//sockets/index.ts
 import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
-import { ChatService } from "../services/implements/chat.service";
-import { ConsultationService } from "../services/implements/consultation.service";
+import { IConsultationService } from "../services/interfaces/consultation.service.interface";
+import { IChatService } from "../services/interfaces/chat.service.interface";
 
 interface AuthSocket extends Socket {
   userId?: string;
   username?: string;
 }
 
-export function initializeSocketServer(io: Server) {
+export function initializeSocketServer(
+  io: Server,
+  consultationService: IConsultationService,
+  chatService: IChatService
+) {
   // Middleware: Authenticate ALL connections
   io.use((socket: AuthSocket, next) => {
     const token = socket.handshake.auth.token || 
@@ -44,7 +49,7 @@ export function initializeSocketServer(io: Server) {
       videoRoomId: string 
     }) => {
       try {
-        const consultationService = new ConsultationService();
+        // Use injected service directly
         const consultation = await consultationService.getConsultation(data.consultationId);
         
         // Verify authorization
@@ -145,8 +150,8 @@ export function initializeSocketServer(io: Server) {
 
     socket.on("chat:send_message", async (data: { roomId: string; content: string }) => {
       try {
-        const chatService = new ChatService();
         const message = await chatService.sendMessage(userId, data.roomId, data.content);
+        // Broadcast to ALL in room (including sender) so sender sees message immediately
         io.to(`chat:${data.roomId}`).emit("chat:receive_message", message);
       } catch (err: any) {
         socket.emit("error", err.message);
@@ -169,9 +174,9 @@ export function initializeSocketServer(io: Server) {
 
     socket.on("chat:mark_seen", async (data: { roomId: string }) => {
       try {
-        const chatService = new ChatService();
         await chatService.markSeen(userId, data.roomId);
-        socket.to(`chat:${data.roomId}`).emit("chat:message_seen", {
+        // Broadcast to ALL in room (including sender) so sender sees status update
+        io.to(`chat:${data.roomId}`).emit("chat:message_seen", {
           seenBy: userId,
           roomId: data.roomId,
           timestamp: new Date(),

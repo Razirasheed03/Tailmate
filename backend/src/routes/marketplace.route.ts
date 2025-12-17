@@ -3,12 +3,12 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authJwt } from '../middlewares/authJwt';
 import { asyncHandler } from '../utils/asyncHandler';
-import { MarketplaceController } from '../controllers/Implements/marketplace.controller';
+import { marketplaceController } from '../dependencies/marketplace.di';
 import { uploadMarketplaceImageBufferToCloudinary } from '../utils/uploadToCloudinary';
 import { MarketOrder } from '../schema/marketOrder.schema';
 
 const router = Router();
-const c = new MarketplaceController();
+const c = marketplaceController;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB

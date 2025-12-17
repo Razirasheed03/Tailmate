@@ -1,7 +1,9 @@
+//matchmaking.repository.ts
 import { Model, Types } from "mongoose";
 import { MatchmakingListing } from "../../schema/matchmaking.schema";
+import { IMatchmakingRepository } from "../interfaces/matchmaking.repository.interface";
 
-export class MatchmakingRepository {
+export class MatchmakingRepository implements IMatchmakingRepository {
   constructor(private readonly model: Model<any> = MatchmakingListing) {}
 
   async create(userId: string, body: any) {

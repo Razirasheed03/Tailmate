@@ -1,8 +1,9 @@
 //consultation.repository.ts
 import { Model, Types } from "mongoose";
 import { Consultation } from "../../schema/consultation.schema";
+import { IConsultationRepository } from "../interfaces/consultation.repository.interface";
 
-export class ConsultationRepository {
+export class ConsultationRepository implements IConsultationRepository{
   model: Model<any>;
   
   constructor(model: Model<any> = Consultation) {
@@ -65,6 +66,27 @@ export class ConsultationRepository {
     return doc ? doc.toObject() : null;
   }
 
+  async findByBookingId(bookingId: string) {
+    const doc = await this.populate(
+      this.model.findOne({
+        bookingId: bookingId,
+        status: { $ne: "cancelled" },
+      })
+    );
+    return doc ? doc.toObject() : null;
+  }
+
+  async deleteByBookingId(bookingId: string) {
+    await this.model.deleteOne({ _id: bookingId });
+  }
+
+  async findOneAndUpsert(filter: any, updates: any, options: any) {
+    const doc = await this.populate(
+      this.model.findOneAndUpdate(filter, updates, { ...options, new: true })
+    );
+    return doc ? doc.toObject() : null;
+  }
+
   async listUserConsultations(userId: string, status?: string) {
     const filter: any = { userId: new Types.ObjectId(userId) };
     if (status) filter.status = status;
@@ -121,4 +143,30 @@ export class ConsultationRepository {
     );
     return doc ? doc.toObject() : null;
   }
+  async updateById(
+  id: string,
+  update: Partial<{
+    userId: Types.ObjectId;
+    doctorId: Types.ObjectId;
+    status: string;
+    videoRoomId: string;
+    callStartedAt: Date;
+    callEndedAt: Date;
+    scheduledFor: Date;
+    durationMinutes: number;
+    notes: string | null;
+  }>
+) {
+  if (!Types.ObjectId.isValid(id)) {
+    return null;
+  }
+
+  return this.model
+    .findByIdAndUpdate(
+      new Types.ObjectId(id),
+      { $set: update },
+      { new: true }
+    )
+    .lean();
+}
 }

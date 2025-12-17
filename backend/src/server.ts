@@ -31,6 +31,8 @@ import consultationRoutes from "./routes/consultation.route";
 import http from "http";
 import { Server } from "socket.io";
 import { initializeSocketServer } from "./sockets/index";
+import { consultationController } from "./dependencies/consultation.di";
+import { chatController } from "./dependencies/chat.di";
 
 const app = express();
 const server = http.createServer(app);
@@ -43,7 +45,11 @@ const io = new Server(server, {
   },
 });
 
-initializeSocketServer(io);
+// Extract services from DI containers and inject into socket layer
+const consultationService = consultationController.getService();
+const chatService = chatController.getService();
+
+initializeSocketServer(io, consultationService, chatService);
 
 export { io };
 

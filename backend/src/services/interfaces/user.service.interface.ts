@@ -68,19 +68,7 @@ export type PublicUser = {
   updatedAt?: Date;
 };
 
-// Contract for the user service
-export interface IUserService {
-  // Account
-  updateMyUsername(userId: string, username: string): Promise<PublicUser>;
-
-  // Vets directory
-  listDoctorsWithNextSlot(params: ListDoctorsQuery): Promise<ListDoctorsResult>;
-  getDoctorPublicById(id: string): Promise<DoctorDetail | null>;
-  listDoctorSlotsBetween(
-    id: string,
-    opts: { from: string; to: string; status?: "available" | "booked" }
-  ): Promise<DoctorSlotEntry[]>;
-}
+// Booking DTO returned to clients
 export type BookingRowDTO = {
   _id: string;
   patientId: string;
@@ -118,6 +106,7 @@ export type ListBookingsResult = {
   items: BookingRowDTO[];
   total: number;
 };
+// Contract for the user service
 export interface IUserService {
   // Account
   updateMyUsername(userId: string, username: string): Promise<PublicUser>;
@@ -125,10 +114,16 @@ export interface IUserService {
   // Vets directory
   listDoctorsWithNextSlot(params: ListDoctorsQuery): Promise<ListDoctorsResult>;
   getDoctorPublicById(id: string): Promise<DoctorDetail | null>;
-  listDoctorSlotsBetween(
+  listDoctorGeneratedAvailability(
     id: string,
-    opts: { from: string; to: string; status?: "available" | "booked" }
-  ): Promise<DoctorSlotEntry[]>;
+    opts: { from: string; to: string }
+  ): Promise<Array<{
+    date: string;
+    time: string;
+    durationMins: number;
+    modes: string[];
+    fee?: number;
+  }>>;
 
   // Bookings
   listMyBookings(userId: string, params: ListBookingsParams): Promise<ListBookingsResult>;

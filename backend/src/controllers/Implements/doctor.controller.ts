@@ -1,18 +1,15 @@
 import { io } from '../../server';
 import { Request, Response, NextFunction } from "express";
-import { DoctorService } from "../../services/implements/doctor.service";
-import { PayoutService } from "../../services/implements/payout.service";
 import { NotificationModel } from '../../schema/notification.schema';
-import { UserModel } from '../../models/implements/user.model'; // For finding all admins if needed
-
-const payoutService = new PayoutService();
-
+import { UserModel } from '../../models/implements/user.model';
 import {
   uploadImageBufferToCloudinary,
   uploadPdfBufferToCloudinary,
 } from "../../utils/uploadToCloudinary";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
+import { IDoctorService } from '../../services/interfaces/doctor.service.interface';
+import { IPayoutService } from '../../services/interfaces/payout.service.interface';
 
 interface AuthRequest extends Request {
   user?: {
@@ -24,8 +21,10 @@ interface AuthRequest extends Request {
 }
 
 export class DoctorController {
-  constructor(private readonly svc: DoctorService) {}
-
+  constructor(
+    private readonly svc: IDoctorService,
+    private readonly payoutService: IPayoutService
+  ) {}
   getVerification = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const authReq = req as AuthRequest;
@@ -320,7 +319,7 @@ export class DoctorController {
     try {
       const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
       const { amount } = req.body;
-      const result = await payoutService.doctorPayout(userId, amount);
+      const result = await this.payoutService.doctorPayout(userId, amount);
       return ResponseHelper.ok(res, result);
     } catch (err) {
       next(err);
@@ -330,7 +329,7 @@ export class DoctorController {
   listPayouts = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?._id?.toString() || (req as any).user?.id;
-      const result = await payoutService.getDoctorPayouts(userId);
+      const result = await this.payoutService.getDoctorPayouts(userId);
       return ResponseHelper.ok(res, result);
     } catch (err) {
       next(err);

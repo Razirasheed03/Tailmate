@@ -2,10 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import { MatchmakingService } from "../../services/implements/matchmaking.service";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
+import { IMatchmakingService } from "../../services/interfaces/matchmaking.service.interface";
 
-const svc = new MatchmakingService();
+// const this.IMatchmakingService = new MatchmakingService();
 
 export class MatchmakingController {
+  constructor(private readonly matchmakingService: IMatchmakingService) {}
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // const userId = (req as any).user?._id?.toString();
@@ -13,7 +15,7 @@ export class MatchmakingController {
       if (!userId)
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
 
-      const listing = await svc.create(userId, req.body || {});
+      const listing = await this.matchmakingService.create(userId, req.body || {});
       return ResponseHelper.created(res, listing, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -33,7 +35,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
     const lng = req.query.lng ? Number(req.query.lng) : undefined;
     const radius = req.query.radius ? Number(req.query.radius) : undefined;
 
-    const result = await svc.listPublic(
+    const result = await this.matchmakingService.listPublic(
       page,
       limit,
       q,
@@ -61,7 +63,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 12;
 
-      const result = await svc.listMine(userId, page, limit);
+      const result = await this.matchmakingService.listMine(userId, page, limit);
       return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -73,7 +75,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       const userId = (req as any).user?._id?.toString();
       const id = req.params.id;
 
-      const updated = await svc.update(userId, id, req.body || {});
+      const updated = await this.matchmakingService.update(userId, id, req.body || {});
       if (!updated)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
 
@@ -93,7 +95,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       if (!validStatuses.includes(status))
         return ResponseHelper.badRequest(res, "Invalid status");
 
-      const updated = await svc.changeStatus(userId, id, status);
+      const updated = await this.matchmakingService.changeStatus(userId, id, status);
       if (!updated)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
 
@@ -108,7 +110,7 @@ listPublic = async (req: Request, res: Response, next: NextFunction) => {
       const userId = (req as any).user?._id?.toString();
       const id = req.params.id;
 
-      const ok = await svc.remove(userId, id);
+      const ok = await this.matchmakingService.remove(userId, id);
       if (!ok) return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
 
       return ResponseHelper.noContent(res);

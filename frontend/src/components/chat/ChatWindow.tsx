@@ -43,6 +43,21 @@ export default function ChatWindow({
     scrollToBottom();
   }, [messages]);
 
+  // Helper to check if there are unseen messages from other user
+  const hasUnseenMessages = () => {
+    return messages.some((msg) => {
+      // Only check messages from OTHER users (not current user)
+      if (msg.senderId === currentUserId) return false;
+      
+      // Check if current user has seen this message
+      const seenByIds = (msg.seenBy || []).map((id: any) => 
+        typeof id === 'string' ? id : id._id || id.toString()
+      );
+      
+      return !seenByIds.includes(currentUserId);
+    });
+  };
+
   // Mark as seen when user scrolls to bottom
   const handleScroll = () => {
     if (!socket || !roomId || document.visibilityState !== 'visible') return;
@@ -53,7 +68,8 @@ export default function ChatWindow({
     // Check if scrolled to bottom (within 100px)
     const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     
-    if (isAtBottom) {
+    // Only mark as seen if there are actually unseen messages from the other user
+    if (isAtBottom && hasUnseenMessages()) {
       socket.emit('chat:mark_seen', { roomId });
     }
   };
@@ -61,7 +77,7 @@ export default function ChatWindow({
   // Handle visibility changes - mark as seen when tab becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && socket && roomId) {
+      if (document.visibilityState === 'visible' && socket && roomId && hasUnseenMessages()) {
         socket.emit('chat:mark_seen', { roomId });
       }
     };
@@ -70,7 +86,7 @@ export default function ChatWindow({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [socket, roomId]);
+  }, [socket, roomId, messages, currentUserId]);
 
   const handleViewListing = () => {
     if (listingId?._id) {

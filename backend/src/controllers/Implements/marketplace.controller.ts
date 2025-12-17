@@ -3,15 +3,16 @@ import { Request, Response, NextFunction } from "express";
 import { MarketplaceService } from "../../services/implements/marketplace.service";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
+import { IMarketplaceService } from "../../services/interfaces/marketplace.service.interface";
 
-const svc = new MarketplaceService();
 
 export class MarketplaceController {
+  constructor(private readonly marketplaceService: IMarketplaceService) {}
 create = async (req:Request, res:Response, next:NextFunction) => {
   try {
     const userId = (req as any).user?._id?.toString();
     if (!userId) return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
-    const listing = await svc.create(userId, req.body || {});
+    const listing = await this.marketplaceService.create(userId, req.body || {});
     return ResponseHelper.created(res, listing, HttpResponse.RESOURCE_FOUND);
   } catch (err: unknown) {
     const e=err as {status:number,message:string}
@@ -37,7 +38,7 @@ create = async (req:Request, res:Response, next:NextFunction) => {
       const excludeFree = req.query.excludeFree === "true";
       const sortBy = (req.query.sortBy as string) || "newest";
 
-      const result = await svc.listPublic(page, limit, type, q, place, {
+      const result = await this.marketplaceService.listPublic(page, limit, type, q, place, {
         minPrice,
         maxPrice,
         excludeFree,
@@ -56,7 +57,7 @@ create = async (req:Request, res:Response, next:NextFunction) => {
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 12;
-      const result = await svc.listMine(userId, page, limit);
+      const result = await this.marketplaceService.listMine(userId, page, limit);
       return ResponseHelper.ok(res, result, HttpResponse.RESOURCE_FOUND);
     } catch (err) {
       next(err);
@@ -69,7 +70,7 @@ create = async (req:Request, res:Response, next:NextFunction) => {
       if (!userId)
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
       const id = req.params.id;
-      const updated = await svc.update(userId, id, req.body || {});
+      const updated = await this.marketplaceService.update(userId, id, req.body || {});
       if (!updated)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.ok(res, updated, HttpResponse.RESOURCE_UPDATED);
@@ -98,7 +99,7 @@ create = async (req:Request, res:Response, next:NextFunction) => {
         return ResponseHelper.badRequest(res, "Invalid status");
       }
 
-      const updated = await svc.changeStatus(userId, id, status);
+      const updated = await this.marketplaceService.changeStatus(userId, id, status);
       if (!updated)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.ok(res, updated, HttpResponse.RESOURCE_UPDATED);
@@ -119,7 +120,7 @@ create = async (req:Request, res:Response, next:NextFunction) => {
         return ResponseHelper.badRequest(res, "Invalid completion status");
       }
 
-      const updated = await svc.markAsComplete(userId, id, status);
+      const updated = await this.marketplaceService.markAsComplete(userId, id, status);
       if (!updated)
         return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.ok(res, updated, HttpResponse.RESOURCE_UPDATED);
@@ -134,7 +135,7 @@ create = async (req:Request, res:Response, next:NextFunction) => {
       if (!userId)
         return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
       const id = req.params.id;
-      const ok = await svc.remove(userId, id);
+      const ok = await this.marketplaceService.remove(userId, id);
       if (!ok) return ResponseHelper.notFound(res, HttpResponse.PAGE_NOT_FOUND);
       return ResponseHelper.noContent(res);
     } catch (err) {

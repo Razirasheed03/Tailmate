@@ -2,10 +2,10 @@
 import { Router } from "express";
 import { authJwt } from "../middlewares/authJwt";
 import { asyncHandler } from "../utils/asyncHandler";
-import { ConsultationController } from "../controllers/Implements/consultation.controller";
+import { consultationController } from "../dependencies/consultation.di";
 
 const router = Router();
-const c = new ConsultationController();
+const c = consultationController;
 
 router.use(authJwt);
 

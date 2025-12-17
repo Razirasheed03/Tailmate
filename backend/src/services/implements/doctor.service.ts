@@ -8,6 +8,7 @@ import { IDoctorVerification, IDoctorProfile, IDoctorModel, UpdateProfileDTO } f
 import { stripe } from "../../utils/stripe";
 import { DoctorModel } from "../../models/implements/doctor.model";
 import { UserModel } from "../../models/implements/user.model";
+import { IDoctorService } from "../interfaces/doctor.service.interface";
 
 
 // Domain type for consultation modes (not a DTO)
@@ -39,7 +40,7 @@ type GeneratedAvailability = Record<
   Array<{ date: string; time: string; durationMins: number; modes: UIMode[] | string[]; fee: number }>
 >;
 
-export class DoctorService {
+export class DoctorService implements IDoctorService{
   constructor(
     private readonly _userRepo: IUserRepository,
     private readonly _doctorRepo: IDoctorRepository

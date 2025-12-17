@@ -1,8 +1,9 @@
 // backend/src/services/implements/user.service.ts
 import { Types } from "mongoose";
-import { UserRepository } from "../../repositories/implements/user.repository";
-import { DoctorPublicRepository } from "../../repositories/implements/doctorPublic.repository";
-import { BookingRepository } from "../../repositories/implements/booking.repository";
+import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
+import { IDoctorPublicRepository } from "../../repositories/interfaces/doctorPublic.repository.interface";
+import { IBookingRepository } from "../../repositories/interfaces/booking.repository.interface";
+import { IUserService } from "../interfaces/user.service.interface";
 import { UIMode } from "../interfaces/checkout.service.interface";
 import { PaymentModel } from "../../models/implements/payment.model";
 import { stripe } from "../../utils/stripe";
@@ -17,11 +18,11 @@ export type PaginatedDoctors = {
   limit: number;
 };
 
-export class UserService {
+export class UserService implements IUserService {
   constructor(
-    private readonly _userRepo = new UserRepository(),
-    private readonly _doctorPubRepo = new DoctorPublicRepository(),
-    private readonly _bookingRepo = new BookingRepository()
+    private readonly _userRepo: IUserRepository,
+    private readonly _doctorPubRepo: IDoctorPublicRepository,
+    private readonly _bookingRepo: IBookingRepository
   ) {}
 
   private validateObjectId(id: string): void {
