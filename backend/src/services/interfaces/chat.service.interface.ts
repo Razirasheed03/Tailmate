@@ -33,5 +33,5 @@ export interface IChatService {
   markSeen(
     currentUserId: string,
     roomId: string
-  ): Promise<{ success: boolean }>;
+  ): Promise<{ success: boolean; modifiedCount: number; matchedCount: number }>;
 }

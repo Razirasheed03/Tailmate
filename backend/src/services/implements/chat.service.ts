@@ -127,7 +127,11 @@ return {
       throw Object.assign(new Error("Unauthorized"), { status: 403 });
     }
 
-    await this.messageRepo.markSeen(roomId, currentUserId);
-    return { success: true };
+    const result = await this.messageRepo.markSeen(roomId, currentUserId);
+    return { 
+      success: true,
+      modifiedCount: result.modifiedCount || 0,
+      matchedCount: result.matchedCount || 0,
+    };
   }
 }

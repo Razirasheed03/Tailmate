@@ -26,6 +26,7 @@ interface ChatSidebarProps {
   onSelectRoom: (roomId: string) => void;
   isLoading?: boolean;
   currentUserId?: string;
+  unseenCounts?: Record<string, number>;
 }
 
 export default function ChatSidebar({
@@ -34,6 +35,7 @@ export default function ChatSidebar({
   onSelectRoom,
   isLoading = false,
   currentUserId,
+  unseenCounts = {},
 }: ChatSidebarProps) {
   const getOtherUser = (room: ChatRoom) => {
     if (!room.users || !currentUserId) return null;
@@ -87,9 +89,16 @@ export default function ChatSidebar({
 
                   {/* Other User & Last Message */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
-                      {otherUser?.username || 'Chat'}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-gray-900 truncate">
+                        {otherUser?.username || 'Chat'}
+                      </p>
+                      {unseenCounts[room._id] > 0 && (
+                        <span className="flex-shrink-0 bg-orange-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                          {unseenCounts[room._id]}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600 truncate">
                       {room.lastMessage || 'No messages yet'}
                     </p>
