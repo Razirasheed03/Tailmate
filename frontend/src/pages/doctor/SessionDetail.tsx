@@ -7,7 +7,6 @@ import { doctorService } from "@/services/doctorService";
 import type { SessionDetail } from "@/types/doctor.types";
 import httpClient from "@/services/httpClient";
 import { consultationService } from "@/services/consultationService";
-import { isConsultationActive } from "@/utils/consultationHelpers";
 
 type PaymentView = {
   _id: string;
@@ -34,7 +33,9 @@ export default function SessionDetailPage() {
   const [row, setRow] = useState<SessionDetail | null>(null);
   const [payment, setPayment] = useState<PaymentView | null>(null);
   const [startingCall, setStartingCall] = useState(false);
-  const [consultationId, setConsultationId] = useState<string | null>(null);
+  const [canStartCall, setCanStartCall] = useState(false);
+  const [timeUntilCall, setTimeUntilCall] = useState<string>("");
+  const [consultationStatus, setConsultationStatus] = useState<'upcoming' | 'in_progress' | 'completed' | 'cancelled' | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -63,6 +64,60 @@ export default function SessionDetailPage() {
     })();
     return () => { mounted = false; };
   }, [id, nav]);
+
+  // Fetch consultation status
+  useEffect(() => {
+    if (!id) return;
+    
+    const fetchConsultationStatus = async () => {
+      try {
+        const consultation = await consultationService.getOrCreateFromBooking(
+          id,
+          row?.doctorId || '',
+          new Date(row?.date + "T" + row?.time).toISOString(),
+          Number(row?.durationMins || 30)
+        );
+        setConsultationStatus(consultation.status);
+      } catch (err) {
+        console.error('Failed to fetch consultation status:', err);
+      }
+    };
+
+    if (row) {
+      fetchConsultationStatus();
+    }
+  }, [id, row]);
+
+  // Check if call can be started (within 10 minutes of scheduled time)
+  useEffect(() => {
+    if (!row) return;
+
+    const checkCallTiming = () => {
+      const scheduledTime = new Date(row.date + "T" + row.time);
+      const now = new Date();
+      const diffMs = scheduledTime.getTime() - now.getTime();
+      const diffMinutes = Math.floor(diffMs / 60000);
+
+      if (diffMinutes <= 10) {
+        setCanStartCall(true);
+        setTimeUntilCall("");
+      } else {
+        setCanStartCall(false);
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        if (hours > 0) {
+          setTimeUntilCall(`Available in ${hours}h ${mins}m`);
+        } else {
+          setTimeUntilCall(`Available in ${mins} minutes`);
+        }
+      }
+    };
+
+    checkCallTiming();
+    const interval = setInterval(checkCallTiming, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [row]);
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
@@ -162,7 +217,6 @@ export default function SessionDetailPage() {
                             
                             console.log("[SessionDetail] Found consultation:", consultation._id);
                             
-                            setConsultationId(consultation._id);
                             // Prepare call to generate videoRoomId and set status to in_progress
                             const result = await consultationService.prepareCall(consultation._id);
                             console.log("[SessionDetail] Prepared call with room:", result.videoRoomId);
@@ -173,13 +227,28 @@ export default function SessionDetailPage() {
                             setStartingCall(false);
                           }
                         }}
-                        disabled={startingCall}
-                        className="px-3 py-2 rounded bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white flex items-center gap-2 disabled:cursor-not-allowed"
+                        disabled={startingCall || !canStartCall || consultationStatus === 'completed'}
+                        className={`px-3 py-2 rounded text-white flex items-center gap-2 disabled:cursor-not-allowed ${
+                          consultationStatus === 'completed'
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700 disabled:bg-gray-400'
+                        }`}
+                        title={consultationStatus === 'completed' ? 'Consultation completed' : (!canStartCall ? timeUntilCall : "")}
                       >
-                        {startingCall ? (
+                        {consultationStatus === 'completed' ? (
+                          <>
+                            <Phone className="w-4 h-4" />
+                            Consultation Completed
+                          </>
+                        ) : startingCall ? (
                           <>
                             <Loader className="w-4 h-4 animate-spin" />
                             Starting...
+                          </>
+                        ) : !canStartCall ? (
+                          <>
+                            <Phone className="w-4 h-4" />
+                            {timeUntilCall || "Not available yet"}
                           </>
                         ) : (
                           <>
