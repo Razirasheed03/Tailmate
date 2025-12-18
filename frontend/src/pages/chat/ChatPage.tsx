@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
+import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/UiComponents/UserNavbar';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
@@ -8,6 +9,7 @@ import { chatService } from '@/services/chatService';
 import { API_BASE_URL } from '@/constants/apiRoutes';
 
 export default function ChatPage() {
+  const { user } = useAuth(); // Get fresh user from context, not localStorage
   const [searchParams] = useSearchParams();
   const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
@@ -18,20 +20,9 @@ export default function ChatPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  // Initialize user
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('auth_user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        setCurrentUserId(user._id || user.id);
-      }
-    } catch (err) {
-      console.error('Failed to get user:', err);
-    }
-  }, []);
+  
+  // Use user._id from AuthContext (always fresh)
+  const currentUserId = user?._id || null;
 
   // Initialize Socket.IO
   useEffect(() => {
@@ -51,32 +42,34 @@ export default function ChatPage() {
       console.log('Chat socket connected');
     });
 
+    // Receive message from socket (includes own messages now)
     newSocket.on('chat:receive_message', (message) => {
-      setMessages((prev) => [...prev, message]);
+      console.log('[Chat] Received message:', message);
+      setMessages((prev) => {
+        // Avoid duplicates - check if message already exists
+        const exists = prev.some((m) => m._id === message._id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
     });
 
-    newSocket.on('chat:delivered', (data) => {
-      console.log('Messages delivered:', data);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.senderId === currentUserId
-            ? {
-                ...msg,
-                deliveredTo: [...(msg.deliveredTo || []), data.userId],
-              }
-            : msg
-        )
-      );
-    });
-
+    // Message seen status update
     newSocket.on('chat:message_seen', (data) => {
-      console.log('Message seen by:', data);
+      console.log('[Chat] Message seen by:', data.seenBy);
       setMessages((prev) =>
         prev.map((msg) => {
-          const seenByIds = (msg.seenBy || []).map((id: any) => id.toString?.() || id);
-          const seenByUserId = data.seenBy.toString?.() || data.seenBy;
+          // Update seenBy for all messages from other users
+          if (msg.senderId !== currentUserId) {
+            return msg; // Don't update messages from other users
+          }
           
-          if (msg.senderId === currentUserId && !seenByIds.includes(seenByUserId)) {
+          // For own messages, add seenBy if not already there
+          const seenByIds = (msg.seenBy || []).map((id: any) => 
+            typeof id === 'string' ? id : id._id || id.toString()
+          );
+          const seenByUserId = typeof data.seenBy === 'string' ? data.seenBy : data.seenBy._id || data.seenBy.toString();
+          
+          if (!seenByIds.includes(seenByUserId)) {
             return {
               ...msg,
               seenBy: [...(msg.seenBy || []), data.seenBy],
@@ -87,12 +80,27 @@ export default function ChatPage() {
       );
     });
 
+    // Typing indicator
     newSocket.on('chat:typing_status', (data) => {
-      console.log('Typing status:', data);
+      console.log('[Chat] Typing status:', data);
+    });
+
+    // User online/offline status
+    newSocket.on('chat:user_online', (data) => {
+      console.log('[Chat] User online:', data.userId);
+    });
+
+    newSocket.on('chat:user_offline', (data) => {
+      console.log('[Chat] User offline:', data.userId);
+    });
+
+    // Error handling
+    newSocket.on('chat:error', (err) => {
+      console.error('[Chat] Socket error:', err);
     });
 
     newSocket.on('error', (err) => {
-      console.error('Socket error:', err);
+      console.error('[Socket] Connection error:', err);
     });
 
     setSocket(newSocket);
@@ -136,9 +144,10 @@ export default function ChatPage() {
         const data = await chatService.listMessages(selectedRoomId, 1, 50);
         setMessages(data.data || []);
 
-        // Join room via socket (but don't mark as seen yet)
-        if (socket) {
-          socket.emit('chat:join_room', selectedRoomId);
+        // Join room via socket
+        if (socket && socket.connected) {
+          socket.emit('chat:join', { roomId: selectedRoomId });
+          console.log('[Chat] Joined room:', selectedRoomId);
         }
       } catch (err) {
         console.error('Failed to load messages:', err);
@@ -151,8 +160,9 @@ export default function ChatPage() {
 
     // Cleanup: leave room when unmounting or switching rooms
     return () => {
-      if (socket) {
-        socket.emit('chat:leave_room', selectedRoomId);
+      if (socket && socket.connected) {
+        socket.emit('chat:leave', { roomId: selectedRoomId });
+        console.log('[Chat] Left room:', selectedRoomId);
       }
     };
   }, [selectedRoomId, currentUserId, socket]);

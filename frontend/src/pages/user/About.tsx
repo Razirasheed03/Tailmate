@@ -19,7 +19,7 @@ const AboutPage = () => {
         </h1>
         <p className="text-lg text-[#6B7280] max-w-2xl mx-auto mt-4 leading-relaxed">
           TailMate is built with one purpose — to make pet care simple, accessible, 
-          and filled with love. Whether you’re adopting, seeking vet help, or joining 
+          and filled with love. Whether you're adopting, seeking vet help, or joining 
           a community, TailMate brings everything together in one place.
         </p>
       </section>

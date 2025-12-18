@@ -138,52 +138,102 @@ export function initializeSocketServer(io: Server) {
     // CHAT EVENTS
     // ========================================
     
+    // Join chat room - user enters the chat
     socket.on("chat:join", (data: { roomId: string }) => {
-      socket.join(`chat:${data.roomId}`);
-      console.log(`[Chat] ${userId} joined chat:${data.roomId}`);
+      const roomName = `chat:${data.roomId}`;
+      socket.join(roomName);
+      console.log(`[Chat] ✅ User ${userId} joined ${roomName}`);
+      
+      // Notify others that user is online
+      socket.to(roomName).emit("chat:user_online", {
+        userId,
+        timestamp: new Date(),
+      });
     });
 
+    // Send message - store in DB and broadcast to room (including sender)
     socket.on("chat:send_message", async (data: { roomId: string; content: string }) => {
       try {
         const chatService = new ChatService();
         const message = await chatService.sendMessage(userId, data.roomId, data.content);
-        io.to(`chat:${data.roomId}`).emit("chat:receive_message", message);
+        
+        const roomName = `chat:${data.roomId}`;
+        
+        // Broadcast to ALL in room (including sender) so sender sees it immediately
+        io.to(roomName).emit("chat:receive_message", {
+          ...message,
+          _id: message._id,
+          senderId: message.senderId,
+          content: message.content,
+          roomId: data.roomId,
+          createdAt: message.createdAt,
+          deliveredTo: message.deliveredTo || [],
+          seenBy: message.seenBy || [],
+        });
+        
+        console.log(`[Chat] Message sent in ${roomName} by ${userId}`);
       } catch (err: any) {
-        socket.emit("error", err.message);
+        console.error("[Chat] send_message error:", err.message);
+        socket.emit("chat:error", { message: err.message });
       }
     });
 
+    // Typing indicator
     socket.on("chat:typing", (data: { roomId: string }) => {
-      socket.to(`chat:${data.roomId}`).emit("chat:typing_status", {
+      const roomName = `chat:${data.roomId}`;
+      socket.to(roomName).emit("chat:typing_status", {
         userId,
         isTyping: true,
+        timestamp: new Date(),
       });
     });
 
+    // Stop typing indicator
     socket.on("chat:stop_typing", (data: { roomId: string }) => {
-      socket.to(`chat:${data.roomId}`).emit("chat:typing_status", {
+      const roomName = `chat:${data.roomId}`;
+      socket.to(roomName).emit("chat:typing_status", {
         userId,
         isTyping: false,
+        timestamp: new Date(),
       });
     });
 
+    // Mark messages as seen - ONLY when receiver explicitly opens/views the chat
+    // This should ONLY be called by the receiver, not the sender
     socket.on("chat:mark_seen", async (data: { roomId: string }) => {
       try {
         const chatService = new ChatService();
+        
+        // Mark unseen messages as seen by this user
         await chatService.markSeen(userId, data.roomId);
-        socket.to(`chat:${data.roomId}`).emit("chat:message_seen", {
+        
+        const roomName = `chat:${data.roomId}`;
+        
+        // Broadcast to ALL in room (including sender) so sender sees double-tick
+        // This event means: "userId has seen the messages in this room"
+        io.to(roomName).emit("chat:message_seen", {
           seenBy: userId,
           roomId: data.roomId,
           timestamp: new Date(),
         });
+        
+        console.log(`[Chat] ✅ User ${userId} marked messages as seen in ${roomName}`);
       } catch (err: any) {
-        console.error("[Chat] mark_seen error:", err.message);
+        console.error("[Chat] ❌ mark_seen error:", err.message);
       }
     });
 
+    // Leave chat room
     socket.on("chat:leave", (data: { roomId: string }) => {
-      socket.leave(`chat:${data.roomId}`);
-      console.log(`[Chat] ${userId} left chat:${data.roomId}`);
+      const roomName = `chat:${data.roomId}`;
+      socket.leave(roomName);
+      console.log(`[Chat] ❌ User ${userId} left ${roomName}`);
+      
+      // Notify others that user is offline
+      socket.to(roomName).emit("chat:user_offline", {
+        userId,
+        timestamp: new Date(),
+      });
     });
 
     // ========================================
