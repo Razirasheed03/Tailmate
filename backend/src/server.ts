@@ -73,23 +73,15 @@ app.use(cookieParser());
 let dbReady = false;
 
 connectDB().then(async () => {
-  console.log("Mongo connected");
-  
-  // Drop old unique index on videoRoomId if it exists
   try {
     const indexes = await Consultation.collection.getIndexes();
-    console.log("Current indexes:", Object.keys(indexes));
     
     if (indexes.videoRoomId_1) {
-      console.log("Dropping old videoRoomId unique index...");
       await Consultation.collection.dropIndex("videoRoomId_1");
       console.log("✅ Old videoRoomId index dropped");
     } else {
       console.log("✅ No old videoRoomId index found");
     }
-    
-    // Rebuild indexes from schema
-    console.log("Rebuilding indexes from schema...");
     await Consultation.collection.dropIndexes();
     await Consultation.syncIndexes();
     console.log("✅ Indexes rebuilt successfully");
