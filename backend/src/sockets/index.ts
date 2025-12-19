@@ -145,6 +145,7 @@ export function initializeSocketServer(
       console.log(`[Chat] ✅ ${userId} joined chat:${data.roomId} | Room members: [${memberIds.join(', ')}]`);
     });
 
+    // Send message - store in DB and broadcast to room (including sender)
     socket.on("chat:send_message", async (data: { roomId: string; content: string }) => {
       try {
         console.log(`[Chat] 📤 ${userId} sending message to room ${data.roomId}`);
@@ -172,20 +173,28 @@ export function initializeSocketServer(
       }
     });
 
+    // Typing indicator
     socket.on("chat:typing", (data: { roomId: string }) => {
-      socket.to(`chat:${data.roomId}`).emit("chat:typing_status", {
+      const roomName = `chat:${data.roomId}`;
+      socket.to(roomName).emit("chat:typing_status", {
         userId,
         isTyping: true,
+        timestamp: new Date(),
       });
     });
 
+    // Stop typing indicator
     socket.on("chat:stop_typing", (data: { roomId: string }) => {
-      socket.to(`chat:${data.roomId}`).emit("chat:typing_status", {
+      const roomName = `chat:${data.roomId}`;
+      socket.to(roomName).emit("chat:typing_status", {
         userId,
         isTyping: false,
+        timestamp: new Date(),
       });
     });
 
+    // Mark messages as seen - ONLY when receiver explicitly opens/views the chat
+    // This should ONLY be called by the receiver, not the sender
     socket.on("chat:mark_seen", async (data: { roomId: string }) => {
       try {
         console.log(`[Chat] 👁️ ${userId} marking messages as seen in room ${data.roomId}`);
