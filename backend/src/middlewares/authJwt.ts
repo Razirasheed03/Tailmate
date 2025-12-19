@@ -17,19 +17,19 @@ export const authJwt: RequestHandler = async (req, res, next) => {
       doctorId?: string | null;
     };
 
-    // Fetch user from database
+
     const user = await UserModel.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid token user." });
     }
 
-    // Attach normalized user data to request
+
     const userId = (user as any)._id?.toString() || decoded.id;
     (req as any).user = {
-      _id: userId,                     // User._id as string
-      id: userId,                      // Alias
-      role: decoded.role || (user as any).role, // From token or fallback to user
-      doctorId: decoded.doctorId || null, // Doctor._id if doctor, else null
+      _id: userId,                    
+      id: userId,                
+      role: decoded.role || (user as any).role,
+      doctorId: decoded.doctorId || null,
     };
 
     next();

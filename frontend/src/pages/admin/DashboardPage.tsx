@@ -24,14 +24,13 @@ ChartJS.register(
   Filler
 );
 
-// Format INR
-function formatINR(amount: number) {
-  return new Intl.NumberFormat("en-IN", {
+// INR Formatter
+const formatINR = (v: number) =>
+  new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amount);
-}
+  }).format(v);
 
 type DashboardStats = {
   totalEarnings: number;
@@ -42,87 +41,22 @@ type DashboardStats = {
   months: string[];
   incomeByMonth: number[];
 };
+
 type GrowthStats = {
   users: { current: number; previous: number; percent: number };
   doctors: { current: number; previous: number; percent: number };
   bookings: { current: number; previous: number; percent: number };
 };
 
-
-// ------------------------------
-// Line Chart Component
-// ------------------------------
-const IncomeLineChart = ({
-  months,
-  income,
-}: {
-  months: string[];
-  income: number[];
-}) => {
-  const data = {
-    labels: months,
-    datasets: [
-      {
-        label: "Monthly Income",
-        data: income,
-        borderColor: "#ea580c",
-        backgroundColor: "rgba(234, 88, 12, 0.08)",
-        tension: 0.4,
-        fill: true,
-        pointRadius: 4,
-        pointBackgroundColor: "#ea580c",
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        pointHoverRadius: 6,
-        borderWidth: 2,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "#1e293b",
-        padding: 12,
-        titleColor: "#f1f5f9",
-        bodyColor: "#f1f5f9",
-        borderColor: "#334155",
-        borderWidth: 1,
-        displayColors: false,
-        callbacks: {
-          label: (ctx: any) => `Revenue: ${formatINR(ctx.parsed.y)}`,
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: "#f1f5f9" },
-        ticks: {
-          color: "#64748b",
-          callback: (value: any) => "₹" + value / 1000 + "k",
-        },
-      },
-      x: {
-        grid: { display: false },
-        ticks: { color: "#64748b" },
-      },
-    },
-  };
-
-  return (
-    <div className="h-48 sm:h-56">
-      <Line data={data} options={options} />
-    </div>
-  );
+const formatGrowth = (p?: number) => {
+  if (p === undefined || p === null) return "No change";
+  const sign = p > 0 ? "+" : "";
+  return `${sign}${p.toFixed(1)}% from last month`;
 };
 
-// ------------------------------
-// Stat Card Component
-// ------------------------------
+// ------------------------------------------------------------------
+// RE-USABLE STAT CARD
+// ------------------------------------------------------------------
 const StatCard = ({
   title,
   value,
@@ -134,21 +68,68 @@ const StatCard = ({
   subtitle: string;
   icon: string;
 }) => (
-  <div className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition-shadow duration-200">
-    <div className="flex items-start justify-between mb-3">
-      <div className="text-slate-600 text-sm font-medium">{title}</div>
-      <div className="text-xl">{icon}</div>
+  <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all duration-200">
+    <div className="flex justify-between items-center mb-3">
+      <h4 className="text-sm text-slate-600 font-medium">{title}</h4>
+      <span className="text-2xl">{icon}</span>
     </div>
-    <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1 tracking-tight">
-      {value}
-    </div>
-    <div className="text-xs text-slate-500">{subtitle}</div>
+    <div className="text-3xl font-semibold text-orange-600">{value}</div>
+    <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
   </div>
 );
 
-// ------------------------------
-// Dashboard Page Component
-// ------------------------------
+// ------------------------------------------------------------------
+// LINE CHART (Modern + Clean)
+// ------------------------------------------------------------------
+const IncomeLineChart = ({ months, income }: { months: string[]; income: number[] }) => {
+  const data = {
+    labels: months,
+    datasets: [
+      {
+        label: "Monthly Revenue",
+        data: income,
+        borderColor: "#ea580c",
+        backgroundColor: "rgba(234, 88, 12, 0.08)",
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: "#ea580c",
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) => `Revenue: ${formatINR(ctx.parsed.y)}`,
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (v: any) => `₹${v / 1000}k`,
+        },
+        grid: { color: "#f1f5f9" },
+      },
+      x: {
+        grid: { display: false },
+      },
+    },
+  };
+
+  return <Line data={data} options={options} />;
+};
+
+// ------------------------------------------------------------------
+// MAIN PAGE
+// ------------------------------------------------------------------
 const DashboardPage = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalEarnings: 0,
@@ -169,13 +150,8 @@ const DashboardPage = () => {
   });
 
   const [loading, setLoading] = useState(true);
-const [growth, setGrowth] = useState<GrowthStats | null>(null);
-const formatGrowth = (percent?: number) => {
-  if (percent === undefined || percent === null) return "No change";
-  if (percent === 0) return "No change";
-  const sign = percent > 0 ? "+" : "";
-  return `${sign}${percent.toFixed(1)}% vs last month`;
-};
+  const [growth, setGrowth] = useState<GrowthStats | null>(null);
+  const [doctorList, setDoctorList] = useState<any[]>([]);
 
   const [filter, setFilter] = useState({
     start: "",
@@ -190,8 +166,6 @@ const formatGrowth = (percent?: number) => {
     count: 0,
   });
 
-  const [doctorList, setDoctorList] = useState<any[]>([]);
-
   const fetchFilteredEarnings = async () => {
     try {
       const data = await adminService.getFilteredEarnings(
@@ -200,232 +174,177 @@ const formatGrowth = (percent?: number) => {
         filter.doctorId
       );
       setFilteredEarnings(data);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
     }
   };
+
+  // FETCH DOCTORS
   useEffect(() => {
-    (async () => {
-      try {
-        const result = await adminService.getDoctorList(); // <-- required
-        setDoctorList(result);
-      } catch (err) {
-        console.error("Failed to fetch doctors:", err);
-      }
-    })();
+    adminService
+      .getDoctorList()
+      .then((res) => setDoctorList(res))
+      .catch((e) => console.error(e));
   }, []);
+
+  // FETCH ALL DASHBOARD DATA
   useEffect(() => {
     (async () => {
       try {
-        const [dashboardData, incomeData] = await Promise.all([
+        const [dashboard, income, growthStats, status] = await Promise.all([
           adminService.getDashboardStats(),
           adminService.getIncomeByMonth(),
+          adminService.getGrowthStats(),
+          adminService.getStatusChart(),
         ]);
 
         setStats({
-          ...dashboardData,
-          months: incomeData?.months || [],
-          incomeByMonth: incomeData?.income || [],
+          ...dashboard,
+          months: income?.months || [],
+          incomeByMonth: income?.income || [],
         });
-      } catch (err) {
-        console.error("Failed to fetch dashboard:", err);
+
+        setGrowth(growthStats);
+        setStatusChart(status);
+      } catch (e) {
+        console.error(e);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
-  useEffect(() => {
-    (async () => {
-      try {
-        const chart = await adminService.getStatusChart();
-
-        setStatusChart({
-          pending: chart.pending,
-          completed: chart.completed,
-          cancelled: chart.cancelled,
-          failed: chart.failed,
-          refunded: chart.refunded,
-        });
-      } catch (err) {
-        console.error("Failed to fetch status chart:", err);
-      }
-    })();
-  }, []);
-
-useEffect(() => {
-  (async () => {
-    try {
-      const [dashboardData, incomeData, growthData] = await Promise.all([
-        adminService.getDashboardStats(),
-        adminService.getIncomeByMonth(),
-        adminService.getGrowthStats(),
-      ]);
-
-      setStats({
-        ...dashboardData,
-        months: incomeData?.months || [],
-        incomeByMonth: incomeData?.income || [],
-      });
-
-      setGrowth(growthData);
-    } catch (err) {
-      console.error("Failed to fetch dashboard:", err);
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, []);
 
   if (loading) {
     return (
-      <section className="w-full h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-slate-200 border-t-orange-600 rounded-full animate-spin"></div>
-          <div className="text-slate-600 text-sm font-medium">
-            Loading dashboard...
-          </div>
+      <div className="w-full h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-10 h-10 border-4 border-slate-300 border-t-orange-600 rounded-full animate-spin" />
+          <p className="text-slate-500 text-sm">Loading dashboard...</p>
         </div>
-      </section>
+      </div>
     );
   }
 
-  // --------------------------
-  // Render
-  // --------------------------
   return (
-    <section className="w-full h-screen overflow-auto bg-slate-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6">
+    <div className="w-full min-h-screen bg-slate-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* ------------------------------ */}
-        {/* Advanced Earnings Filter */}
-        {/* ------------------------------ */}
-        <div className="bg-white border rounded-xl p-5 mb-5">
-          <h2 className="text-lg font-semibold mb-4 text-orange-600">
-            Advanced Earnings Filter
-          </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* ---------------------- EARNINGS FILTER ---------------------- */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <h2 className="text-lg font-semibold text-orange-600">Filter Earnings</h2>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
             <input
               type="date"
-              className="border rounded p-2"
+              className="border rounded-md p-2 text-sm"
               value={filter.start}
               onChange={(e) => setFilter({ ...filter, start: e.target.value })}
             />
-
             <input
               type="date"
-              className="border rounded p-2"
+              className="border rounded-md p-2 text-sm"
               value={filter.end}
               onChange={(e) => setFilter({ ...filter, end: e.target.value })}
             />
-
             <select
-              className="border rounded p-2"
+              className="border rounded-md p-2 text-sm"
               value={filter.doctorId}
-              onChange={(e) =>
-                setFilter({ ...filter, doctorId: e.target.value })
-              }
+              onChange={(e) => setFilter({ ...filter, doctorId: e.target.value })}
             >
               <option value="">All Doctors</option>
-              {doctorList.map((doc) => (
-                <option key={doc._id} value={doc._id}>
-                  {doc.username}
+              {doctorList.map((d) => (
+                <option key={d._id} value={d._id}>
+                  {d.username}
                 </option>
               ))}
             </select>
-
           </div>
 
           <button
-            className="mt-4 bg-orange-600 text-white px-4 py-2 rounded"
+            className="mt-4 bg-orange-600 text-white px-5 py-2 rounded-md text-sm"
             onClick={fetchFilteredEarnings}
           >
-            Apply Filter
+            Apply
           </button>
 
-          {/* Filtered Results */}
-          <div className="mt-4 text-sm">
+          <div className="mt-4 text-sm grid grid-cols-2 sm:grid-cols-4 gap-3">
             <p>Total Revenue: ₹{filteredEarnings.totalRevenue}</p>
             <p>Platform Fee: ₹{filteredEarnings.totalPlatformFee}</p>
             <p>Doctor Earnings: ₹{filteredEarnings.totalDoctorEarnings}</p>
-            <p>Filtered Bookings: {filteredEarnings.count}</p>
+            <p>Bookings: {filteredEarnings.count}</p>
           </div>
         </div>
 
-        {/* ------------------------------ */}
-        {/* Dashboard Stats */}
-        {/* ------------------------------ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        {/* ---------------------- STAT CARDS --------------------------- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Platform Revenue"
+            value={formatINR(stats.totalEarnings)}
+            subtitle={growth ? formatGrowth(growth.bookings.percent) : ""}
+            icon="💰"
+          />
+          <StatCard
+            title="Total Users"
+            value={stats.totalUsers.toLocaleString()}
+            subtitle={growth ? formatGrowth(growth.users.percent) : ""}
+            icon="👥"
+          />
+          <StatCard
+            title="Active Doctors"
+            value={stats.totalDoctors.toLocaleString()}
+            subtitle={growth ? formatGrowth(growth.doctors.percent) : ""}
+            icon="⚕️"
+          />
+          <StatCard
+            title="Pet Profiles"
+            value={stats.totalPets.toLocaleString()}
+            subtitle="Registered pets"
+            icon="🐾"
+          />
+        </div>
 
-<StatCard
-  title="Platform Revenue"
-  value={formatINR(stats.totalEarnings)}
-  subtitle={growth ? formatGrowth(growth.bookings.percent) : "Total earnings to date"}
-  icon="💰"
-/>
-    <StatCard
-  title="Total Users"
-  value={stats.totalUsers.toLocaleString()}
-  subtitle={growth ? formatGrowth(growth.users.percent) : "Registered pet owners"}
-  icon="👥"
-/>
-        <StatCard
-  title="Active Doctors"
-  value={stats.totalDoctors.toLocaleString()}
-  subtitle={growth ? formatGrowth(growth.doctors.percent) : "Verified veterinarians"}
-  icon="⚕️"
-/>
-          <StatCard title="Pet Profiles" value={stats.totalPets.toLocaleString()} subtitle="Registered pets" icon="🐾" />
-          <StatCard title="Total Bookings" value={stats.totalBookings.toLocaleString()} subtitle="All appointments" icon="📅" />
-          
+        {/* -------------------- CHARTS SECTION ------------------------- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Income Line Chart */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 sm:col-span-2 lg:col-span-3">
-            <h2 className="text-lg font-semibold text-orange-600 mb-1">
-              Revenue Overview
-            </h2>
-
-            {stats.months.length ? (
-              <IncomeLineChart months={stats.months} income={stats.incomeByMonth} />
-            ) : (
-              <div className="h-48 flex items-center justify-center text-slate-400">No data available</div>
-            )}
+          {/* Revenue Line Chart */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+            <h3 className="text-lg font-semibold text-orange-600 mb-3">Revenue Trend</h3>
+            <div className="h-64">
+              {stats.months.length ? (
+                <IncomeLineChart months={stats.months} income={stats.incomeByMonth} />
+              ) : (
+                <div className="flex h-full items-center justify-center text-slate-400">
+                  No data available
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Pie Chart */}
-          <div className="bg-white border rounded-xl p-5">
-            <h2 className="text-lg font-semibold mb-3">Booking Status Overview</h2>
-
-            <StatusPieChart
-              pending={statusChart.pending}
-              completed={statusChart.completed}
-              cancelled={statusChart.cancelled}
-              failed={statusChart.failed}
-              refunded={statusChart.refunded}
-            />
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="text-lg font-semibold mb-3">Booking Status</h3>
+            <StatusPieChart {...statusChart} />
           </div>
+        </div>
 
-          {/* Monthly Revenue Bar Chart */}
-          <div className="bg-white border rounded-xl p-5 sm:col-span-2 lg:col-span-3">
-            <h2 className="text-lg font-semibold mb-3 text-orange-600">
-              Monthly Revenue (Bar Graph)
-            </h2>
-
+        {/* -------------------- BAR CHART ------------------------------ */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-orange-600 mb-3">
+            Monthly Revenue Breakdown
+          </h3>
+          <div className="h-72">
             {stats.months.length ? (
-              <div className="h-64">
-                <RevenueBarChart months={stats.months} income={stats.incomeByMonth} />
-              </div>
+              <RevenueBarChart months={stats.months} income={stats.incomeByMonth} />
             ) : (
-              <div className="h-64 flex items-center justify-center text-slate-400">
-                No revenue data available
+              <div className="flex h-full items-center justify-center text-slate-400">
+                No revenue data
               </div>
             )}
           </div>
-
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

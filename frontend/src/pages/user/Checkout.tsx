@@ -217,7 +217,6 @@ export default function Checkout() {
                   )}
                   <div className="text-sm">
                     <div className="font-medium leading-tight">{pickedPet.name}</div>
-                    <div className="text-xs text-gray-500 leading-tight">{pickedPet._id}</div>
                   </div>
                 </div>
               )}
