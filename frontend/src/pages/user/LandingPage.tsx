@@ -1,6 +1,6 @@
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
-import { PawPrint, Stethoscope, Users, ShoppingBag, Heart, Star } from "lucide-react";
+import { PawPrint, Stethoscope, Users, ShoppingBag, Heart, Star, MessageSquareHeart } from "lucide-react";
 import heroPets from "@/assets/images/hero-pets.jpg";
 import petsCircle from "@/assets/images/pets-circle.jpg";
 import { useNavigate } from "react-router-dom";
@@ -143,7 +143,7 @@ const LandingPage = () => {
                 </div>
                 <h3 className="text-xl font-semibold">Pet Adoption</h3>
                 <p className="text-[#6B7280]">
-                  Find your perfect furry companion from loving families and shelters
+                  Adopt trusted, well-cared-for pets from certified shelters and verified families.
                 </p>
               </CardContent>
             </Card>
@@ -155,7 +155,7 @@ const LandingPage = () => {
                 </div>
                 <h3 className="text-xl font-semibold">Vet Care</h3>
                 <p className="text-[#6B7280]">
-                  Connect with certified veterinarians for consultations and care
+                  Consult certified veterinary experts for reliable medical guidance and care.
                 </p>
               </CardContent>
             </Card>
@@ -163,11 +163,11 @@ const LandingPage = () => {
             <Card className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-1">
               <CardContent className="p-8 text-center space-y-4">
                 <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FBE7FF] to-[#FFF0FB] flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-8 h-8 text-[#8B5CF6]" />
+                  <MessageSquareHeart className="w-8 h-8 text-[#8B5CF6]" />
                 </div>
-                <h3 className="text-xl font-semibold">Community</h3>
+                <h3 className="text-xl font-semibold">Matchmaking</h3>
                 <p className="text-[#6B7280]">
-                  Join thousands of pet lovers sharing stories and advice
+                  Find compatible partners for your pets through responsible, data-based matching.
                 </p>
               </CardContent>
             </Card>
@@ -179,7 +179,7 @@ const LandingPage = () => {
                 </div>
                 <h3 className="text-xl font-semibold">Marketplace</h3>
                 <p className="text-[#6B7280]">
-                  Discover premium pet supplies and accessories
+                  Explore a curated marketplace of verified, high-quality pets and offerings.
                 </p>
               </CardContent>
             </Card>
@@ -195,8 +195,7 @@ const LandingPage = () => {
               <div className="space-y-4">
                 <h2 className="text-4xl font-bold">Trusted by Pet Families Everywhere</h2>
                 <p className="text-lg text-[#6B7280] leading-relaxed">
-                  Join thousands of pet parents who trust TailMate for their furry family members. 
-                  Our platform connects you with verified professionals and loving community members.
+                  Join thousands of pet parents who trust TailMate to access verified veterinarians, safe pet adoption, and responsible pet matchmaking.
                 </p>
               </div>
 
@@ -245,7 +244,7 @@ const LandingPage = () => {
               <div className="space-y-4">
                 <h2 className="text-4xl font-bold">Ready to Join the TailMate Family?</h2>
                 <p className="text-lg text-[#6B7280] max-w-2xl mx-auto">
-                  Start your journey with us today — whether you're adopting, seeking care, or connecting with fellow pet lovers.
+                  Start your journey today—adopt a pet, consult a vet, or find the ideal companion match for your furry friend.
                 </p>
               </div>
 

@@ -190,8 +190,6 @@ export default function SessionDetailPage() {
                   ) : null}
 
                   <div className="mt-6 flex gap-2">
-                    <button className="px-3 py-2 rounded border">Copy meeting link</button>
-                    <button className="px-3 py-2 rounded border">Message patient</button>
                     {(row.mode === "video" || row.mode === "audio") && (
                       <button
                         onClick={async () => {
@@ -217,7 +215,6 @@ export default function SessionDetailPage() {
                             
                             console.log("[SessionDetail] Found consultation:", consultation._id);
                             
-                            // Prepare call to generate videoRoomId and set status to in_progress
                             const result = await consultationService.prepareCall(consultation._id);
                             console.log("[SessionDetail] Prepared call with room:", result.videoRoomId);
                             
@@ -258,7 +255,6 @@ export default function SessionDetailPage() {
                         )}
                       </button>
                     )}
-                    <button className="px-3 py-2 rounded bg-black text-white">Open session</button>
                   </div>
                 </>
               )}

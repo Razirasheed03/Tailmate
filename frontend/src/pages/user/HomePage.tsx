@@ -1,10 +1,9 @@
-// src/pages/HomePage.tsx
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
-import { Calendar, User, Users, Stethoscope, Heart, PawPrint, Plus, ChevronDown } from "lucide-react";
+import { Calendar, User, Heart, PawPrint, Plus, ChevronDown, Stethoscope, ShoppingBag, Users } from "lucide-react";
 import { APP_ROUTES } from "@/constants/routes";
 import { useEffect, useMemo, useState } from "react";
 import { PetAddModal } from "../pets/PetAddModal";
@@ -28,10 +27,6 @@ export default function HomePage() {
       setPetLoading(true);
       try {
         const res = await listMyPets(1, 6);
-        // Normalize shapes:
-        // - If service returns { data: [...] } directly
-        // - If wrapped: { success, data: { data: [...], total, ... } }
-        // - If array directly
         const payload = res?.data?.data ? res.data : res;
         const rows = Array.isArray(payload?.data)
           ? payload.data
@@ -40,7 +35,6 @@ export default function HomePage() {
           : [];
         setPetList(rows);
       } catch {
-        // ignore or toast
         setPetList([]);
       } finally {
         setPetLoading(false);
@@ -88,15 +82,15 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Overview Grid */}
-        <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        {/* Overview Grid - Updated with 4 cards */}
+        <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Upcoming Session</h3>
-                <Calendar className="w-5 h-5 text-[#0EA5E9]" />
+                <h3 className="font-semibold">Vet Booking</h3>
+                <Stethoscope className="w-5 h-5 text-[#0EA5E9]" />
               </div>
-              <p className="text-[#6B7280]">No session scheduled. Book your next vet consultation.</p>
+              <p className="text-[#6B7280]">Book consultations with verified veterinarians for your pets.</p>
               <div className="mt-4">
                 <Button size="sm" onClick={() => navigate(APP_ROUTES.Vets)} className="bg-[#0EA5E9] hover:bg-[#0284C7]">
                   Book Now
@@ -108,13 +102,13 @@ export default function HomePage() {
           <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Community</h3>
-                <Users className="w-5 h-5 text-[#8B5CF6]" />
+                <h3 className="font-semibold">Matchmaking</h3>
+                <Heart className="w-5 h-5 text-[#EF4444]" />
               </div>
-              <p className="text-[#6B7280]">Join discussions, share stories, and get tips from other pet parents.</p>
+              <p className="text-[#6B7280]">Find the perfect breeding match for your pet with our smart algorithm.</p>
               <div className="mt-4">
-                <Button size="sm" variant="outline" onClick={() => navigate(APP_ROUTES.COMMUNITY)} className="border-[#E5E7EB] bg-white hover:bg-white/90">
-                  Explore
+                <Button size="sm" variant="outline" onClick={() => navigate("/matchmaking")} className="border-[#E5E7EB] bg-white hover:bg-white/90">
+                  Find Match
                 </Button>
               </div>
             </CardContent>
@@ -123,13 +117,28 @@ export default function HomePage() {
           <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Wellness</h3>
-                <Heart className="w-5 h-5 text-[#EF4444]" />
+                <h3 className="font-semibold">Adoption</h3>
+                <Users className="w-5 h-5 text-[#8B5CF6]" />
               </div>
-              <p className="text-[#6B7280]">Track vaccinations, reminders, and personalized care tips.</p>
+              <p className="text-[#6B7280]">Browse pets looking for loving homes and start your adoption journey.</p>
               <div className="mt-4">
-                <Button size="sm" variant="outline" className="border-[#E5E7EB] bg-white hover:bg-white/90">
-                  Coming Soon
+                <Button size="sm" variant="outline" onClick={() => navigate("/marketplace")} className="border-[#E5E7EB] bg-white hover:bg-white/90">
+                  Browse Pets
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)]">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Marketplace</h3>
+                <ShoppingBag className="w-5 h-5 text-[#22C55E]" />
+              </div>
+              <p className="text-[#6B7280]">Shop for premium pet supplies, food, and accessories all in one place.</p>
+              <div className="mt-4">
+                <Button size="sm" variant="outline" onClick={() => navigate("/marketplace")} className="border-[#E5E7EB] bg-white hover:bg-white/90">
+                  Shop Now
                 </Button>
               </div>
             </CardContent>
@@ -194,41 +203,64 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Recommended Vets */}
-        <section className="mb-16">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Recommended Vets</h2>
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.Vets)} className="border-[#E5E7EB] bg-white hover:bg-white/90">
-              View All
-            </Button>
-          </div>
+        {/* Featured Services */}
+  <section className="mb-16">
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-2xl font-bold">Explore Our Services</h2>
+  </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((id) => (
-              <Card
-                key={id}
-                className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-1"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E6F7FF] to-[#F0F9FF] flex items-center justify-center">
-                      <Stethoscope className="w-6 h-6 text-[#22C55E]" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">Dr. Pawsitive #{id}</p>
-                      <p className="text-sm text-[#6B7280]">Small Animals · 4.9 ⭐</p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button size="sm" onClick={() => navigate(APP_ROUTES.Vets)} className="bg-[#22C55E] hover:bg-[#16A34A]">
-                      Book Session
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    {/* CARD 1 */}
+    <Card
+      onClick={() => navigate(APP_ROUTES.Vets)}
+      className="cursor-pointer group border-0 bg-gradient-to-br from-[#FFF7ED] to-[#FFF3E7] rounded-2xl shadow hover:-translate-y-1 transition-all"
+    >
+      <CardContent className="p-6">
+        <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <Stethoscope className="w-7 h-7 text-[#F97316]" />
+        </div>
+        <h3 className="font-bold text-lg mb-2">Expert Veterinary Care</h3>
+        <p className="text-sm text-[#6B7280] leading-relaxed">
+          Connect with certified vets for trusted consultations.
+        </p>
+      </CardContent>
+    </Card>
+
+    {/* CARD 2 */}
+    <Card
+      onClick={() => navigate("/matchmaking")}
+      className="cursor-pointer group border-0 bg-gradient-to-br from-[#FFF7ED] to-[#FFF3E7] rounded-2xl shadow hover:-translate-y-1 transition-all"
+    >
+      <CardContent className="p-6">
+        <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <Heart className="w-7 h-7 text-[#F97316]" />
+        </div>
+        <h3 className="font-bold text-lg mb-2">Smart Matchmaking</h3>
+        <p className="text-sm text-[#6B7280] leading-relaxed">
+          Find compatible partners for healthy and safe breeding.
+        </p>
+      </CardContent>
+    </Card>
+
+    {/* CARD 3 */}
+    <Card
+      onClick={() => navigate("/marketplace")}
+      className="cursor-pointer group border-0 bg-gradient-to-br from-[#FFF7ED] to-[#FFF3E7] rounded-2xl shadow hover:-translate-y-1 transition-all"
+    >
+      <CardContent className="p-6">
+        <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <Users className="w-7 h-7 text-[#F97316]" />
+        </div>
+        <h3 className="font-bold text-lg mb-2">Pet Adoption</h3>
+        <p className="text-sm text-[#6B7280] leading-relaxed">
+          Explore verified listings and adopt a loving companion.
+        </p>
+      </CardContent>
+    </Card>
+
+  </div>
+</section>
 
         {/* Wellness Tips */}
         <section className="mb-16">
@@ -262,10 +294,10 @@ export default function HomePage() {
 
           <div className="mx-auto max-w-3xl space-y-3">
             {[
-              { id: 1, q: "How do I book a vet session?", a: "Open Vets, select a specialist, choose a time slot, and confirm your booking. You’ll receive a confirmation instantly." },
+              { id: 1, q: "How do I book a vet session?", a: "Open Vets, select a specialist, choose a time slot, and confirm your booking." },
               { id: 2, q: "Can I manage multiple pets?", a: "Yes. Go to Profile to add, edit, or remove pet profiles, and manage their records independently." },
-              { id: 3, q: "Are veterinarians verified?", a: "We verify licenses and credentials before listing a vet on TailMate to maintain quality and trust." },
-              { id: 4, q: "Is there a community code of conduct?", a: "Yes. Our community is moderated and follows clear guidelines to ensure respectful, helpful conversations." },
+              { id: 3, q: "How does the matchmaking feature work?", a: "Our algorithm matches pets based on breed, health records, temperament, and location to find compatible breeding partners." },
+              { id: 4, q: "Is the adoption process verified?", a: "Yes. All adoption listings are verified, and we facilitate secure communication between adopters and current owners." },
             ].map((f) => {
               const open = faqOpenId === f.id;
               return (
@@ -299,7 +331,12 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="mt-2 bg-white/80 backdrop-blur border-t border-[#EEF2F7]">
-        {/* ... existing footer unchanged ... */}
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-[#6B7280]">© 2025 TailMate. All rights reserved.</p>
+        
+          </div>
+        </div>
       </footer>
     </div>
   );
