@@ -1,7 +1,9 @@
+//message.repository.ts
 import { Model, Types } from "mongoose";
 import { Message } from "../../schema/message.schema";
+import { IMessageRepository } from "../interfaces/message.repository.interface";
 
-export class MessageRepository {
+export class MessageRepository implements IMessageRepository{
   constructor(private readonly model: Model<any> = Message) {}
 
   async create(roomId: string, senderId: string, content: string) {

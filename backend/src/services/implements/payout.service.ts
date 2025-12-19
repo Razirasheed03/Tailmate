@@ -4,8 +4,9 @@ import { Payout } from "../../schema/payout.schema";
 import { DoctorModel } from "../../models/implements/doctor.model";
 import { stripe } from "../../utils/stripe";
 import { DoctorPayoutModel } from "../../schema/doctorPayout.schema";
+import { IPayoutService } from "../interfaces/payout.service.interface";
 
-export class PayoutService {
+export class PayoutService implements IPayoutService{
   async requestPayout(ownerType: "user" | "doctor", ownerId: string, amount: number, currency: string) {
     // Ensure enough balance
     const wallet = await Wallet.findOne({ ownerType, ownerId, currency });

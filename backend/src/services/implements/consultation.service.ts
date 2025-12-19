@@ -1,9 +1,32 @@
+// services/implements/consultation.service.ts
 import { Types } from "mongoose";
-import { ConsultationRepository } from "../../repositories/implements/consultation.repository";
-import { BookingRepository } from "../../repositories/implements/booking.repository";
+import { IConsultationRepository } from "../../repositories/interfaces/consultation.repository.interface";
+import { IBookingRepository } from "../../repositories/interfaces/booking.repository.interface";
 import { Doctor } from "../../schema/doctor.schema";
+import { IConsultationService } from "../interfaces/consultation.service.interface";
 
-const generateVideoRoomId = async (repo: ConsultationRepository): Promise<string> => {
+// Helper function to safely extract ObjectId string from populated or non-populated field
+const extractObjectIdString = (field: any): string => {
+  if (!field) return "";
+  
+  // If it's already a string
+  if (typeof field === "string") return field;
+  
+  // If it's a Mongoose ObjectId
+  if (field instanceof Types.ObjectId) return field.toString();
+  
+  // If it's a populated object with _id
+  if (typeof field === "object" && field._id) {
+    return field._id instanceof Types.ObjectId 
+      ? field._id.toString() 
+      : String(field._id);
+  }
+  
+  // Fallback: try toString (may return [object Object] if not handled above)
+  return String(field);
+};
+
+const generateVideoRoomId = async (repo: IConsultationRepository): Promise<string> => {
   const chars = "1234567890abcdefghijklmnopqrstuvwxyz";
   let attempts = 0;
   const maxAttempts = 10;
@@ -24,9 +47,11 @@ const generateVideoRoomId = async (repo: ConsultationRepository): Promise<string
   throw new Error("Failed to generate unique videoRoomId");
 };
 
-export class ConsultationService {
-  private _repo = new ConsultationRepository();
-  private _bookingRepo = new BookingRepository();
+export class ConsultationService implements IConsultationService {
+  constructor(
+    private readonly _repo: IConsultationRepository,
+    private readonly _bookingRepo: IBookingRepository
+  ) {}
 
   async create(userId: string, doctorProfileId: string, payload: any) {
     if (!doctorProfileId?.trim()) {
@@ -73,12 +98,6 @@ export class ConsultationService {
     return this._repo.listDoctorConsultations(doctorProfileId, status);
   }
 
-  /**
-   * Prepare consultation call for WebRTC
-   * Both doctor and patient call this endpoint
-   * Doctor: authDoctorId (Doctor._id) must match consultation.doctorId
-   * Patient: authUserId (User._id) must match consultation.userId
-   */
   async prepareConsultationCall(
     consultationId: string,
     authUserId: string,
@@ -90,39 +109,22 @@ export class ConsultationService {
       throw Object.assign(new Error("Consultation not found"), { status: 404 });
     }
 
-    // Extract normalized IDs from consultation
-    // Handle both populated objects and raw ObjectIds
-    const patientUserId = consultation.userId
-      ? typeof consultation.userId === "object"
-        ? (consultation.userId as any)._id?.toString() || (consultation.userId as any).toString()
-        : consultation.userId.toString()
-      : null;
-
-    const doctorProfileId = consultation.doctorId
-      ? typeof consultation.doctorId === "object"
-        ? (consultation.doctorId as any)._id?.toString() || (consultation.doctorId as any).toString()
-        : consultation.doctorId.toString()
-      : null;
-
-    // Extract doctor's User ID for comparison (from populated Doctor object)
+    // Extract normalized IDs using helper function
+    const patientUserId = extractObjectIdString(consultation.userId);
+    const doctorProfileId = extractObjectIdString(consultation.doctorId);
+    
+    // Extract doctor's User ID (from populated Doctor.userId)
     const doctorUserId = consultation.doctorId && typeof consultation.doctorId === "object"
-      ? (consultation.doctorId as any).userId
-        ? typeof (consultation.doctorId as any).userId === "object"
-          ? ((consultation.doctorId as any).userId as any)._id?.toString() || ((consultation.doctorId as any).userId as any).toString()
-          : (consultation.doctorId as any).userId.toString()
-        : null
+      ? extractObjectIdString(consultation.doctorId.userId)
       : null;
 
     console.log("[prepareCall] Consultation data:", {
       consultationId,
-      userId: consultation.userId,
-      doctorId: consultation.doctorId,
       patientUserId,
       doctorProfileId,
       doctorUserId,
     });
 
-    // Validate that we have the required IDs
     if (!patientUserId) {
       throw Object.assign(new Error("Consultation missing patient user ID"), { status: 400 });
     }
@@ -130,13 +132,9 @@ export class ConsultationService {
       throw Object.assign(new Error("Consultation missing doctor profile ID"), { status: 400 });
     }
 
-    // Normalize authUserId for comparison
     const normalizedAuthUserId = authUserId?.toString() || "";
     const normalizedAuthDoctorId = authDoctorId?.toString() || "";
 
-    // Authorization: Patient OR Doctor
-    // Patient: authUserId matches consultation.userId (User._id)
-    // Doctor: EITHER authDoctorId matches Doctor._id OR authUserId matches Doctor.userId
     const isPatient = normalizedAuthUserId === patientUserId;
     const isDoctorByProfile = role === "doctor" && normalizedAuthDoctorId && normalizedAuthDoctorId === doctorProfileId;
     const isDoctorByUserId = role === "doctor" && doctorUserId && normalizedAuthUserId === doctorUserId;
@@ -146,26 +144,15 @@ export class ConsultationService {
       authUserId: normalizedAuthUserId,
       authDoctorId: normalizedAuthDoctorId,
       role,
-      patientUserId,
-      doctorProfileId,
-      doctorUserId,
       isPatient,
-      isDoctorByProfile,
-      isDoctorByUserId,
       isDoctor,
     });
 
     if (!isPatient && !isDoctor) {
-      console.error("[prepareCall] AUTHORIZATION FAILED", {
-        authUserId: normalizedAuthUserId,
-        patientUserId,
-        authDoctorId: normalizedAuthDoctorId,
-        doctorProfileId,
-      });
+      console.error("[prepareCall] AUTHORIZATION FAILED");
       throw Object.assign(new Error("You are not allowed to join this call"), { status: 403 });
     }
 
-    // Check consultation status
     if (consultation.status === "cancelled") {
       throw Object.assign(new Error("Consultation has been cancelled"), { status: 400 });
     }
@@ -174,13 +161,11 @@ export class ConsultationService {
       throw Object.assign(new Error("Consultation has already been completed"), { status: 400 });
     }
 
-    // Generate videoRoomId if not exists
     let videoRoomId = consultation.videoRoomId;
     if (!videoRoomId) {
       videoRoomId = await generateVideoRoomId(this._repo);
     }
 
-    // Update status to in_progress
     const updates: any = { videoRoomId };
     if (consultation.status !== "in_progress") {
       updates.status = "in_progress";
@@ -204,21 +189,13 @@ export class ConsultationService {
       throw Object.assign(new Error("Consultation not found"), { status: 404 });
     }
 
-    const patientUserId = typeof consultation.userId === "object"
-      ? (consultation.userId as any)._id?.toString()
-      : consultation.userId?.toString();
+    // Use helper function to extract IDs
+    const patientUserId = extractObjectIdString(consultation.userId);
+    const doctorProfileId = extractObjectIdString(consultation.doctorId);
 
-    const doctorProfileId = typeof consultation.doctorId === "object"
-      ? (consultation.doctorId as any)._id?.toString()
-      : consultation.doctorId?.toString();
-
-    // Normalize IDs for comparison
     const normalizedUserId = userId?.toString() || "";
     const normalizedDoctorId = doctorId?.toString() || "";
 
-    // Authorization: Patient OR Doctor
-    // Patient: userId matches consultation.userId (User._id)
-    // Doctor: doctorId matches consultation.doctorId (Doctor._id)
     const isPatient = normalizedUserId === patientUserId;
     const isDoctor = normalizedDoctorId && normalizedDoctorId === doctorProfileId;
 
@@ -235,29 +212,24 @@ export class ConsultationService {
       throw Object.assign(new Error("Unauthorized"), { status: 403 });
     }
 
-    // RULE: Only doctor can end the consultation
-    // Patient can leave but consultation stays in_progress
     if (isPatient && !isDoctor) {
-      console.log("[endConsultationCall] Patient attempted to end call - not allowed, only doctor can end");
+      console.log("[endConsultationCall] Patient attempted to end call - not allowed");
       throw Object.assign(
         new Error("Only the doctor can end the consultation. You can rejoin if the doctor is still available."),
         { status: 403, isPatientLeaving: true }
       );
     }
 
-    // If already completed, return it (idempotent)
     if (consultation.status === "completed") {
-      console.log("[endConsultationCall] Call already completed, returning existing");
+      console.log("[endConsultationCall] Call already completed");
       return consultation;
     }
 
-    // Doctor ending call - mark as completed
     const updated = await this._repo.findByIdAndUpdate(consultationId, {
       status: "completed",
       callEndedAt: new Date(),
     });
 
-    // Emit socket event to notify all participants that doctor ended the call
     if (io && consultation.videoRoomId) {
       const roomName = `consultation:${consultation.videoRoomId}`;
       console.log("[endConsultationCall] Emitting consultation_call_ended to room:", roomName);
@@ -277,15 +249,10 @@ export class ConsultationService {
       throw Object.assign(new Error("Consultation not found"), { status: 404 });
     }
 
-    const patientUserId = typeof consultation.userId === "object"
-      ? (consultation.userId as any)._id?.toString()
-      : consultation.userId?.toString();
+    // Use helper function
+    const patientUserId = extractObjectIdString(consultation.userId);
+    const doctorProfileId = extractObjectIdString(consultation.doctorId);
 
-    const doctorProfileId = typeof consultation.doctorId === "object"
-      ? (consultation.doctorId as any)._id?.toString()
-      : consultation.doctorId?.toString();
-
-    // Only patient or doctor can cancel
     const isPatient = userId === patientUserId;
     const isDoctor = userId === doctorProfileId;
 
@@ -308,16 +275,6 @@ export class ConsultationService {
     return consultation;
   }
 
-  /**
-   * Create or get consultation from booking
-   * CRITICAL: Uses atomic findOneAndUpdate with upsert to prevent race conditions
-   * Booking.doctorId is User._id, but Consultation.doctorId must be Doctor._id
-   * 
-   * STRICT VALIDATION:
-   * - Consultation.userId MUST be patientUserId
-   * - Consultation.doctorId MUST be Doctor._id (doctor profile, not user)
-   * - If corrupted, DELETE and RECREATE
-   */
   async getOrCreateConsultationFromBooking(
     bookingId: string,
     patientUserId: string,
@@ -336,7 +293,6 @@ export class ConsultationService {
     });
 
     try {
-      // Step 1: Resolve Doctor profile ID from doctor's User ID
       console.log("[getOrCreateConsultationFromBooking] Looking up Doctor with userId:", doctorUserId);
       let doctorProfile = await Doctor.findOne({ userId: new Types.ObjectId(doctorUserId) });
       
@@ -356,16 +312,12 @@ export class ConsultationService {
       const scheduledDate = new Date(scheduledFor);
       const videoRoomId = await generateVideoRoomId(this._repo);
 
-      // Step 2: Check if consultation already exists
       console.log("[getOrCreateConsultationFromBooking] Checking for existing consultation by bookingId:", bookingId);
-      let existingConsultation = await this._repo.model.findOne({
-        bookingId: bookingId,
-        status: { $ne: "cancelled" },
-      });
+      let existingConsultation = await this._repo.findByBookingId(bookingId);
 
-      // Step 3: If exists, validate it has correct userId
       if (existingConsultation) {
-        const existingUserId = existingConsultation.userId.toString();
+        // FIXED: Use helper function to extract ID from potentially populated field
+        const existingUserId = extractObjectIdString(existingConsultation.userId);
         const expectedUserId = patientUserIdObj.toString();
         
         console.log("[getOrCreateConsultationFromBooking] Found existing consultation:", {
@@ -375,27 +327,22 @@ export class ConsultationService {
           match: existingUserId === expectedUserId,
         });
 
-        // If userId is WRONG, delete and recreate
         if (existingUserId !== expectedUserId) {
           console.warn("[getOrCreateConsultationFromBooking] ⚠️ CORRUPTED: userId mismatch!");
           console.warn("[getOrCreateConsultationFromBooking] Expected:", expectedUserId, "Got:", existingUserId);
           console.log("[getOrCreateConsultationFromBooking] Deleting corrupted consultation...");
           
-          await this._repo.model.deleteOne({ _id: existingConsultation._id });
-          
-          // Fall through to create new one
+          await this._repo.deleteByBookingId(bookingId);
           existingConsultation = null;
         } else {
-          // userId is correct, return it
           console.log("[getOrCreateConsultationFromBooking] Consultation is valid, returning existing one");
           return await this._repo.findById(existingConsultation._id.toString());
         }
       }
 
-      // Step 4: Create new consultation with ATOMIC upsert
       console.log("[getOrCreateConsultationFromBooking] Creating new consultation with atomic upsert");
       
-      const consultation = await this._repo.model.findOneAndUpdate(
+      const consultation = await this._repo.findOneAndUpsert(
         {
           bookingId: bookingId,
           status: { $ne: "cancelled" },
@@ -412,8 +359,7 @@ export class ConsultationService {
           },
         },
         { 
-          upsert: true, 
-          new: true,
+          upsert: true,
           setDefaultsOnInsert: true,
         }
       );
@@ -421,13 +367,18 @@ export class ConsultationService {
       console.log("[getOrCreateConsultationFromBooking] Got consultation:", {
         _id: consultation._id,
         videoRoomId: consultation.videoRoomId,
-        userId: consultation.userId.toString(),
-        doctorId: consultation.doctorId.toString(),
       });
 
-      // Step 5: Final validation before returning
-      const finalUserId = consultation.userId.toString();
-      const finalDoctorId = consultation.doctorId.toString();
+      // FIXED: Use helper function for final validation
+      const finalUserId = extractObjectIdString(consultation.userId);
+      const finalDoctorId = extractObjectIdString(consultation.doctorId);
+      
+      console.log("[getOrCreateConsultationFromBooking] Final validation:", {
+        finalUserId,
+        expectedPatientId: patientUserIdObj.toString(),
+        finalDoctorId,
+        expectedDoctorId: doctorProfileIdObj.toString(),
+      });
       
       if (finalUserId !== patientUserIdObj.toString()) {
         throw Object.assign(
@@ -443,12 +394,10 @@ export class ConsultationService {
         );
       }
 
-      // Return fully populated consultation
       return await this._repo.findById(consultation._id.toString());
     } catch (error: any) {
-      // Handle duplicate key error (race condition from concurrent requests)
       if (error.code === 11000) {
-        console.warn("[getOrCreateConsultationFromBooking] Duplicate key error (race condition):", error.message);
+        console.warn("[getOrCreateConsultationFromBooking] Duplicate key error (race condition)");
         
         if (retryCount < maxRetries) {
           const waitTime = 50 * Math.pow(2, retryCount);
@@ -465,12 +414,8 @@ export class ConsultationService {
             retryCount + 1
           );
         } else {
-          // After max retries, try to find existing consultation
           console.log("[getOrCreateConsultationFromBooking] Max retries reached, searching for existing consultation...");
-          const existing = await this._repo.model.findOne({
-            bookingId: bookingId,
-            status: { $ne: "cancelled" },
-          });
+          const existing = await this._repo.findByBookingId(bookingId);
           
           if (existing) {
             console.log("[getOrCreateConsultationFromBooking] Found existing consultation after retries:", existing._id);

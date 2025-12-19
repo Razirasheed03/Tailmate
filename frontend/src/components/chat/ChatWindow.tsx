@@ -22,14 +22,12 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({
-  roomId,
   messages,
   currentUserId,
   onSendMessage,
   isLoading = false,
   otherUserName = 'User',
   listingId,
-  socket,
 }: ChatWindowProps) {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,53 +40,6 @@ export default function ChatWindow({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Mark as seen ONLY if there are unseen messages from the other user
-  const hasUnseenMessages = () => {
-    return messages.some((msg) => {
-      // Only check messages from OTHER users (not current user)
-      if (msg.senderId === currentUserId) return false;
-      
-      // Check if current user has seen this message
-      const seenByIds = (msg.seenBy || []).map((id: any) => 
-        typeof id === 'string' ? id : id._id || id.toString()
-      );
-      
-      return !seenByIds.includes(currentUserId);
-    });
-  };
-
-  // Mark as seen when user scrolls to bottom
-  const handleScroll = () => {
-    if (!socket || !roomId || document.visibilityState !== 'visible') return;
-
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    // Check if scrolled to bottom (within 100px)
-    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-    
-    // Only mark as seen if there are actually unseen messages from the other user
-    if (isAtBottom && hasUnseenMessages()) {
-      socket.emit('chat:mark_seen', { roomId });
-      console.log('[Chat] Marked unseen messages as seen');
-    }
-  };
-
-  // Handle visibility changes - mark as seen when tab becomes visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && socket && roomId && hasUnseenMessages()) {
-        socket.emit('chat:mark_seen', { roomId });
-        console.log('[Chat] Marked unseen messages as seen (visibility change)');
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [socket, roomId, messages, currentUserId]);
 
   const handleViewListing = () => {
     if (listingId?._id) {
@@ -137,7 +88,6 @@ export default function ChatWindow({
       {/* Messages */}
       <div 
         ref={messagesContainerRef}
-        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 space-y-2"
       >
         {messages.length === 0 ? (

@@ -393,8 +393,6 @@ export default function DoctorLandingPage() {
                     />
                   </div>
                 </section>
-
-                {/* ✅ PET TRENDS ONLY FOR VERIFIED DOCTORS */}
                 <Card className="p-5">
                   <h2 className="text-lg font-semibold mb-3">
                     Most Booked Pet Categories

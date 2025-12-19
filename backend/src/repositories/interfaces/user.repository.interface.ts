@@ -28,4 +28,6 @@ export interface IUserRepository {
     totalPatients: number;
     blockedUsers: number;
   }>;
+
+  updateUsername(userId: string, username: string): Promise<Omit<IUserModel, "password"> | null>;
 }

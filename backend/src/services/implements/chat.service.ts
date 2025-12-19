@@ -1,12 +1,14 @@
-import { ChatRepository } from "../../repositories/implements/chat.repository";
-import { MessageRepository } from "../../repositories/implements/message.repository";
-import { MatchmakingRepository } from "../../repositories/implements/matchmaking.repository";
+import { IChatRepository } from "../../repositories/interfaces/chat.repository.inteface";
+import { IMatchmakingRepository } from "../../repositories/interfaces/matchmaking.repository.interface";
+import { IMessageRepository } from "../../repositories/interfaces/message.repository.interface";
+import { IChatService } from "../interfaces/chat.service.interface";
 
-export class ChatService {
+//   ) {}
+export class ChatService implements IChatService {
   constructor(
-    private readonly chatRepo = new ChatRepository(),
-    private readonly messageRepo = new MessageRepository(),
-    private readonly matchmakingRepo = new MatchmakingRepository()
+    private readonly chatRepo: IChatRepository,
+    private readonly messageRepo: IMessageRepository,
+    private readonly matchmakingRepo: IMatchmakingRepository
   ) {}
 
   async startChat(currentUserId: string, listingId: string, receiverId: string) {
@@ -56,7 +58,14 @@ export class ChatService {
     }
 
     const result = await this.messageRepo.listByRoom(roomId, page, limit);
-    return result;
+
+return {
+  messages: result.data,
+  total: result.total,
+  page: result.page,
+  limit,
+};
+
   }
 
   async sendMessage(currentUserId: string, roomId: string, content: string) {
@@ -118,7 +127,11 @@ export class ChatService {
       throw Object.assign(new Error("Unauthorized"), { status: 403 });
     }
 
-    await this.messageRepo.markSeen(roomId, currentUserId);
-    return { success: true };
+    const result = await this.messageRepo.markSeen(roomId, currentUserId);
+    return { 
+      success: true,
+      modifiedCount: result.modifiedCount || 0,
+      matchedCount: result.matchedCount || 0,
+    };
   }
 }

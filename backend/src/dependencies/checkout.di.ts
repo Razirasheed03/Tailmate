@@ -1,6 +1,9 @@
-// backend/src/dependencies/checkout.di.ts
+// dependencies/checkout.di.ts
+
 import { CheckoutController } from "../controllers/Implements/checkout.controller";
 import { CheckoutService } from "../services/implements/checkout.service";
+import { DoctorPublicRepository } from "../repositories/implements/doctorPublic.repository";
 
-const checkoutService = new CheckoutService();
-export const checkoutController = new CheckoutController(checkoutService);
+export const checkoutController = new CheckoutController(
+  new CheckoutService(new DoctorPublicRepository())
+);

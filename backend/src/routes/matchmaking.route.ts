@@ -2,11 +2,11 @@ import { Router } from "express";
 import multer from "multer";
 import { authJwt } from "../middlewares/authJwt";
 import { asyncHandler } from "../utils/asyncHandler";
-import { MatchmakingController } from "../controllers/Implements/matchmaking.controller";
+import { matchmakingController } from "../dependencies/matchmaking.di";
 import { uploadMarketplaceImageBufferToCloudinary } from "../utils/uploadToCloudinary";
 
 const router = Router();
-const c = new MatchmakingController();
+const c = matchmakingController;
 
 const upload = multer({
   storage: multer.memoryStorage(),

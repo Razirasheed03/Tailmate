@@ -3,11 +3,9 @@ import { Types } from "mongoose";
 import { stripe } from "../../utils/stripe";
 import { MarketOrder } from "../../schema/marketOrder.schema";
 import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
+import { IMarketplacePaymentService, CreateSessionPayload, CreateSessionResp } from "../interfaces/marketplace.payment.service.interface";
 
-type CreateSessionPayload = { listingId: string };
-type CreateSessionResp = { url: string | null, orderId: string };
-
-export class MarketplacePaymentService {
+export class MarketplacePaymentService implements IMarketplacePaymentService {
   async createCheckoutSession(payload: CreateSessionPayload, buyerId: string): Promise<CreateSessionResp> {
     const { listingId } = payload || ({} as CreateSessionPayload);
     if (!listingId || !Types.ObjectId.isValid(listingId)) throw new Error("Invalid listing");

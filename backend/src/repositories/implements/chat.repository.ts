@@ -1,7 +1,8 @@
 import { Model, Types } from "mongoose";
 import { ChatRoom } from "../../schema/chatRoom.schema";
+import { IChatRepository } from "../interfaces/chat.repository.inteface";
 
-export class ChatRepository {
+export class ChatRepository implements IChatRepository {
   constructor(private readonly model: Model<any> = ChatRoom) {}
 
   async findOrCreateRoom(

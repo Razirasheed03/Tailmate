@@ -6,7 +6,6 @@ import userService from "@/services/userService";
 import type { BookingRow, BookingStatus, UIMode } from "@/types/booking.types";
 import { Button } from "@/components/UiComponents/button";
 import { consultationService } from "@/services/consultationService";
-import { isConsultationActive } from "@/utils/consultationHelpers";
 
 const Bookings = () => {
   const nav = useNavigate();
@@ -22,12 +21,82 @@ const Bookings = () => {
   const [modeFilter, setModeFilter] = useState<UIMode | "">("");
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [joiningCall, setJoiningCall] = useState<string | null>(null);
+  const [callAvailability, setCallAvailability] = useState<Record<string, { canJoin: boolean; timeUntil: string }>>({});
+  const [consultationStatuses, setConsultationStatuses] = useState<Record<string, 'upcoming' | 'in_progress' | 'completed' | 'cancelled'>>({});
 
   const limit = 10;
 
   useEffect(() => {
     fetchBookings();
   }, [page, scope, statusFilter, modeFilter]);
+
+  // Fetch consultation statuses for all bookings
+  useEffect(() => {
+    if (bookings.length === 0) return;
+
+    const fetchConsultationStatuses = async () => {
+      const statuses: Record<string, 'upcoming' | 'in_progress' | 'completed' | 'cancelled'> = {};
+
+      for (const booking of bookings) {
+        if (booking.status === "paid" && (booking.mode === "video" || booking.mode === "audio")) {
+          try {
+            const consultation = await consultationService.getOrCreateFromBooking(
+              booking._id,
+              booking.doctorId,
+              new Date(booking.date + "T" + booking.time).toISOString(),
+              Number(booking.durationMins)
+            );
+            statuses[booking._id] = consultation.status;
+          } catch (err) {
+            console.error(`Failed to fetch consultation status for booking ${booking._id}:`, err);
+          }
+        }
+      }
+
+      setConsultationStatuses(statuses);
+    };
+
+    fetchConsultationStatuses();
+  }, [bookings]);
+
+  // Check call availability for all bookings (within 10 minutes of scheduled time)
+  useEffect(() => {
+    if (bookings.length === 0) return;
+
+    const checkCallAvailability = () => {
+      const availability: Record<string, { canJoin: boolean; timeUntil: string }> = {};
+
+      bookings.forEach((booking) => {
+        if (booking.status === "paid" && (booking.mode === "video" || booking.mode === "audio")) {
+          const scheduledTime = new Date(booking.date + "T" + booking.time);
+          const now = new Date();
+          const diffMs = scheduledTime.getTime() - now.getTime();
+          const diffMinutes = Math.floor(diffMs / 60000);
+
+          if (diffMinutes <= 10) {
+            availability[booking._id] = { canJoin: true, timeUntil: "" };
+          } else {
+            const hours = Math.floor(diffMinutes / 60);
+            const mins = diffMinutes % 60;
+            let timeUntil = "";
+            if (hours > 0) {
+              timeUntil = `Available in ${hours}h ${mins}m`;
+            } else {
+              timeUntil = `Available in ${mins} minutes`;
+            }
+            availability[booking._id] = { canJoin: false, timeUntil };
+          }
+        }
+      });
+
+      setCallAvailability(availability);
+    };
+
+    checkCallAvailability();
+    const interval = setInterval(checkCallAvailability, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [bookings]);
 
   const fetchBookings = async () => {
     try {
@@ -350,13 +419,45 @@ const Bookings = () => {
                                 setJoiningCall(null);
                               }
                             }}
-                            disabled={joiningCall === booking._id}
-                            className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 disabled:bg-gray-200 disabled:text-gray-500 rounded-lg text-sm font-medium flex items-center gap-2 disabled:cursor-not-allowed"
+                            disabled={
+                              joiningCall === booking._id ||
+                              consultationStatuses[booking._id] === 'completed' ||
+                              (!callAvailability[booking._id]?.canJoin && consultationStatuses[booking._id] !== 'in_progress')
+                            }
+                            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:cursor-not-allowed ${
+                              consultationStatuses[booking._id] === 'completed'
+                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                : consultationStatuses[booking._id] === 'in_progress'
+                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200 disabled:bg-gray-200 disabled:text-gray-500'
+                            }`}
+                            title={
+                              consultationStatuses[booking._id] === 'completed'
+                                ? 'Consultation completed'
+                                : !callAvailability[booking._id]?.canJoin && consultationStatuses[booking._id] !== 'in_progress'
+                                ? callAvailability[booking._id]?.timeUntil
+                                : ''
+                            }
                           >
-                            {joiningCall === booking._id ? (
+                            {consultationStatuses[booking._id] === 'completed' ? (
+                              <>
+                                <Phone className="w-4 h-4" />
+                                Consultation Completed
+                              </>
+                            ) : joiningCall === booking._id ? (
                               <>
                                 <Loader className="w-4 h-4 animate-spin" />
-                                Joining...
+                                {consultationStatuses[booking._id] === 'in_progress' ? 'Rejoining...' : 'Joining...'}
+                              </>
+                            ) : consultationStatuses[booking._id] === 'in_progress' ? (
+                              <>
+                                <Phone className="w-4 h-4" />
+                                Rejoin Call
+                              </>
+                            ) : !callAvailability[booking._id]?.canJoin ? (
+                              <>
+                                <Phone className="w-4 h-4" />
+                                {callAvailability[booking._id]?.timeUntil || "Not available yet"}
                               </>
                             ) : (
                               <>
