@@ -1,297 +1,175 @@
-//src/components/UiComponents/AdminNavbar.tsx
-import React, { useState, useEffect, useRef } from "react";
-import { Bell, ChevronDown, LogOut, Menu, Search } from "lucide-react";
+// src/components/UiComponents/AdminNavbar.tsx
+
+import React, { useState, useEffect } from "react";
+import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { io, Socket } from "socket.io-client";
 import httpClient from "@/services/httpClient";
+import { io } from "socket.io-client";
 
 interface NavbarProps {
   title?: string;
   onMobileMenuToggle?: () => void;
 }
 
-type NotificationItem = {
-  id: string;
-  message: string;
-  createdAt: string;
-  read: boolean;
-  doctorId?: string;
-};
-
 const SOCKET_URL = "http://localhost:4000";
 
-const AdminNavbar: React.FC<NavbarProps> = ({
-  title = "Dashboard",
-  onMobileMenuToggle,
-}) => {
+const AdminNavbar: React.FC<NavbarProps> = ({ title, onMobileMenuToggle }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [showAllNotifications, setShowAllNotifications] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const socketRef = useRef<Socket | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Helper function to fetch notifications from backend
+  // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const { data } = await httpClient.get<{ data: any[] }>(
-        "/notifications?limit=30"
+      const { data } = await httpClient.get("/notifications?limit=30");
+      setNotifications(
+        data.data.map((n: any) => ({
+          id: n._id,
+          message: n.message,
+          createdAt: n.createdAt,
+          read: n.read,
+          doctorId: n.meta?.doctorId,
+        }))
       );
-      if (Array.isArray(data?.data)) {
-        setNotifications(
-          data.data.map((n: any) => ({
-            id: n._id || `${n.createdAt}`,
-            message: n.message,
-            createdAt: n.createdAt,
-            read: n.read,
-            doctorId: n.meta?.doctorId,
-          }))
-        );
-      }
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-    }
+    } catch {}
   };
 
-  // Fetch notification history + socket.io live
+  // Setup real-time
   useEffect(() => {
-    let mounted = true;
     (async () => {
-      if (user?.role === "admin" && user?._id) {
-        // Initial fetch
+      if (user?.role === "admin") {
         await fetchNotifications();
 
-        // SOCKET.IO real-time
         const socket = io(SOCKET_URL, {
-          withCredentials: true,
           transports: ["websocket"],
-        });
-        socketRef.current = socket;
-
-        socket.on("connect", () => {
-          console.log("Socket.IO: Connected (admin)", socket.id);
+          withCredentials: true,
         });
 
-        // ✅ FIX: Only refetch from backend, don't add locally!
         socket.on("admin_notification", async (data) => {
-          toast.info(data.message || "You have a new notification!");
-          // Refetch all notifications from backend
+          toast.info(data.message);
           await fetchNotifications();
         });
 
-        socket.on("disconnect", () => {
-          console.log("Socket disconnected");
-        });
-
-        return () => {
-          mounted = false;
-          socket.disconnect();
-        };
+        return () => socket.disconnect();
       }
     })();
-
-    return () => {
-      mounted = false;
-      socketRef.current?.disconnect();
-    };
   }, [user]);
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await httpClient.patch("/notifications/mark-all-read");
-      await fetchNotifications(); // Refetch to get updated read status
-    } catch (error) {
-      console.error("Failed to mark all as read:", error);
-      // Fallback: update locally if backend fails
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    }
-  };
-
-  const handleViewAllNotifications = () => {
-    setShowAllNotifications(true);
-    setIsNotificationOpen(true);
-  };
-
-  const handleNotificationClick = async (notification: NotificationItem) => {
-    // Mark single notification as read
-    try {
-      await httpClient.patch(`/notifications/${notification.id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
-      );
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-    }
-
-    // Navigate to doctor verification if doctorId exists
-    if (notification.doctorId) {
-      navigate(`/admin/doctor-verification/${notification.doctorId}`);
-    }
-  };
-
-  const renderNotifications =
-    notifications.length === 0 ? (
-      <div className="p-4 text-sm text-gray-500">No notifications yet.</div>
-    ) : (
-      notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className={`p-4 border-b border-gray-100 transition-colors cursor-pointer ${
-            !notification.read ? "bg-orange-50" : "hover:bg-gray-50"
-          }`}
-          onClick={() => handleNotificationClick(notification)}
-        >
-          <p className="text-sm font-medium text-gray-900">
-            {notification.message}
-            {!notification.read && (
-              <span className="ml-2 inline-block align-middle w-2 h-2 bg-orange-500 rounded-full"></span>
-            )}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {notification.createdAt
-              ? new Date(notification.createdAt).toLocaleString()
-              : ""}
-          </p>
-        </div>
-      ))
-    );
 
   const handleLogout = () => {
     logout();
-    toast.success("Logged out successfully");
+    toast.success("Logged out");
     navigate("/login");
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+    <header className="fixed top-0 left-0 w-full bg-white border-b shadow-sm z-40">
       <div className="flex items-center justify-between px-4 py-3 lg:px-6">
+
+        {/* LEFT */}
         <div className="flex items-center space-x-4">
           <button
             onClick={onMobileMenuToggle}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
           >
-            <Menu className="w-5 h-5 text-gray-600" />
+            <Menu className="w-6 h-6 text-gray-700" />
           </button>
+
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
-              {title}
-            </h1>
-            <p className="text-sm text-gray-500 hidden sm:block">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{title}</h1>
+            <p className="text-xs text-gray-500 hidden sm:block">
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",
-                year: "numeric",
                 month: "long",
                 day: "numeric",
+                year: "numeric",
               })}
             </p>
           </div>
         </div>
 
-        {/* Center Section - Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search patients, appointments..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* Right Section */}
-        <div className="flex items-center space-x-2 lg:space-x-4">
+        {/* RIGHT */}
+        <div className="flex items-center space-x-4">
           {/* Notifications */}
           <div className="relative">
             <button
-              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className="p-2 rounded-lg hover:bg-gray-100 relative"
             >
-              <Bell className="w-5 h-5 text-gray-600" />
+              <Bell className="w-5 h-5 text-gray-700" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white w-4 h-4 flex items-center justify-center rounded-full text-xs">
                   {unreadCount}
                 </span>
               )}
             </button>
-            {(isNotificationOpen || showAllNotifications) && (
+
+            {isNotifOpen && (
               <>
                 <div
-                  className="fixed inset-0 z-[9999]"
-                  onClick={() => {
-                    setIsNotificationOpen(false);
-                    setShowAllNotifications(false);
-                  }}
+                  className="fixed inset-0 z-20"
+                  onClick={() => setIsNotifOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-[10000]">
-                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 className="font-semibold text-gray-900">
-                      Notifications
-                    </h3>
-                    {notifications.length > 0 && (
-                      <button
-                        className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
-                        onClick={handleMarkAllAsRead}
-                      >
-                        Mark all as read
-                      </button>
+                <div className="absolute right-0 mt-2 w-80 bg-white border rounded-xl shadow-lg z-30">
+                  <div className="p-4 border-b font-semibold text-gray-700">
+                    Notifications
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="p-4 text-gray-500 text-sm">No notifications.</p>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`p-4 border-b cursor-pointer ${
+                            !n.read ? "bg-orange-50" : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <p className="text-sm text-gray-900">{n.message}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      ))
                     )}
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {renderNotifications}
-                  </div>
-                  <div className="p-2 border-t border-gray-200"></div>
                 </div>
               </>
             )}
           </div>
-          {/* Profile dropdown */}
+
+          {/* Profile */}
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">
-                  {user?.username?.charAt(0).toUpperCase() || "U"}
-                </span>
+              <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold">
+                {user?.username?.[0]?.toUpperCase()}
               </div>
-              <div className="hidden lg:block text-left">
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.username || "User"}
-                </p>
-                <p className="text-xs text-gray-500">Admin</p>
-              </div>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <ChevronDown className="w-4 h-4 text-gray-600" />
             </button>
 
             {isProfileOpen && (
               <>
                 <div
-                  className="fixed inset-0 z-10"
+                  className="fixed inset-0 z-20"
                   onClick={() => setIsProfileOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                  <div className="py-1">
-                    <hr className="my-1" />
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
+                <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg z-30">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center px-4 py-2 w-full hover:bg-red-50 text-red-600 text-sm"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" /> Logout
+                  </button>
                 </div>
               </>
             )}

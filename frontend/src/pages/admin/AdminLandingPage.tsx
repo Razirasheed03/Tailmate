@@ -1,4 +1,4 @@
-
+//pages/admin/AdminLandingPage.tsx
 import DashboardLayout from '@/components/Layouts/DashboardLayout';
 import { Outlet } from 'react-router-dom';
 
