@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Send,
   IndianRupee,
+  Loader2,
 } from "lucide-react";
 import { doctorService } from "@/services/doctorService";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
@@ -45,6 +46,7 @@ export default function DoctorLandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [isLoading, setIsLoading] = useState(true);
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus>("not_submitted");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
@@ -86,11 +88,23 @@ export default function DoctorLandingPage() {
   const canShowForm =
     verificationStatus === "not_submitted" || verificationStatus === "rejected";
 
-  // FETCH VERIFICATION + PROFILE
+  // FETCH VERIFICATION + PROFILE (with localStorage cache)
   useEffect(() => {
     let isMounted = true;
+
+    // Check cache first for instant load
+    const cachedStatus = localStorage.getItem('doctor_verification_status');
+    if (cachedStatus) {
+      setVerificationStatus(cachedStatus as VerificationStatus);
+      setIsLoading(false);
+    }
+
     (async () => {
       try {
+        if (!cachedStatus) {
+          setIsLoading(true);
+        }
+
         const v = await doctorService.getVerification();
         if (!isMounted) return;
 
@@ -104,6 +118,7 @@ export default function DoctorLandingPage() {
             : "not_submitted";
 
         setVerificationStatus(actualStatus);
+        localStorage.setItem('doctor_verification_status', actualStatus);
 
         if (v.rejectionReasons?.length) {
           setRejectionReasons(v.rejectionReasons);
@@ -123,7 +138,11 @@ export default function DoctorLandingPage() {
               typeof p?.consultationFee === "number" ? p.consultationFee : "",
           });
         } catch {}
-      } catch {}
+      } catch {
+        localStorage.removeItem('doctor_verification_status');
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     })();
 
     return () => {
@@ -251,6 +270,7 @@ export default function DoctorLandingPage() {
       });
       await doctorService.submitForReview();
       setVerificationStatus("pending");
+      localStorage.setItem('doctor_verification_status', 'pending');
       setRejectionReasons(null);
       toast.success("Submitted for admin review!");
     } catch (e: any) {
@@ -262,10 +282,38 @@ export default function DoctorLandingPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
+        <div className="flex">
+          <DoctorSidebar isVerified={false} isLoading={true} />
+
+          <div className="flex-1 min-h-screen">
+            <header className="border-b bg-white sticky top-0 z-50">
+              <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+                <h1 className="text-lg font-semibold">Doctor Portal</h1>
+                <DoctorNavbar />
+              </div>
+            </header>
+
+            <main className="container mx-auto px-6 py-8">
+              <div className="flex items-center justify-center min-h-[500px]">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto" />
+                  <p className="text-gray-600 text-lg">Loading your dashboard...</p>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-white via-[#F9FAFB] to-[#F3F6FA] text-[#1F2937]">
       <div className="flex">
-        <DoctorSidebar isVerified={isVerified} />
+        <DoctorSidebar isVerified={isVerified} isLoading={isLoading} />
 
         <div className="flex-1 min-h-screen">
           <header className="border-b bg-white sticky top-0 z-50">
@@ -284,7 +332,7 @@ export default function DoctorLandingPage() {
                     <h2 className="text-xl font-semibold">Under Review</h2>
                   </div>
                   <p className="text-slate-600">
-                    Your profile is under review. You’ll be notified once
+                    Your profile is under review. You'll be notified once
                     verified.
                   </p>
                 </CardContent>

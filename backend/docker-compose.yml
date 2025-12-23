@@ -1,0 +1,27 @@
+services:
+  backend:
+    container_name: tailmate-backend
+    build: .
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - PORT=4000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGO_URI=mongodb+srv://tailmate_admin:3c8mIUQvTqQpnvhr@tailmate-cluster.kh6dtpq.mongodb.net/tailmate?retryWrites=true&w=majority&appName=tailmate-cluster
+    depends_on:
+      - redis
+
+  redis:
+    container_name: tailmate-redis
+    image: redis:7.4
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:

@@ -23,10 +23,16 @@ const items: SidebarItem[] = [
     { key: "sessions", label: "Sessions", icon: Layers, to: "/doctor/appointments", requiresVerified: true },
     { key: "bookings", label: "Bookings", icon: Calendar, to: "/doctor/sessions", requiresVerified: true },
     { key: "wallet", label: "Earnings", icon: DollarSign, to: "/doctor/wallet", requiresVerified: true },
-    { key: "consultations", label: "consultations", icon: List, to: "/doctor/consultations", requiresVerified: true },
+    { key: "consultations", label: "Consultations", icon: List, to: "/doctor/consultations", requiresVerified: true },
 ];
 
-export default function DoctorSidebar({ isVerified }: { isVerified: boolean }) {
+export default function DoctorSidebar({ 
+    isVerified, 
+    isLoading = false 
+}: { 
+    isVerified: boolean;
+    isLoading?: boolean;
+}) {
     const location = useLocation();
 
     return (
@@ -77,7 +83,8 @@ export default function DoctorSidebar({ isVerified }: { isVerified: boolean }) {
                     })}
                 </nav>
 
-                {!isVerified && (
+                {/* Only show banner when NOT loading AND not verified */}
+                {!isLoading && !isVerified && (
                     <div className="mt-auto p-3 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 text-xs">
                         Get Verified to unlock all features.
                     </div>
