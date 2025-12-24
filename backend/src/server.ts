@@ -37,10 +37,14 @@ import { chatController } from "./dependencies/chat.di";
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://15.207.100.5",
+];
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -55,7 +59,7 @@ export { io };
 
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: allowedOrigins,
   credentials: true,
 }));
 
