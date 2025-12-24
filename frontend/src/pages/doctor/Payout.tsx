@@ -1,7 +1,7 @@
 // src/pages/Payout.tsx
 
 import { useState, useEffect } from "react";
-import payoutService from "@/services/payoutService";
+import {payoutService} from "@/services/payoutService";
 
 type OwnerType = "user" | "doctor";
 
@@ -11,7 +11,6 @@ function formatINR(amount: number) {
 
 const Payout = ({ ownerType = "user" }: { ownerType?: OwnerType }) => {
   const [amount, setAmount] = useState("");
-  const [currency] = useState("INR");
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -20,12 +19,14 @@ const Payout = ({ ownerType = "user" }: { ownerType?: OwnerType }) => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const data = await payoutService.getMyPayoutHistory(ownerType);
+     const data = await payoutService.getMyPayoutHistory();
       setHistory(data);
-    } catch (e: any) {
-      setMessage(e?.message || "Failed to load payout history");
-    }
-    setLoading(false);
+    }catch (e: unknown) {
+  if (e instanceof Error) {
+    setMessage(e.message);
+  }
+}
+ setLoading(false);
   };
 
   useEffect(() => {
@@ -38,7 +39,7 @@ const Payout = ({ ownerType = "user" }: { ownerType?: OwnerType }) => {
     setLoading(true);
     setMessage(null);
     try {
-      await payoutService.requestPayout(ownerType, parseFloat(amount), currency);
+      await payoutService.requestPayout(parseFloat(amount));;
       setMessage("Payout requested successfully!");
       setAmount("");
       fetchHistory();

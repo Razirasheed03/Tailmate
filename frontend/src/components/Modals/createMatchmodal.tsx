@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { matchmakingService } from "@/services/matchmakingServices";
 import { uploadListingPhoto } from "@/services/petsApiService";
 import { PetSelectDialog } from "@/pages/pets/PetSelectDialog";
@@ -15,7 +15,7 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
   const [pickedPet, setPickedPet] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
-  const [place, setPlace] = useState("");
+  const [, setPlace] = useState("");
   const [contact, setContact] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,7 +23,7 @@ export default function CreateMatchmakingModal({ open, onClose, onCreated }: Pro
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [images, setImages] = useState<{ file: File; url: string }[]>([]);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [, setUploadingPhotos] = useState(false);
   const [location, setLocation] = useState({
   place: "",
   latitude: 0,

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { useAuth } from '@/context/AuthContext';
+// import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/UiComponents/UserNavbar';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
@@ -9,7 +9,7 @@ import { chatService } from '@/services/chatService';
 import { API_BASE_URL } from '@/constants/apiRoutes';
 
 export default function ChatPage() {
-  const { user } = useAuth(); // Get fresh user from context, not localStorage
+  // const { user } = useAuth(); // Get fresh user from context, not localStorage
   const [searchParams] = useSearchParams();
   const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(

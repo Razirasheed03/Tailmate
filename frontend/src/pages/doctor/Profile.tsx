@@ -48,25 +48,25 @@ export default function Profile() {
   const isVerified = verificationStatus === "verified";
   const canEdit = verificationStatus !== "pending" || !hasSubmitted;
 
-  const statusBadge = useMemo(() => {
-    if (verificationStatus === "verified")
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-          Verified
-        </span>
-      );
-    if (verificationStatus === "pending")
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-          {hasSubmitted ? "Under Review" : "Draft"}
-        </span>
-      );
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
-        Rejected
-      </span>
-    );
-  }, [verificationStatus, hasSubmitted]);
+  // const statusBadge = useMemo(() => {
+  //   if (verificationStatus === "verified")
+  //     return (
+  //       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+  //         Verified
+  //       </span>
+  //     );
+  //   if (verificationStatus === "pending")
+  //     return (
+  //       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+  //         {hasSubmitted ? "Under Review" : "Draft"}
+  //       </span>
+  //     );
+  //   return (
+  //     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
+  //       Rejected
+  //     </span>
+  //   );
+  // }, [verificationStatus, hasSubmitted]);
 
   useEffect(() => {
     let mounted = true;

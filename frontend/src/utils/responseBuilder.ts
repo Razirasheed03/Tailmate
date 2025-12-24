@@ -1,5 +1,5 @@
 // src/utils/responseBuilder.ts
-import { type ApiResponse, type ApiError, type SuccessResponse,type ErrorResponse } from '@/types/common.types';
+import { type SuccessResponse,type ErrorResponse } from '@/types/common.types';
 
 export class ResponseBuilder {
   // Generate unique request ID

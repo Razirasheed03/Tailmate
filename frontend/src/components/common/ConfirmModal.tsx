@@ -24,7 +24,6 @@ export function ConfirmModal({
   onClose,
   onConfirm,
   danger,
-  footer,
   children,
 }: ConfirmModalProps) {
   if (!open) return null;

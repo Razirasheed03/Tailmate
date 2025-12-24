@@ -1,6 +1,6 @@
 import { Button } from "@/components/UiComponents/button";
 import { Card, CardContent } from "@/components/UiComponents/Card";
-import { PawPrint, Stethoscope, Users, ShoppingBag, Heart, Star, MessageSquareHeart } from "lucide-react";
+import { PawPrint, Stethoscope, ShoppingBag, Heart, Star, MessageSquareHeart } from "lucide-react";
 import heroPets from "@/assets/images/hero-pets.jpg";
 import petsCircle from "@/assets/images/pets-circle.jpg";
 import { useNavigate } from "react-router-dom";

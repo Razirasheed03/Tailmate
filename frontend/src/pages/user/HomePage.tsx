@@ -165,7 +165,7 @@ export default function HomePage() {
             <p className="text-sm text-gray-600">No pets yet. Add one to get started.</p>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rows.map((p) => (
+              {rows.map((p: any) => (
                 <Card
                   key={p._id || p.id}
                   className="group border-0 bg-white/80 backdrop-blur rounded-2xl shadow-[0_10px_25px_rgba(16,24,40,0.06)] hover:shadow-[0_14px_34px_rgba(16,24,40,0.10)] transition-all hover:-translate-y-0.5"

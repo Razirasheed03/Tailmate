@@ -77,11 +77,11 @@ httpClient.interceptors.response.use(
 );
 
 // Error handling functions
-const handleBadRequest = (error: AxiosError) => {
-  const message = getErrorMessage(error) || 'Invalid request. Please check your data.';
-  toast.error(message);
-  console.error('Bad Request (400):', error);
-};
+// const handleBadRequest = (error: AxiosError) => {
+//   const message = getErrorMessage(error) || 'Invalid request. Please check your data.';
+//   toast.error(message);
+//   console.error('Bad Request (400):', error);
+// };
 
 const handleUnauthorized = async (error: AxiosError, original: any) => {
   if (!original._retry) {

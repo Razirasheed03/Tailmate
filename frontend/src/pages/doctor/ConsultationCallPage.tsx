@@ -23,7 +23,6 @@ export default function DoctorConsultationCallPage() {
   const {
     localStream,
     remoteStream,
-    connectionState,
     toggleAudio,
     toggleVideo,
     endCall,

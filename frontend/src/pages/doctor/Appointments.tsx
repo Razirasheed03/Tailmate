@@ -2,8 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { doctorAvailabilityService } from "@/services/doctorAvailabilityService";
-import DoctorNavbar from "@/components/UiComponents/DoctorNavbar";
-
 type UIMode = "video" | "audio" | "inPerson";
 type VerificationStatus = "pending" | "verified" | "rejected";
 

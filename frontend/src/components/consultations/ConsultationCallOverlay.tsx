@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, Phone, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff,PhoneOff } from 'lucide-react';
 
 interface ConsultationCallOverlayProps {
   localStream: MediaStream | null;
@@ -71,8 +71,8 @@ export const ConsultationCallOverlay: React.FC<ConsultationCallOverlayProps> = (
   // Determine which stream goes where based on swap state
   const mainVideoRef = isSelfViewPrimary ? localVideoRef : remoteVideoRef;
   const miniVideoRef = isSelfViewPrimary ? remoteVideoRef : localVideoRef;
-  const mainStream = isSelfViewPrimary ? localStream : remoteStream;
-  const miniStream = isSelfViewPrimary ? remoteStream : localStream;
+  // const mainStream = isSelfViewPrimary ? localStream : remoteStream;
+  // const miniStream = isSelfViewPrimary ? remoteStream : localStream;
   const miniLabel = isSelfViewPrimary ? 'Doctor' : 'You';
 
   return (

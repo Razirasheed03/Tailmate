@@ -216,7 +216,7 @@ export default function DoctorWallet() {
   // const [alreadyConnected, setAlreadyConnected] = useState<boolean>(false);
   // const [checkingStripe, setCheckingStripe] = useState<boolean>(false);
   // const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey,] = useState(0);
 
   const total = useMemo(
     () =>

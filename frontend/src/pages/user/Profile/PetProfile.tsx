@@ -20,7 +20,7 @@ export default function PetProfiles() {
   const [pets, setPets] = useState<PetItem[]>([]);
   const [pastPets, setPastPets] = useState<PetItem[]>([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 

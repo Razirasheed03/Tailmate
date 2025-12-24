@@ -1,6 +1,6 @@
 // src/pages/profile/MatchmakingListings.tsx
 import { useEffect, useState, useCallback } from "react";
-import { matchmakingService } from "@/services/matchMakingServices";
+import { matchmakingService } from "@/services/matchmakingServices";
 
 /* ------------------ Confirm Modal ------------------ */
 function ConfirmDialog({
