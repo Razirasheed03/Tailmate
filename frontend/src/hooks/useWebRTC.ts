@@ -52,11 +52,7 @@ export function useWebRTC({
       return;
     }
 
-const backendUrl =
-  import.meta.env.MODE === 'production'
-    ? 'http://15.207.100.5:4000'
-    : 'http://localhost:4000';
-
+const backendUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '');
 
     console.log('[WebRTC] Connecting to:', backendUrl);
     

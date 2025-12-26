@@ -48,7 +48,8 @@ export default function ChatPage() {
     if (!currentUserId) return;
 
     const token = localStorage.getItem('auth_token');
-    const socketUrl = API_BASE_URL.replace('/api', '');
+    const socketUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '');
+
     const newSocket = io(socketUrl, {
       auth: { token },
       reconnection: true,
