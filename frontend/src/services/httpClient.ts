@@ -1,12 +1,13 @@
 ///httpClient.ts
 import axios, {type AxiosInstance, AxiosError } from 'axios';
-import { API_BASE_URL, AUTH_ROUTES } from '@/constants/apiRoutes';
+import { AUTH_ROUTES } from '@/constants/apiRoutes';
 import { toast } from 'sonner';
 
+
 const httpClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
-  timeout: 10000, // 10 sec
+  timeout: 10000,
 });
 
 // Refresh token queue management

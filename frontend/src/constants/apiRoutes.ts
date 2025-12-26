@@ -1,18 +1,17 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
-////changed hardcoded routes to env as per reviewer said
 
 export const AUTH_ROUTES = {
-  LOGIN: `${API_BASE_URL}/auth/login`,
-  LOGOUT: `${API_BASE_URL}/auth/logout`,
-  SIGNUP: `${API_BASE_URL}/auth/signup`,
-  REFRESH: `${API_BASE_URL}/auth/refresh-token`,
-  FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
-  RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-  RESEND_OTP:`${API_BASE_URL}/auth/resend-otp`,
-  GOOGLE:`${API_BASE_URL}/auth/google"`
+  LOGIN: "/auth/login",
+  LOGOUT: "/auth/logout",
+  SIGNUP: "/auth/signup",
+  REFRESH: "/auth/refresh-token",
+  FORGOT_PASSWORD: "/auth/forgot-password",
+  RESET_PASSWORD: "/auth/reset-password",
+  RESEND_OTP: "/auth/resend-otp",
+  GOOGLE: "/auth/google",
 };
 
 export const USER_ROUTES = {
-  PROFILE: `${API_BASE_URL}/user/profile`,
-  UPDATE_PROFILE: `${API_BASE_URL}/user/update`,
+  PROFILE: "/user/profile",
+  UPDATE_PROFILE: "/user/update",
 };
