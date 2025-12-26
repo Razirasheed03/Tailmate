@@ -39,7 +39,7 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://15.207.100.5",
+
   "https://tailmate-care.vercel.app"
 ];
 
