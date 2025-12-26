@@ -74,9 +74,6 @@ app.use(
   })
 );
 
-app.options("*", cors());
-
-
 
 app.post(
   "/api/payments/webhook",
