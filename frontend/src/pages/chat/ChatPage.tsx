@@ -47,7 +47,11 @@ export default function ChatPage() {
     if (!currentUserId) return;
 
     const token = localStorage.getItem('auth_token');
-    const socketUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '');
+    const socketUrl =
+  import.meta.env.MODE === 'production'
+    ? 'http://15.207.100.5:4000'
+    : 'http://localhost:4000';
+
 
     const newSocket = io(socketUrl, {
       auth: { token },

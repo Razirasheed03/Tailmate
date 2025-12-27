@@ -54,6 +54,7 @@ export function useWebRTC({
 
 const backendUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '');
 
+
     console.log('[WebRTC] Connecting to:', backendUrl);
     
     const socket = io(backendUrl, {

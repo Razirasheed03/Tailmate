@@ -48,6 +48,7 @@ const io = new Server(server, {
     origin: allowedOrigins,
     credentials: true,
   },
+  transports: ["polling"],
 });
 
 // Extract services from DI containers and inject into socket layer
