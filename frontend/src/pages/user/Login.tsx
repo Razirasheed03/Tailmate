@@ -109,9 +109,8 @@ const handleLogin = async (e: React.FormEvent) => {
     toast.error(msg);
   }
 };
-
 const handleGoogleLogin = () => {
-  window.location.href = AUTH_ROUTES.GOOGLE;
+  window.location.href = `${import.meta.env.VITE_API_BASE_URL}${AUTH_ROUTES.GOOGLE}`;
 };
 
   return (

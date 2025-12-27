@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import LoginImage from "/loginp.png";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { APP_ROUTES } from "@/constants/routes";
 import userService from "@/services/userService";
+import httpClient from "@/services/httpClient";
 
 const OtpVerify = () => {
   const navigate = useNavigate();
@@ -113,10 +113,10 @@ const OtpVerify = () => {
 
     try {
       const otpString = otp.join("");
-      const res = await axios.post("http://localhost:4000/api/auth/verify-otp", {
-        email,
-        otp: otpString,
-      });
+    const res = await httpClient.post("/auth/verify-otp", {
+  email,
+  otp: otpString,
+});
 
      const accessToken = res?.data?.data?.accessToken;
 const user = res?.data?.data?.user;

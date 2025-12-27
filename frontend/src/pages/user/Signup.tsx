@@ -41,7 +41,6 @@ const onSubmit = async (data: SignupFormInputs) => {
       role: data.role,
     };
     const response = await userService.signup(payload);
-    if (response.message) toast.success(response.message);
     if (response.success) {
       navigate("/verify-otp", { state: { email: data.email } });
     }
