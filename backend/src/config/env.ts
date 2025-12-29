@@ -10,9 +10,7 @@ const requireEnvVar = (key: string) => {
 }
 
 export const env = {
-    PORT: requireEnvVar("PORT"),
-    MONGO_URI: requireEnvVar("MONGO_URI"),
-     REDIS_HOST: requireEnvVar("REDIS_HOST"),
-  REDIS_PORT: requireEnvVar("REDIS_PORT"),
-
+  PORT: requireEnvVar("PORT"),
+  MONGO_URI: requireEnvVar("MONGO_URI"),
+  REDIS_URL: requireEnvVar("REDIS_URL"),
 }
