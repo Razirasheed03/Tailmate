@@ -13,44 +13,47 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [backendReady, setBackendReady] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginStep, setLoginStep] = useState<0 | 1 | 2 | 3>(0);
   const { login } = useAuth();
 
   useEffect(() => {
-     const params = new URLSearchParams(window.location.search);
-  const tokenFromGoogle = params.get("accessToken");
-  const userFromGoogle = params.get("user");
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromGoogle = params.get("accessToken");
+    const userFromGoogle = params.get("user");
 
-  if (tokenFromGoogle && userFromGoogle) {
-    try {
-      const parsedUser = JSON.parse(userFromGoogle);
+    if (tokenFromGoogle && userFromGoogle) {
+      try {
+        const parsedUser = JSON.parse(userFromGoogle);
 
-      // Blocked users should not be persisted
-      if (parsedUser?.isBlocked) {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
-        return;
+        // Blocked users should not be persisted
+        if (parsedUser?.isBlocked) {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("auth_user");
+          return;
+        }
+
+        // Save via AuthContext (this writes to localStorage via your effect)
+        login(tokenFromGoogle, parsedUser);
+
+        // Clean the URL (remove query params)
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, "", cleanUrl);
+
+        // Redirect by role
+        if (parsedUser.role === "admin") {
+          navigate(APP_ROUTES.ADMIN_DASHBOARD);
+        } else if (parsedUser.role === "doctor") {
+          navigate(APP_ROUTES.DOCTOR_DASHBOARD);
+        } else {
+          navigate(APP_ROUTES.USER_HOME);
+        }
+        return; // stop further localStorage-based redirect below
+      } catch {
+        // ignore parse errors and proceed
       }
-
-      // Save via AuthContext (this writes to localStorage via your effect)
-      login(tokenFromGoogle, parsedUser);
-
-      // Clean the URL (remove query params)
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, "", cleanUrl);
-
-      // Redirect by role
-      if (parsedUser.role === "admin") {
-        navigate(APP_ROUTES.ADMIN_DASHBOARD);
-      } else if (parsedUser.role === "doctor") {
-        navigate(APP_ROUTES.DOCTOR_DASHBOARD);
-      } else {
-        navigate(APP_ROUTES.USER_HOME);
-      }
-      return; // stop further localStorage-based redirect below
-    } catch {
-      // ignore parse errors and proceed
     }
-  }
     const token = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("auth_user");
     if (token && storedUser) {
@@ -75,43 +78,111 @@ const Login = () => {
         // Ignore parse errors
       }
     }
-  }, [navigate]);
+  }, [navigate, login]);
 
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const res = await userService.login(email, password);
-    const accessToken = res?.data?.accessToken;
-    const user = res?.data?.user;
+  // Silent background health polling
+  useEffect(() => {
+    let cancelled = false;
 
-    if (!accessToken || !user) {
-      toast.error(res?.message || "Unexpected response from server.");
-      return;
+    const pollHealth = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/health`
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "ready" && !cancelled) {
+            setBackendReady(true);
+            return;
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      if (!cancelled) {
+        setTimeout(pollHealth, 2000);
+      }
+    };
+
+    pollHealth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loginStepText = () => {
+    switch (loginStep) {
+      case 1:
+        return "Verifying credentials…";
+      case 2:
+        return "Securing session…";
+      case 3:
+        return "Loading your workspace…";
+      default:
+        return "Logging in…";
     }
-    if (user?.isBlocked) {
-      toast.error("Account is blocked");
-      return;
-    }
+  };
 
-    login(accessToken, user);
-    toast.success("Login successful!");
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    const role = user?.role;
-    if (role === "admin") {
-      navigate(APP_ROUTES.ADMIN_DASHBOARD);
-    } else if (role === "doctor") {
-      navigate(APP_ROUTES.DOCTOR_DASHBOARD);
-    } else {
-      navigate(APP_ROUTES.USER_HOME);
+    // Instant UI feedback
+    setIsLoggingIn(true);
+
+    // Fake progress steps
+    setLoginStep(1);
+    setTimeout(() => setLoginStep(2), 1200);
+    setTimeout(() => setLoginStep(3), 2400);
+
+    try {
+      // Wait silently for backend to be ready
+      while (!backendReady) {
+        await new Promise(res => setTimeout(res, 300));
+      }
+
+      // Now backend is ready - call login
+      const res = await userService.login(email, password);
+      const accessToken = res?.data?.accessToken;
+      const user = res?.data?.user;
+
+      if (!accessToken || !user) {
+        setIsLoggingIn(false);
+        setLoginStep(0);
+        toast.error(res?.message || "Unexpected response from server.");
+        return;
+      }
+      if (user?.isBlocked) {
+        setIsLoggingIn(false);
+        setLoginStep(0);
+        toast.error("Account is blocked");
+        return;
+      }
+
+      login(accessToken, user);
+      toast.success("Login successful!");
+
+      const role = user?.role;
+      if (role === "admin") {
+        navigate(APP_ROUTES.ADMIN_DASHBOARD);
+      } else if (role === "doctor") {
+        navigate(APP_ROUTES.DOCTOR_DASHBOARD);
+      } else {
+        navigate(APP_ROUTES.USER_HOME);
+      }
+    } catch (error: any) {
+      setIsLoggingIn(false);
+      setLoginStep(0);
+      const msg = error?.response?.data?.message || error?.response?.data?.error || "Login failed. Please check your credentials.";
+      toast.error(msg);
     }
-  } catch (error: any) {
-    const msg = error?.response?.data?.message || error?.response?.data?.error || "Login failed. Please check your credentials.";
-    toast.error(msg);
-  }
-};
-const handleGoogleLogin = () => {
-  window.location.href = `${import.meta.env.VITE_API_BASE_URL}${AUTH_ROUTES.GOOGLE}`;
-};
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${import.meta.env.VITE_API_BASE_URL}${AUTH_ROUTES.GOOGLE}`;
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f8f9fa]">
@@ -188,9 +259,34 @@ const handleGoogleLogin = () => {
 
             <button
               type="submit"
-              className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors duration-200"
+              className="w-full bg-[#e4a574] hover:bg-[#d4956a] text-white font-medium py-3 rounded-full transition-colors flex items-center justify-center gap-2"
             >
-              Login
+              {isLoggingIn ? (
+                <>
+                  <svg
+                    className="w-5 h-5 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="white"
+                      strokeWidth="4"
+                      opacity="0.25"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="white"
+                      strokeWidth="4"
+                    />
+                  </svg>
+                  {loginStepText()}
+                </>
+              ) : (
+                "Login"
+              )}
             </button>
 
             <div className="flex items-center justify-center my-6">
@@ -198,19 +294,18 @@ const handleGoogleLogin = () => {
             </div>
 
             <div className="flex justify-center space-x-4">
-      <button
-  type="button"
-  onClick={handleGoogleLogin}
-  className="w-12 h-12 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
->
-  <svg className="w-5 h-5" viewBox="0 0 24 24">
-    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-  </svg>
-</button>
-
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-12 h-12 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+              </button>
             </div>
 
             <p className="text-sm text-gray-600 text-center mt-6">
