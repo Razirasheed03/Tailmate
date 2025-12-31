@@ -88,8 +88,16 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.get("/api/health", (_req, res) => {
-  res.status(200).json({ ok: true });
+  if (!dbReady) {
+    return res.status(503).json({
+      status: "warming",
+      message: "Database initializing",
+    });
+  }
+
+  res.status(200).json({ status: "ready" });
 });
+
 
 // Initialize database and drop old indexes BEFORE registering routes
 let dbReady = false;
@@ -121,13 +129,22 @@ connectDB().then(async () => {
   process.exit(1);
 });
 
-// Middleware to ensure DB is ready before processing requests
 app.use((req, res, next) => {
+  if (req.path.startsWith("/socket.io")) {
+    return next();
+  }
+  if (req.path === "/api/health") {
+    return next();
+  }
   if (!dbReady) {
-    return res.status(503).json({ success: false, message: "Database initializing..." });
+    return res.status(503).json({
+      success: false,
+      message: "Database initializing...",
+    });
   }
   next();
 });
+
 
 app.use("/api/marketplace", marketplaceRoutes);
 app.use("/api/auth", authRoutes);
