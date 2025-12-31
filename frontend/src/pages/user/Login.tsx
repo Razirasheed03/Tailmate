@@ -15,7 +15,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
 const [checkingBackend, setCheckingBackend] = useState(true);
-const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const { login } = useAuth();
 
   useEffect(() => {
@@ -113,7 +113,6 @@ const [isLoggingIn, setIsLoggingIn] = useState(false);
 
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
-    setIsLoggingIn(true);
   if (!backendReady) {
     toast.info("Server is starting, please wait...");
     return;
