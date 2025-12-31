@@ -6,7 +6,6 @@ import {
     Calendar,
     DollarSign,
     Settings,
-    List,
 } from "lucide-react";
 
 type SidebarItem = {
