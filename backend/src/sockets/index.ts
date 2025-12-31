@@ -1,3 +1,4 @@
+//sockets/index.ts
 import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { IConsultationService } from "../services/interfaces/consultation.service.interface";
@@ -145,33 +146,45 @@ export function initializeSocketServer(
       console.log(`[Chat] ✅ ${userId} joined chat:${data.roomId} | Room members: [${memberIds.join(', ')}]`);
     });
 
-    // Send message - store in DB and broadcast to room (including sender)
-    socket.on("chat:send_message", async (data: { roomId: string; content: string }) => {
-      try {
-        console.log(`[Chat] 📤 ${userId} sending message to room ${data.roomId}`);
-        
-        // Ensure sender is in the room
-        await socket.join(`chat:${data.roomId}`);
-        
-        const message = await chatService.sendMessage(userId, data.roomId, data.content);
-        
-        console.log(`[Chat] 📨 Broadcasting message ${message._id} to room chat:${data.roomId}`);
-        
-        // Get room members before broadcasting
-        const roomSockets = await io.in(`chat:${data.roomId}`).fetchSockets();
-        const memberIds = roomSockets.map(s => (s as any).userId);
-        
-        console.log(`[Chat] 👥 Room members who will receive: [${memberIds.join(', ')}]`);
-        
-        // Broadcast to ALL in room (sender will also receive via their own listener)
-        io.to(`chat:${data.roomId}`).emit("chat:receive_message", message);
-        
-        console.log(`[Chat] ✅ Message broadcasted successfully`);
-      } catch (err: any) {
-        console.error(`[Chat] ❌ send_message error:`, err.message);
-        socket.emit("error", err.message);
-      }
-    });
+socket.on("chat:send_message", async (data: { roomId: string; content: string }) => {
+  try {
+    console.log(`[Chat] 📤 ${userId} sending message to room ${data.roomId}`);
+    
+    // Ensure sender is in the room
+    await socket.join(`chat:${data.roomId}`);
+    
+    const message = await chatService.sendMessage(userId, data.roomId, data.content);
+    
+    console.log(`[Chat] 📨 Broadcasting message ${message._id} to room chat:${data.roomId}`);
+    
+    // Get room members before broadcasting
+    const roomSockets = await io.in(`chat:${data.roomId}`).fetchSockets();
+    const memberIds = roomSockets.map(s => (s as any).userId);
+    
+    console.log(`[Chat] 👥 Room members who will receive: [${memberIds.join(', ')}]`);
+    
+    // ✅ FIX: Convert ObjectIds to strings before broadcasting
+    const messageToSend = {
+      _id: message._id.toString(),
+      roomId: message.roomId.toString(),
+      senderId: message.senderId.toString(), // ← CRITICAL FIX
+      content: message.content,
+      type: message.type,
+      deliveredTo: (message.deliveredTo || []).map((id: any) => id.toString()),
+      seenBy: (message.seenBy || []).map((id: any) => id.toString()),
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+    };
+    
+    // Broadcast to ALL in room (sender will also receive via their own listener)
+    io.to(`chat:${data.roomId}`).emit("chat:receive_message", messageToSend);
+    
+    console.log(`[Chat] ✅ Message broadcasted successfully`);
+  } catch (err: any) {
+    console.error(`[Chat] ❌ send_message error:`, err.message);
+    socket.emit("error", err.message);
+  }
+});
 
     // Typing indicator
     socket.on("chat:typing", (data: { roomId: string }) => {

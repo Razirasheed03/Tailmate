@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/UiComponents/UserNavbar";
+import { useEffect } from "react";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -19,6 +20,11 @@ const LandingPage = () => {
   const handleLogin = () => {
     navigate(APP_ROUTES.LOGIN);
   };
+  useEffect(() => {
+  fetch(import.meta.env.VITE_API_BASE_URL + "/health")
+    .catch(() => {});
+}, []);
+
 
   return (
     

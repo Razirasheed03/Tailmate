@@ -64,7 +64,7 @@ export default function DoctorConsultationCallPage() {
           const msg = 'This consultation has already been completed';
           setError(msg);
           toast.error(msg);
-          setTimeout(() => navigate('/doctor/consultations', { replace: true }), 2000);
+          setTimeout(() => navigate('/doctor/sessions', { replace: true }), 2000);
           return;
         }
         
@@ -94,7 +94,7 @@ export default function DoctorConsultationCallPage() {
         toast.success('Call ended successfully');
       }
       // Use replace: true to prevent back button returning to call page
-      navigate('/doctor/consultations', { replace: true });
+      navigate('/doctor/sessions', { replace: true });
     } catch (err) {
       console.error("[Doctor] Error ending call:", err);
       const errorMsg = err instanceof Error ? err.message : 'Failed to end call';
@@ -102,7 +102,7 @@ export default function DoctorConsultationCallPage() {
       toast.error(errorMsg);
       // Still navigate away even if API call fails, but show error first
       setTimeout(() => {
-        navigate('/doctor/consultations', { replace: true });
+        navigate('/doctor/sessions', { replace: true });
       }, 2000);
     }
   };

@@ -68,7 +68,7 @@ export default function UserConsultationCallPage() {
           const msg = 'This consultation has already been completed. You cannot rejoin.';
           setError(msg);
           toast.error(msg);
-          setTimeout(() => navigate('/profile/consultations', { replace: true }), 2000);
+          setTimeout(() => navigate('/profile/bookings', { replace: true }), 2000);
           return;
         }
         
@@ -95,7 +95,7 @@ export default function UserConsultationCallPage() {
       // Only doctor can end the consultation
       toast.info('You have left the call. The doctor can still end the consultation.');
       // Use replace: true to prevent back button returning to call page
-      navigate('/profile/consultations', { replace: true });
+      navigate('/profile/bookings', { replace: true });
     } catch (err) {
       console.error("[Patient] Error leaving call:", err);
       const errorMsg = err instanceof Error ? err.message : 'Failed to leave call';
@@ -103,7 +103,7 @@ export default function UserConsultationCallPage() {
       toast.error(errorMsg);
       // Still navigate away even if there's an error
       setTimeout(() => {
-        navigate('/profile/consultations', { replace: true });
+        navigate('/profile/bookings', { replace: true });
       }, 2000);
     }
   };
@@ -196,7 +196,7 @@ export default function UserConsultationCallPage() {
           </div>
           
           <button
-            onClick={() => navigate('/profile/consultations')}
+            onClick={() => navigate('/profile/bookings')}
             className="mt-6 px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
           >
             Cancel

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import axios from "axios";
 import { toast } from "sonner";
 import LoginImage from "/loginp.png";
 import { AUTH_ROUTES } from "@/constants/apiRoutes";
+import httpClient from "@/services/httpClient";
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -42,7 +42,7 @@ const ResetPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post(AUTH_ROUTES.RESET_PASSWORD, {
+      const response = await httpClient.post(AUTH_ROUTES.RESET_PASSWORD, {
         id,
         token,
         newPassword

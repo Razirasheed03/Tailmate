@@ -54,6 +54,12 @@ const formatGrowth = (p?: number) => {
   return `${sign}${p.toFixed(1)}% from last month`;
 };
 
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
 // ------------------------------------------------------------------
 // RE-USABLE STAT CARD
 // ------------------------------------------------------------------
@@ -159,6 +165,8 @@ const DashboardPage = () => {
     doctorId: "",
   });
 
+  const [dateError, setDateError] = useState("");
+
   const [filteredEarnings, setFilteredEarnings] = useState({
     totalRevenue: 0,
     totalPlatformFee: 0,
@@ -166,7 +174,38 @@ const DashboardPage = () => {
     count: 0,
   });
 
+  // Validate date range
+  const validateDateRange = (startDate: string, endDate: string): string => {
+    if (!startDate || !endDate) return "";
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (end < start) {
+      return "End date cannot be before start date";
+    }
+    
+    return "";
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setFilter({ ...filter, start: value });
+    const error = validateDateRange(value, filter.end);
+    setDateError(error);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setFilter({ ...filter, end: value });
+    const error = validateDateRange(filter.start, value);
+    setDateError(error);
+  };
+
   const fetchFilteredEarnings = async () => {
+    // Final validation before fetching
+    if (dateError) {
+      return;
+    }
+
     try {
       const data = await adminService.getFilteredEarnings(
         filter.start,
@@ -225,54 +264,86 @@ const DashboardPage = () => {
     );
   }
 
+  const todayDate = getTodayDate();
+
   return (
     <div className="w-full min-h-screen bg-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-
 
         {/* ---------------------- EARNINGS FILTER ---------------------- */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h2 className="text-lg font-semibold text-orange-600">Filter Earnings</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <input
-              type="date"
-              className="border rounded-md p-2 text-sm"
-              value={filter.start}
-              onChange={(e) => setFilter({ ...filter, start: e.target.value })}
-            />
-            <input
-              type="date"
-              className="border rounded-md p-2 text-sm"
-              value={filter.end}
-              onChange={(e) => setFilter({ ...filter, end: e.target.value })}
-            />
-            <select
-              className="border rounded-md p-2 text-sm"
-              value={filter.doctorId}
-              onChange={(e) => setFilter({ ...filter, doctorId: e.target.value })}
-            >
-              <option value="">All Doctors</option>
-              {doctorList.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.username}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Start Date</label>
+              <input
+                type="date"
+                className="border rounded-md p-2 text-sm w-full"
+                value={filter.start}
+                max={todayDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">End Date</label>
+              <input
+                type="date"
+                className="border rounded-md p-2 text-sm w-full"
+                value={filter.end}
+                min={filter.start || undefined}
+                max={todayDate}
+                onChange={(e) => handleEndDateChange(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Doctor</label>
+              <select
+                className="border rounded-md p-2 text-sm w-full"
+                value={filter.doctorId}
+                onChange={(e) => setFilter({ ...filter, doctorId: e.target.value })}
+              >
+                <option value="">All Doctors</option>
+                {doctorList.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.username}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
+          {dateError && (
+            <p className="mt-2 text-sm text-red-600">⚠️ {dateError}</p>
+          )}
+
           <button
-            className="mt-4 bg-orange-600 text-white px-5 py-2 rounded-md text-sm"
+            className={`mt-4 px-5 py-2 rounded-md text-sm transition-colors ${
+              dateError
+                ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                : "bg-orange-600 text-white hover:bg-orange-700"
+            }`}
             onClick={fetchFilteredEarnings}
+            disabled={!!dateError}
           >
-            Apply
+            Apply Filter
           </button>
 
           <div className="mt-4 text-sm grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <p>Total Revenue: ₹{filteredEarnings.totalRevenue}</p>
-            <p>Platform Fee: ₹{filteredEarnings.totalPlatformFee}</p>
-            <p>Doctor Earnings: ₹{filteredEarnings.totalDoctorEarnings}</p>
-            <p>Bookings: {filteredEarnings.count}</p>
+            <p className="text-slate-600">
+              <span className="font-medium">Total Revenue:</span> ₹{filteredEarnings.totalRevenue.toLocaleString()}
+            </p>
+            <p className="text-slate-600">
+              <span className="font-medium">Platform Fee:</span> ₹{filteredEarnings.totalPlatformFee.toLocaleString()}
+            </p>
+            <p className="text-slate-600">
+              <span className="font-medium">Doctor Earnings:</span> ₹{filteredEarnings.totalDoctorEarnings.toLocaleString()}
+            </p>
+            <p className="text-slate-600">
+              <span className="font-medium">Bookings:</span> {filteredEarnings.count}
+            </p>
           </div>
         </div>
 

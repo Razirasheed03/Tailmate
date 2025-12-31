@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 const httpClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
-  timeout: 10000,
+  timeout: 60000,
 });
 
 // Refresh token queue management

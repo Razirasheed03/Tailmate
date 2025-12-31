@@ -23,7 +23,6 @@ const items: SidebarItem[] = [
     { key: "sessions", label: "Sessions", icon: Layers, to: "/doctor/appointments", requiresVerified: true },
     { key: "bookings", label: "Bookings", icon: Calendar, to: "/doctor/sessions", requiresVerified: true },
     { key: "wallet", label: "Earnings", icon: DollarSign, to: "/doctor/wallet", requiresVerified: true },
-    { key: "consultations", label: "Consultations", icon: List, to: "/doctor/consultations", requiresVerified: true },
 ];
 
 export default function DoctorSidebar({ 

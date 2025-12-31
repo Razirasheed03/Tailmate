@@ -276,13 +276,15 @@ export default function Matchmaking() {
           </div>
         )}
 
-        {/* CREATE BUTTON */}
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-orange-600 text-white shadow-lg text-3xl flex items-center justify-center"
-        >
-          +
-        </button>
+           <button
+        onClick={() => setCreateOpen(true)}
+        aria-label="Create Listing"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-orange-600 text-white shadow-lg hover:bg-orange-700 active:scale-95 transition flex items-center justify-center z-50"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
+          <path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
+        </svg>
+      </button>
 
         <CreateMatchmakingModal
           open={createOpen}

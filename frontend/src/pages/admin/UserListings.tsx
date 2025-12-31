@@ -12,6 +12,8 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 
 const ITEMS_PER_PAGE = 5;
 
+type ActionType = 'block' | 'unblock' | 'delete';
+
 const UserListing = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -22,7 +24,8 @@ const UserListing = () => {
   const [total, setTotal] = useState(0);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [actionType, setActionType] = useState<ActionType | null>(null);
 
   const fetchUsers = async (page = 1, search = '') => {
     try {
@@ -63,46 +66,44 @@ const UserListing = () => {
     fetchUsers(page, searchQuery);
   };
 
-  const handleBlockUser = async (userId: string) => {
-    try {
-      setActionLoading(userId);
-      await adminService.blockUser(userId);
-      toast.success('User blocked successfully');
-      fetchUsers(currentPage, searchQuery);
-      fetchStats();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to block user');
-    } finally {
-      setActionLoading(null);
-    }
+  const openConfirmModal = (user: User, action: ActionType) => {
+    setSelectedUser(user);
+    setActionType(action);
+    setShowModal(true);
   };
 
-  const handleUnblockUser = async (userId: string) => {
-    try {
-      setActionLoading(userId);
-      await adminService.unblockUser(userId);
-      toast.success('User unblocked successfully');
-      fetchUsers(currentPage, searchQuery);
-      fetchStats();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to unblock user');
-    } finally {
-      setActionLoading(null);
-    }
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedUser(null);
+    setActionType(null);
   };
 
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
+  const handleConfirmAction = async () => {
+    if (!selectedUser || !actionType) return;
+
     try {
       setActionLoading(selectedUser.id);
-      await adminService.deleteUser(selectedUser.id);
-      toast.success('User deleted successfully');
-      setShowDeleteModal(false);
-      setSelectedUser(null);
+
+      switch (actionType) {
+        case 'block':
+          await adminService.blockUser(selectedUser.id);
+          toast.success('User blocked successfully');
+          break;
+        case 'unblock':
+          await adminService.unblockUser(selectedUser.id);
+          toast.success('User unblocked successfully');
+          break;
+        case 'delete':
+          await adminService.deleteUser(selectedUser.id);
+          toast.success('User deleted successfully');
+          break;
+      }
+
+      closeModal();
       fetchUsers(currentPage, searchQuery);
       fetchStats();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to delete user');
+      toast.error(error?.response?.data?.message || `Failed to ${actionType} user`);
     } finally {
       setActionLoading(null);
     }
@@ -116,6 +117,49 @@ const UserListing = () => {
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+  const getModalContent = () => {
+    if (!selectedUser || !actionType) return { title: '', description: null, confirmText: '', danger: false };
+
+    switch (actionType) {
+      case 'block':
+        return {
+          title: 'Block User',
+          description: (
+            <>
+              Are you sure you want to block <strong>{selectedUser.username}</strong>? 
+              They will no longer be able to access their account.
+            </>
+          ),
+          confirmText: actionLoading === selectedUser.id ? 'Blocking...' : 'Block User',
+          danger: true,
+        };
+      case 'unblock':
+        return {
+          title: 'Unblock User',
+          description: (
+            <>
+              Are you sure you want to unblock <strong>{selectedUser.username}</strong>? 
+              They will regain access to their account.
+            </>
+          ),
+          confirmText: actionLoading === selectedUser.id ? 'Unblocking...' : 'Unblock User',
+          danger: false,
+        };
+      case 'delete':
+        return {
+          title: 'Delete User',
+          description: (
+            <>
+              Are you sure you want to delete user <strong>{selectedUser.username}</strong>? 
+              This action cannot be undone.
+            </>
+          ),
+          confirmText: actionLoading === selectedUser.id ? 'Deleting...' : 'Delete User',
+          danger: true,
+        };
+    }
+  };
 
   const columns = useMemo<ColumnDef<User>[]>(() => [
     {
@@ -172,7 +216,7 @@ const UserListing = () => {
         <div className="flex items-center space-x-2">
           {user.isBlocked ? (
             <button
-              onClick={() => handleUnblockUser(user.id)}
+              onClick={() => openConfirmModal(user, 'unblock')}
               disabled={actionLoading === user.id || user.role === 'admin'}
               className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
             >
@@ -181,7 +225,7 @@ const UserListing = () => {
             </button>
           ) : (
             <button
-              onClick={() => handleBlockUser(user.id)}
+              onClick={() => openConfirmModal(user, 'block')}
               disabled={actionLoading === user.id || user.role === 'admin'}
               className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
             >
@@ -191,10 +235,7 @@ const UserListing = () => {
           )}
           {!(user.role === 'admin') && (
             <button
-              onClick={() => {
-                setSelectedUser(user);
-                setShowDeleteModal(true);
-              }}
+              onClick={() => openConfirmModal(user, 'delete')}
               disabled={actionLoading === user.id}
               className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
             >
@@ -211,6 +252,8 @@ const UserListing = () => {
     currentPage * ITEMS_PER_PAGE,
     total
   )} of ${total} users`;
+
+  const modalContent = getModalContent();
 
   return (
     <div className="space-y-6">
@@ -269,33 +312,25 @@ const UserListing = () => {
           />
         </div>
 
-       {totalPages > 1 && (
-  <TablePagination
-    page={currentPage}
-    totalPages={totalPages}
-    onPrev={() => handlePageChange(Math.max(1, currentPage - 1))}
-    onNext={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-    leftText={leftText}
-  />
-)}
-
+        {totalPages > 1 && (
+          <TablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPrev={() => handlePageChange(Math.max(1, currentPage - 1))}
+            onNext={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            leftText={leftText}
+          />
+        )}
       </div>
 
       <ConfirmModal
-        open={showDeleteModal && !!selectedUser}
-        title="Delete User"
-        description={
-          selectedUser ? (
-            <>Are you sure you want to delete user <strong>{selectedUser.username}</strong>? This action cannot be undone.</>
-          ) : null
-        }
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedUser(null);
-        }}
-        onConfirm={handleDeleteUser}
-        confirmText={actionLoading === selectedUser?.id ? 'Deleting...' : 'Delete'}
-        danger
+        open={showModal && !!selectedUser}
+        title={modalContent.title}
+        description={modalContent.description}
+        onClose={closeModal}
+        onConfirm={handleConfirmAction}
+        confirmText={modalContent.confirmText}
+        danger={modalContent.danger}
       />
     </div>
   );

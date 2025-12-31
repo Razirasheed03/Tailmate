@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import { toast } from "sonner";
 import LoginImage from "/loginp.png";
 import { AUTH_ROUTES } from "@/constants/apiRoutes";
+import httpClient from "@/services/httpClient";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -14,7 +14,8 @@ const ForgotPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post(AUTH_ROUTES.FORGOT_PASSWORD, { email });
+      const response =await httpClient.post(AUTH_ROUTES.FORGOT_PASSWORD, { email });
+
       toast.success(response.data.message || "If the email exists, a reset link has been sent.");
       setEmail(""); // Clear form
     } catch (error: any) {

@@ -89,11 +89,10 @@ export default function ProfileLayout() {
             
             <nav className="p-3 flex flex-col gap-1.5">
               <SideNavItem to="personal" icon={User} label="Personal" end />
-              {/* <SideNavItem to="security" icon={Shield} label="Security" /> */}
+              <SideNavItem to="security" icon={Shield} label="Security" />
               <SideNavItem to="pets" icon={PawPrint} label="Pet Profiles" />
               <SideNavItem to="listings" icon={PawPrint} label="Listings" />
               <SideNavItem to="bookings" icon={CalendarRange} label="Bookings" />
-              <SideNavItem to="consultations" icon={List} label="Consultations" />
               <SideNavItem to="matchmaking" icon={PawPrint} label="Matchmaking" />
               <SideNavItem to="wallet" icon={Wallet} label="Wallet" />
             </nav>

@@ -41,6 +41,7 @@ export default function ChatSidebar({
     if (!room.users || !currentUserId) return null;
     return room.users.find((u) => u._id !== currentUserId);
   };
+
   return (
     <div className="w-full md:w-80 border-r border-gray-200 bg-white flex flex-col">
       {/* Header */}
@@ -65,12 +66,16 @@ export default function ChatSidebar({
         ) : (
           rooms.map((room) => {
             const otherUser = getOtherUser(room);
+            const unseenCount = unseenCounts[room._id] || 0;
+
             return (
               <button
                 key={room._id}
                 onClick={() => onSelectRoom(room._id)}
                 className={`w-full p-4 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors ${
-                  selectedRoomId === room._id ? 'bg-orange-50 border-l-4 border-l-orange-600' : ''
+                  selectedRoomId === room._id
+                    ? 'bg-orange-50 border-l-4 border-l-orange-600'
+                    : ''
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -89,27 +94,30 @@ export default function ChatSidebar({
 
                   {/* Other User & Last Message */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 mb-1">
                       <p className="font-medium text-gray-900 truncate">
                         {otherUser?.username || 'Chat'}
                       </p>
-                      {unseenCounts[room._id] > 0 && (
+                      {room.lastMessageAt && (
+                        <p className="text-xs text-gray-500 flex-shrink-0">
+                          {dayjs(room.lastMessageAt).fromNow()}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-gray-600 truncate flex-1">
+                        {room.lastMessage || 'No messages yet'}
+                      </p>
+                      
+                      {/* Unseen Count Badge */}
+                      {unseenCount > 0 && (
                         <span className="flex-shrink-0 bg-orange-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center">
-                          {unseenCounts[room._id]}
+                          {unseenCount}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 truncate">
-                      {room.lastMessage || 'No messages yet'}
-                    </p>
                   </div>
-
-                  {/* Time */}
-                  {room.lastMessageAt && (
-                    <p className="text-xs text-gray-500 flex-shrink-0">
-                      {dayjs(room.lastMessageAt).fromNow()}
-                    </p>
-                  )}
                 </div>
               </button>
             );

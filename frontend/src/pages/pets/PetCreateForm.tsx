@@ -137,7 +137,9 @@ export function PetCreateForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className={`space-y-4 transition-opacity ${
+    saving ? "opacity-70 pointer-events-none" : ""
+  }`}>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="text-sm text-gray-600">Pet name</label>
@@ -203,14 +205,6 @@ export function PetCreateForm({
                 accept=".jpg,.jpeg,.png,.webp,.gif"
                 onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
               />
-              <Button
-                type="button"
-                onClick={doUpload}
-                disabled={!photoFile || uploading}
-                className="bg-[#F97316] hover:bg-[#EA580C]"
-              >
-                {uploading ? "Uploading…" : "Upload"}
-              </Button>
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
@@ -244,13 +238,18 @@ export function PetCreateForm({
         >
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={saving}
-          className="bg-[#F97316] hover:bg-[#EA580C]"
-        >
-          {saving ? "Saving…" : "Save Pet"}
-        </Button>
+<Button
+  type="submit"
+  disabled={saving}
+  className="bg-[#F97316] hover:bg-[#EA580C]"
+>
+  {saving
+    ? uploading
+      ? "Uploading photo…"
+      : "Saving pet…"
+    : "Save Pet"}
+</Button>
+
       </div>
     </form>
   );

@@ -1,14 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-// import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/UiComponents/UserNavbar';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import { chatService } from '@/services/chatService';
 
 export default function ChatPage() {
-  // const { user } = useAuth(); // Get fresh user from context, not localStorage
   const [searchParams] = useSearchParams();
   const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
@@ -21,13 +19,11 @@ export default function ChatPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
-  
-  // Use ref to track active room to avoid stale closures in socket listeners
+
+  // Refs to avoid stale closures
   const activeRoomIdRef = useRef<string | null>(null);
-  // Track if ChatPage is mounted and visible to prevent false auto-seen
   const isPageVisibleRef = useRef<boolean>(true);
-  // Track which messages we've already marked as seen to prevent duplicates
-  const markedSeenMessagesRef = useRef<Set<string>>(new Set());
+  const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Initialize user
   useEffect(() => {
@@ -48,10 +44,9 @@ export default function ChatPage() {
 
     const token = localStorage.getItem('auth_token');
     const socketUrl =
-  import.meta.env.MODE === 'production'
-    ? 'http://15.207.100.5:4000'
-    : 'http://localhost:4000';
-
+      import.meta.env.MODE === 'production'
+        ? 'http://15.207.100.5:4000'
+        : 'http://localhost:4000';
 
     const newSocket = io(socketUrl, {
       auth: { token },
@@ -62,120 +57,164 @@ export default function ChatPage() {
     });
 
     newSocket.on('connect', () => {
-      console.log('Chat socket connected');
+      console.log('[Chat] 🔌 Socket connected');
     });
 
-    // Receive message from socket (includes own messages now)
+    // ========================================
+    // RECEIVE MESSAGE - Main handler
+    // ========================================
     newSocket.on('chat:receive_message', (message) => {
       const messageRoomId = message.roomId?.toString() || message.roomId;
-      
+      const messageId = message._id;
+
       console.log('[Chat] 📥 Received message:', {
-        messageId: message._id,
+        messageId,
         roomId: messageRoomId,
         senderId: message.senderId,
         isFromMe: message.senderId === currentUserId,
         activeRoom: activeRoomIdRef.current,
         pageVisible: isPageVisibleRef.current,
       });
-      
-      // ALWAYS append message to the correct room (real-time delivery)
+
+      // ✅ Prevent duplicate processing
+      if (processedMessageIdsRef.current.has(messageId)) {
+        console.log('[Chat] ⚠️ Duplicate message detected, skipping');
+        return;
+      }
+      processedMessageIdsRef.current.add(messageId);
+
+      // ✅ Step 1: Add message to room
       setMessagesByRoom((prev) => {
         const roomMessages = prev[messageRoomId] || [];
-        // Add duplicate detection - check if message already exists by _id
-        const exists = roomMessages.some(m => m._id === message._id);
+        
+        // Double-check for duplicates in state
+        const exists = roomMessages.some(m => m._id === messageId);
         if (exists) {
-          console.log('[Chat] ⚠️ Duplicate message, ignoring');
+          console.log('[Chat] ⚠️ Message already in state, skipping');
           return prev;
         }
-        
+
         console.log('[Chat] ✅ Adding message to room:', messageRoomId);
         return {
           ...prev,
           [messageRoomId]: [...roomMessages, message],
         };
       });
+
+      // ✅ Step 2: Update sidebar room info (lastMessage, lastMessageAt)
+      setRooms((prev) => {
+        const updated = prev.map((room) => {
+          if (room._id === messageRoomId) {
+            return {
+              ...room,
+              lastMessage: message.content,
+              lastMessageAt: message.createdAt || new Date().toISOString(),
+            };
+          }
+          return room;
+        });
+
+        // ✅ Sort rooms by lastMessageAt (most recent on top)
+        return updated.sort((a, b) => {
+          const dateA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const dateB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          return dateB - dateA;
+        });
+      });
+
+      // ✅ Step 3: Handle unseen count and mark as seen logic
+      // Convert senderId to string for comparison (backend sends ObjectId)
+      const messageSenderId = typeof message.senderId === 'string' 
+        ? message.senderId 
+        : message.senderId?.toString?.() || message.senderId?._id?.toString?.() || message.senderId;
       
-      // Handle unseen count and mark as seen logic
-      if (message.senderId !== currentUserId) {
-        // Use ref to avoid stale closure - always get current active room
+      const isMessageFromOtherUser = messageSenderId !== currentUserId;
+      
+      if (isMessageFromOtherUser) {
         const currentActiveRoom = activeRoomIdRef.current;
         const isPageVisible = isPageVisibleRef.current;
-        
-        console.log('[Chat] 📊 Checking if should mark as seen:', {
+        const isUserViewingThisChat = messageRoomId === currentActiveRoom && isPageVisible;
+
+        console.log('[Chat] 📊 Message from other user:', {
           messageRoomId,
           currentActiveRoom,
           isPageVisible,
-          shouldMarkSeen: messageRoomId === currentActiveRoom && isPageVisible,
+          isUserViewingThisChat,
         });
-        
-        // Only mark as seen if:
-        // 1. User is viewing this specific chat (messageRoomId === currentActiveRoom)
-        // 2. AND the page is actually visible (not background tab, not unmounted)
-        if (messageRoomId === currentActiveRoom && isPageVisible) {
-          // User is actively viewing this chat - mark new message as seen IMMEDIATELY
-          console.log('[Chat] ✅ Marking message as seen (user is viewing this chat)');
+
+        if (isUserViewingThisChat) {
+          // 🔹 Case 1: User is viewing this chat - mark as seen immediately
+          console.log('[Chat] ✅ User is viewing this chat, marking as seen');
           newSocket.emit('chat:mark_seen', { roomId: messageRoomId });
-          
-          // Track that we've marked this message as seen
-          markedSeenMessagesRef.current.add(message._id);
         } else {
-          // User is NOT viewing this chat OR page is not visible - increment unseen count
-          console.log('[Chat] 📬 Incrementing unseen count (user not viewing or page hidden)');
+          // 🔹 Case 2: User is NOT viewing this chat - increment unseen count
+          console.log('[Chat] 📬 User is NOT viewing, incrementing unseen count');
           setUnseenCounts((prev) => ({
             ...prev,
             [messageRoomId]: (prev[messageRoomId] || 0) + 1,
           }));
         }
       } else {
-        console.log('[Chat] ℹ️ Message is from current user, no action needed');
+        console.log('[Chat] ℹ️ Message is from current user, no unseen action needed');
       }
     });
 
-    newSocket.on('chat:delivered', (data) => {
-      console.log('[Chat] ✅ Messages delivered:', data);
-      setMessagesByRoom((prev) => {
-        const updated: Record<string, any[]> = {};
-        for (const [roomId, messages] of Object.entries(prev)) {
-          updated[roomId] = messages.map((msg) =>
-            msg.senderId === currentUserId
-              ? {
-                  ...msg,
-                  deliveredTo: [...(msg.deliveredTo || []), data.userId],
-                }
-              : msg
-          );
-        }
-        return updated;
-      });
-    });
-
-    // Message seen status update
+    // ========================================
+    // MESSAGE SEEN STATUS UPDATE
+    // ========================================
     newSocket.on('chat:message_seen', (data) => {
       console.log('[Chat] 👁️ Message seen by:', data);
+      
+      const seenByUserId = data.seenBy?.toString();
+      const seenRoomId = data.roomId?.toString();
+
       setMessagesByRoom((prev) => {
         const updated: Record<string, any[]> = {};
+        
         for (const [roomId, messages] of Object.entries(prev)) {
-          updated[roomId] = messages.map((msg) => {
-            const seenByIds = (msg.seenBy || []).map((id: any) => id.toString?.() || id);
-            const seenByUserId = data.seenBy.toString?.() || data.seenBy;
-            
-            if (msg.senderId === currentUserId && !seenByIds.includes(seenByUserId)) {
-              return {
-                ...msg,
-                seenBy: [...(msg.seenBy || []), data.seenBy],
-              };
-            }
-            return msg;
-          });
+          if (roomId === seenRoomId) {
+            updated[roomId] = messages.map((msg) => {
+              // Convert senderId to string for comparison
+              const msgSenderId = typeof msg.senderId === 'string'
+                ? msg.senderId
+                : msg.senderId?.toString?.() || msg.senderId;
+              
+              // Only update messages sent by current user
+              if (msgSenderId === currentUserId) {
+                const seenByIds = (msg.seenBy || []).map((id: any) => 
+                  id?.toString?.() || id
+                );
+                
+                // Add seenByUserId if not already in array
+                if (!seenByIds.includes(seenByUserId)) {
+                  return {
+                    ...msg,
+                    seenBy: [...(msg.seenBy || []), seenByUserId],
+                  };
+                }
+              }
+              return msg;
+            });
+          } else {
+            updated[roomId] = messages;
+          }
         }
+        
         return updated;
       });
     });
-    
+
+    // ========================================
+    // TYPING STATUS
+    // ========================================
     newSocket.on('chat:typing_status', (data) => {
       console.log('[Chat] ⌨️ Typing status:', data);
+      // You can implement typing indicator UI here if needed
     });
 
+    // ========================================
+    // ERROR HANDLING
+    // ========================================
     newSocket.on('error', (err) => {
       console.error('[Chat] ❌ Socket error:', err);
     });
@@ -183,40 +222,121 @@ export default function ChatPage() {
     setSocket(newSocket);
 
     return () => {
-      console.log('[Chat] 🔌 Disconnecting socket');
+      console.log('[Chat] 🔌 Disconnecting socket and leaving all rooms');
+      
+      // Leave all rooms before disconnecting
+      rooms.forEach((room) => {
+        newSocket.emit('chat:leave', { roomId: room._id });
+      });
+      
       newSocket.disconnect();
     };
-  }, [currentUserId]);
+  }, [currentUserId]); // ✅ rooms is NOT a dependency to avoid infinite loops
 
-  // Load rooms and calculate unseen counts
+  // ========================================
+  // TRACK PAGE VISIBILITY
+  // ========================================
   useEffect(() => {
-    if (!currentUserId) return;
+    const handleVisibilityChange = () => {
+      const wasVisible = isPageVisibleRef.current;
+      isPageVisibleRef.current = !document.hidden;
+
+      console.log('[Chat] 👁️ Page visibility changed:', {
+        wasVisible,
+        nowVisible: isPageVisibleRef.current,
+        activeRoom: activeRoomIdRef.current,
+      });
+
+      // If page becomes visible and user has active room, mark unseen messages as seen
+      if (!wasVisible && isPageVisibleRef.current && activeRoomIdRef.current && socket) {
+        const roomId = activeRoomIdRef.current;
+        
+        // Check if there are unseen messages in this room
+        if (unseenCounts[roomId] > 0) {
+          console.log('[Chat] 📖 Page became visible, marking messages as seen');
+          socket.emit('chat:mark_seen', { roomId });
+          
+          // Reset unseen count
+          setUnseenCounts((prev) => ({
+            ...prev,
+            [roomId]: 0,
+          }));
+        }
+      }
+    };
+
+    // Set initial visibility
+    isPageVisibleRef.current = !document.hidden;
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      isPageVisibleRef.current = false;
+    };
+  }, [socket, unseenCounts]);
+
+  // ========================================
+  // SYNC ACTIVE ROOM REF
+  // ========================================
+  useEffect(() => {
+    activeRoomIdRef.current = selectedRoomId;
+  }, [selectedRoomId]);
+
+  // ========================================
+  // LOAD ROOMS ON MOUNT
+  // ========================================
+  useEffect(() => {
+    if (!currentUserId || !socket) return;
 
     const loadRooms = async () => {
       try {
         setIsLoadingRooms(true);
         const data = await chatService.listRooms();
-        setRooms(data);
+        
+        // Sort rooms by lastMessageAt (most recent first)
+        const sortedRooms = data.sort((a: any, b: any) => {
+          const dateA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const dateB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        
+        setRooms(sortedRooms);
 
-        // Calculate unseen counts for each room
+        // ✅ CRITICAL FIX: Join ALL room sockets so user receives messages from all chats
+        console.log('[Chat] 🚪 Joining ALL user rooms via socket');
+        for (const room of sortedRooms) {
+          socket.emit('chat:join', { roomId: room._id });
+          console.log(`[Chat] ✅ Joined room: ${room._id}`);
+        }
+
+        // Calculate initial unseen counts
         const counts: Record<string, number> = {};
-        for (const room of data) {
+        for (const room of sortedRooms) {
           try {
             const messagesData = await chatService.listMessages(room._id, 1, 100);
             const unseenCount = (messagesData.messages || []).filter((msg: any) => {
-              // Count messages from other users that current user hasn't seen
-              if (msg.senderId === currentUserId) return false;
-              const seenByIds = (msg.seenBy || []).map((id: any) => 
-                typeof id === 'string' ? id : id._id || id.toString()
+              // Convert senderId to string for comparison
+              const msgSenderId = typeof msg.senderId === 'string'
+                ? msg.senderId
+                : msg.senderId?.toString?.() || msg.senderId;
+              
+              if (msgSenderId === currentUserId) return false;
+              
+              const seenByIds = (msg.seenBy || []).map((id: any) =>
+                id?.toString?.() || id
               );
+              
               return !seenByIds.includes(currentUserId);
             }).length;
+            
             counts[room._id] = unseenCount;
           } catch (err) {
             console.error(`Failed to calculate unseen for room ${room._id}:`, err);
             counts[room._id] = 0;
           }
         }
+        
         setUnseenCounts(counts);
       } catch (err) {
         console.error('Failed to load rooms:', err);
@@ -226,61 +346,11 @@ export default function ChatPage() {
     };
 
     loadRooms();
-  }, [currentUserId]);
+  }, [currentUserId, socket]); // ✅ Add socket as dependency
 
-  // Track page visibility to prevent marking messages as seen when page is not visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      const wasVisible = isPageVisibleRef.current;
-      isPageVisibleRef.current = !document.hidden;
-      
-      console.log('[Chat] 👁️ Page visibility changed:', {
-        wasVisible,
-        nowVisible: isPageVisibleRef.current,
-        activeRoom: activeRoomIdRef.current,
-      });
-
-      // If page becomes visible again and user has an active room open,
-      // mark any unseen messages in that room as seen
-      if (!wasVisible && isPageVisibleRef.current && activeRoomIdRef.current && socket) {
-        const roomId = activeRoomIdRef.current;
-        const roomMessages = messagesByRoom[roomId] || [];
-        
-        // Check if there are any unseen messages from other users
-        const hasUnseenMessages = roomMessages.some((msg: any) => {
-          if (msg.senderId === currentUserId) return false;
-          const seenByIds = (msg.seenBy || []).map((id: any) => 
-            typeof id === 'string' ? id : id._id || id.toString()
-          );
-          return !seenByIds.includes(currentUserId);
-        });
-
-        if (hasUnseenMessages) {
-          console.log('[Chat] 📖 Page became visible, marking messages as seen');
-          socket.emit('chat:mark_seen', { roomId });
-        }
-      }
-    };
-
-    // Set initial visibility
-    isPageVisibleRef.current = !document.hidden;
-
-    // Listen for visibility changes
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Mark page as not visible when component unmounts
-      isPageVisibleRef.current = false;
-    };
-  }, [socket, messagesByRoom, currentUserId]);
-
-  // Sync ref with selectedRoomId to avoid stale closures
-  useEffect(() => {
-    activeRoomIdRef.current = selectedRoomId;
-  }, [selectedRoomId]);
-
-  // Load messages for selected room and mark as seen
+  // ========================================
+  // LOAD MESSAGES FOR SELECTED ROOM
+  // ========================================
   useEffect(() => {
     if (!selectedRoomId || !currentUserId) return;
 
@@ -288,26 +358,33 @@ export default function ChatPage() {
       try {
         setIsLoadingMessages(true);
         console.log('[Chat] 📂 Loading messages for room:', selectedRoomId);
-        
+
         const data = await chatService.listMessages(selectedRoomId, 1, 50);
-        // Backend returns { messages: [], total, page, limit }
         setMessagesByRoom((prev) => ({
           ...prev,
           [selectedRoomId]: data.messages || [],
         }));
 
-        // Join room via socket
+        // ✅ NOTE: We already joined ALL rooms on mount, so no need to join again here
+        // But we keep this for safety in case user opens a room before rooms are loaded
         if (socket) {
-          console.log('[Chat] 🚪 Joining room via socket:', selectedRoomId);
+          console.log('[Chat] 🔄 Ensuring user is in room:', selectedRoomId);
           socket.emit('chat:join', { roomId: selectedRoomId });
         }
 
-        // Check if there are unseen messages from other user
+        // Check for unseen messages
         const unseenMessages = (data.messages || []).filter((msg: any) => {
-          if (msg.senderId === currentUserId) return false;
-          const seenByIds = (msg.seenBy || []).map((id: any) => 
-            typeof id === 'string' ? id : id._id || id.toString()
+          // Convert senderId to string for comparison
+          const msgSenderId = typeof msg.senderId === 'string'
+            ? msg.senderId
+            : msg.senderId?.toString?.() || msg.senderId;
+          
+          if (msgSenderId === currentUserId) return false;
+          
+          const seenByIds = (msg.seenBy || []).map((id: any) =>
+            id?.toString?.() || id
           );
+          
           return !seenByIds.includes(currentUserId);
         });
 
@@ -319,15 +396,10 @@ export default function ChatPage() {
           willMarkSeen: hasUnseen && !!socket,
         });
 
-        // Mark as seen if there are unseen messages (user explicitly opened this chat)
+        // 🔹 Case 3: User clicked on chat - mark existing unseen messages as seen
         if (hasUnseen && socket) {
           console.log('[Chat] ✅ Marking existing messages as seen (user opened chat)');
           socket.emit('chat:mark_seen', { roomId: selectedRoomId });
-          
-          // Track these messages as marked
-          unseenMessages.forEach((msg: { _id: string; }) => {
-            markedSeenMessagesRef.current.add(msg._id);
-          });
         }
 
         // Reset unseen count for this room
@@ -344,16 +416,13 @@ export default function ChatPage() {
 
     loadMessages();
 
-    // Cleanup: leave room when unmounting or switching rooms
-    return () => {
-      if (socket && selectedRoomId) {
-        console.log('[Chat] 🚪 Leaving room:', selectedRoomId);
-        socket.emit('chat:leave', { roomId: selectedRoomId });
-      }
-    };
+    // ✅ NOTE: We don't leave the room anymore since user needs to stay in ALL rooms
+    // This ensures they receive messages from all chats in real-time
   }, [selectedRoomId, currentUserId, socket]);
 
-  // Send message
+  // ========================================
+  // SEND MESSAGE
+  // ========================================
   const handleSendMessage = async (content: string) => {
     if (!selectedRoomId || !currentUserId) return;
 
@@ -378,6 +447,9 @@ export default function ChatPage() {
     }
   };
 
+  // ========================================
+  // RENDER
+  // ========================================
   if (!currentUserId) {
     return (
       <div className="min-h-screen bg-gray-50">

@@ -45,8 +45,19 @@ const onSubmit = async (data: SignupFormInputs) => {
       navigate("/verify-otp", { state: { email: data.email } });
     }
   } catch (error: any) {
-    toast.error(error?.response?.data?.message || "Signup failed");
+  if (error?.code === "ECONNABORTED") {
+    toast.loading("Waking up server, please wait…", {
+      duration: 4000,
+    });
+    return;
   }
+
+  toast.error(
+    error?.response?.data?.message ||
+    "Signup failed. Please try again."
+  );
+}
+
 };
 
 

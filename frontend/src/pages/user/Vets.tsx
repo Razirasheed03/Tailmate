@@ -155,8 +155,7 @@ useEffect(() => {
                     <span className="text-gray-500"> per session</span>
                   </div>
                   <div className="flex gap-2">
-                    <Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm border rounded">Profile</Link>
-                    <Link to={`/vets/${d.doctorId}`} className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded">Book</Link>
+                    <Link to={`/vets/${d.doctorId}`} className="px-10 py-1.5 text-sm bg-teal-600 text-white rounded">Book</Link>
                   </div>
                 </div>
               </article>

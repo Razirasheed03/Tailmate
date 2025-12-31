@@ -48,7 +48,8 @@ const io = new Server(server, {
     origin: allowedOrigins,
     credentials: true,
   },
-  transports: ["polling"],
+  transports: ["websocket", "polling"],
+  allowUpgrades: true,
 });
 
 // Extract services from DI containers and inject into socket layer
@@ -85,6 +86,10 @@ app.post(
 
 app.use(express.json());
 app.use(cookieParser());
+
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 // Initialize database and drop old indexes BEFORE registering routes
 let dbReady = false;

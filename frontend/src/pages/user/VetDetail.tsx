@@ -199,9 +199,7 @@ export default function VetDetail() {
           {/* About */}
           <section className="mt-4 bg-white border rounded-xl p-5">
             <div className="flex gap-3 text-sm border-b pb-2">
-              <button className="px-3 py-1 rounded bg-gray-100">About Me</button>
-              <button className="px-3 py-1 rounded text-gray-500">Reviews</button>
-              <button className="px-3 py-1 rounded text-gray-500">Qualifications</button>
+              <button className="px-3 py-1 rounded bg-gray-50">About Me</button>
             </div>
             <div className="mt-3 text-sm text-gray-700 leading-6">
               {doctor?.bio || "Profile bio will appear here."}
@@ -323,12 +321,6 @@ export default function VetDetail() {
               className="mt-3 w-full px-3 py-2 rounded bg-teal-600 text-white disabled:opacity-50"
             >
               Proceed
-            </button>
-
-            <button
-              className="mt-2 w-full px-3 py-2 rounded border text-teal-700 border-teal-200 bg-white"
-            >
-              Send Message
             </button>
           </section>
         </aside>
