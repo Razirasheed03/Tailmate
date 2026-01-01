@@ -22,7 +22,13 @@ export const authJwt: RequestHandler = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid token user." });
     }
-
+    if (user.isBlocked) {
+  return res.status(403).json({
+    success: false,
+    code: "USER_BLOCKED",
+    message: "Your account has been blocked by admin.",
+  });
+}
 
     const userId = (user as any)._id?.toString() || decoded.id;
     (req as any).user = {

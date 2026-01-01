@@ -1,8 +1,7 @@
 ///httpClient.ts
-import axios, {type AxiosInstance, AxiosError } from 'axios';
-import { AUTH_ROUTES } from '@/constants/apiRoutes';
-import { toast } from 'sonner';
-
+import axios, { type AxiosInstance, AxiosError } from "axios";
+import { AUTH_ROUTES } from "@/constants/apiRoutes";
+import { toast } from "sonner";
 
 const httpClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -18,7 +17,7 @@ let hasShownTokenExpiredToast = false; // Guard to prevent duplicate toasts
 // Request interceptor
 httpClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -26,26 +25,36 @@ httpClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Request Error:', error);
+    console.error("Request Error:", error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
 httpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config;
-
-    // Handling different types of errors
     if (error.response) {
       const { status } = error.response;
-      
+
       switch (status) {
         case 401:
           return handleUnauthorized(error, original);
         case 403:
-          handleForbidden(error);
+          {
+            const data: any = error.response?.data;
+            if (data?.code === "USER_BLOCKED") {
+              localStorage.removeItem("auth_token");
+              localStorage.removeItem("auth_user");
+              toast.error("Your account has been blocked by admin.");
+              window.location.href = "/login?blocked=true";
+              return Promise.reject(error);
+            }
+
+            handleForbidden(error);
+            break;
+          }
+
           break;
         case 404:
           handleNotFound(error);
@@ -100,33 +109,33 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
         {},
         { withCredentials: true }
       );
-      
+
       const newAccessToken = refreshResponse?.data?.accessToken;
-      
+
       if (newAccessToken) {
-        localStorage.setItem('auth_token', newAccessToken);
+        localStorage.setItem("auth_token", newAccessToken);
         original.headers = original.headers || {};
         original.headers.Authorization = `Bearer ${newAccessToken}`;
-        
+
         // Reset the toast guard since token was refreshed successfully
         hasShownTokenExpiredToast = false;
-        
+
         // Process queued requests
         refreshQueue.forEach((resolve) => resolve());
         refreshQueue = [];
-        
+
         return httpClient.request(original);
       }
     } catch (refreshError) {
       // Only show toast ONCE per token expiry event
       if (!hasShownTokenExpiredToast) {
         hasShownTokenExpiredToast = true;
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        toast.error('Session expired. Please login again.');
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        toast.error("Session expired. Please login again.");
 
         setTimeout(() => {
-          window.location.href = '/login';
+          window.location.href = "/login";
         }, 1500);
       }
     } finally {
@@ -138,87 +147,78 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
 };
 
 const handleForbidden = (error: AxiosError) => {
-  const message = 'You do not have permission to perform this action.';
+  const message = "You do not have permission to perform this action.";
   toast.error(message);
-  console.error('Forbidden (403):', error);
+  console.error("Forbidden (403):", error);
 };
 
 const handleNotFound = (error: AxiosError) => {
-  const message = 'The requested resource was not found.';
+  const message = "The requested resource was not found.";
   toast.error(message);
-  console.error('Not Found (404):', error);
+  console.error("Not Found (404):", error);
 };
 
 const handleValidationError = (error: AxiosError) => {
-  const message = getErrorMessage(error) || 'Validation failed. Please check your input.';
+  const message =
+    getErrorMessage(error) || "Validation failed. Please check your input.";
   toast.error(message);
-  console.error('Validation Error (422):', error);
+  console.error("Validation Error (422):", error);
 };
 
 const handleRateLimit = (error: AxiosError) => {
-  const message = 'Too many requests. Please try again later.';
+  const message = "Too many requests. Please try again later.";
   toast.error(message);
-  console.error('Rate Limited (429):', error);
+  console.error("Rate Limited (429):", error);
 };
 
 const handleServerError = (error: AxiosError) => {
-  const message = 'Server error. Please try again later.';
+  const message = "Server error. Please try again later.";
   toast.error(message);
-  console.error('Server Error (5xx):', error);
+  console.error("Server Error (5xx):", error);
 };
 
 const handleNetworkError = (error: AxiosError) => {
-  const message = 'Network error. Please check your internet connection.';
+  const message = "Network error. Please check your internet connection.";
   toast.error(message);
-  console.error('Network Error:', error);
+  console.error("Network Error:", error);
 };
 
 const handleRequestError = (error: AxiosError) => {
-  const message = 'Request failed. Please try again.';
+  const message = "Request failed. Please try again.";
   toast.error(message);
-  console.error('Request Error:', error);
+  console.error("Request Error:", error);
 };
 
 const handleGenericError = (error: AxiosError) => {
-  const message = getErrorMessage(error) || 'An unexpected error occurred.';
+  const message = getErrorMessage(error) || "An unexpected error occurred.";
   toast.error(message);
-  console.error('Generic Error:', error);
+  console.error("Generic Error:", error);
 };
 
 // Helper function to extract error message from response
 const getErrorMessage = (error: AxiosError): string | null => {
   if (error.response?.data) {
     const data = error.response.data as any;
-    
+
     // Try different common error message fields
-    return (
-      data.message ||
-      data.error ||
-      data.details ||
-      data.msg ||
-      null
-    );
+    return data.message || data.error || data.details || data.msg || null;
   }
-  
+
   return error.message || null;
 };
 
 const isDevelopment = (): boolean => {
-  return import.meta.env.MODE === 'development';
+  return import.meta.env.MODE === "development";
 };
 
 if (isDevelopment()) {
-  httpClient.interceptors.request.use(
-    (config) => {
-      return config;
-    }
-  );
+  httpClient.interceptors.request.use((config) => {
+    return config;
+  });
 
-  httpClient.interceptors.response.use(
-    (response) => {
-      return response;
-    }
-  );
+  httpClient.interceptors.response.use((response) => {
+    return response;
+  });
 }
 
 export default httpClient;
