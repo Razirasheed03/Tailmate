@@ -51,8 +51,7 @@ export function useWebRTC({
       console.error('[WebRTC] No auth token');
       return;
     }
-const backendUrl = import.meta.env.VITE_API_BASE_URL;
-
+    const backendUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, "");
     console.log('[WebRTC] Connecting to:', backendUrl);
     
     const socket = io(backendUrl, {
