@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { authController } from "../dependencies/auth.di";
+import { authJwt } from "../middlewares/authJwt";
 
 const router = Router();
 
@@ -13,7 +14,11 @@ router.post("/forgot-password", asyncHandler(authController.forgotPassword));
 router.post("/reset-password", asyncHandler(authController.resetPassword));
 router.post("/google/login", asyncHandler(authController.googleLoginWithToken));
 router.post("/refresh-token", asyncHandler(authController.refreshToken));
-// OPTIONAL redirect-based OAuth:
+router.post(
+  "/change-password",
+  authJwt,
+  asyncHandler(authController.changePassword)
+);
 router.get("/google", asyncHandler(authController.googleRedirect));
 router.get("/google/callback", asyncHandler(authController.googleCallback));
 export default router;

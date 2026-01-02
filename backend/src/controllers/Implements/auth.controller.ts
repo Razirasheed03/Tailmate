@@ -202,4 +202,33 @@ export class AuthController {
       next(err);
     }
   };
+  changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = (req as any).user?._id;
+    if (!userId) {
+      return ResponseHelper.unauthorized(res, "Unauthorized");
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    await this._authService.changePassword(
+      userId,
+      currentPassword,
+      newPassword
+    );
+
+    return ResponseHelper.ok(
+      res,
+      { ok: true },
+      "Password updated successfully. Please login again."
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
 }

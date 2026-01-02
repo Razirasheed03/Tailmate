@@ -14,7 +14,10 @@ export interface SignupPayload {
 
 const userService = {
   login: async (email: string, password: string) => {
-    const { data } = await httpClient.post(AUTH_ROUTES.LOGIN, { email, password });
+    const { data } = await httpClient.post(AUTH_ROUTES.LOGIN, {
+      email,
+      password,
+    });
     return { success: data?.success, data: data?.data, message: data?.message };
   },
 
@@ -39,11 +42,16 @@ const userService = {
   },
 
   updateProfile: async (profileData: any) => {
-    const { data } = await httpClient.put(USER_ROUTES.UPDATE_PROFILE, profileData);
+    const { data } = await httpClient.put(
+      USER_ROUTES.UPDATE_PROFILE,
+      profileData
+    );
     return { success: data?.success, data: data?.data, message: data?.message };
   },
 
-  listBookings: async (params: BookingListParams): Promise<{ data: BookingRow[]; total: number }> => {
+  listBookings: async (
+    params: BookingListParams
+  ): Promise<{ data: BookingRow[]; total: number }> => {
     const { data } = await httpClient.get("/bookings", { params });
     return { data: data?.data?.items ?? [], total: data?.data?.total ?? 0 };
   },
@@ -66,6 +74,20 @@ const userService = {
   getWalletTransactions: async () => {
     const { data } = await httpClient.get("/wallet/transactions");
     return { success: data?.success, data: data?.data };
+  },
+  changePassword: async (payload: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
+    const { data } = await httpClient.post(
+      AUTH_ROUTES.CHANGE_PASSWORD,
+      payload
+    );
+
+    return {
+      success: data?.success,
+      message: data?.message,
+    };
   },
 };
 

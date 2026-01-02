@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import LoginImage from "/loginp.png";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -13,8 +13,6 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [backendReady, setBackendReady] = useState(false);
-const [checkingBackend, setCheckingBackend] = useState(true);
 
   const { login } = useAuth();
 
@@ -79,54 +77,30 @@ const [checkingBackend, setCheckingBackend] = useState(true);
       }
     }
   }, [navigate]);
-  useEffect(() => {
-  let cancelled = false;
-
-  const checkHealth = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/health`
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        if (!cancelled && data.status === "ready") {
-          setBackendReady(true);
-          setCheckingBackend(false);
-          return;
-        }
-      }
-    } catch {}
-
-    if (!cancelled) {
-      setTimeout(checkHealth, 2000); // retry every 2 sec
-    }
-  };
-
-  checkHealth();
-
-  return () => {
-    cancelled = true;
-  };
-}, []);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
 
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
-  if (!backendReady) {
-    toast.info("Server is starting, please wait...");
+
+  if (!email || !password) {
+    toast.error("Email and password are required");
     return;
   }
+
   try {
+    setIsLoggingIn(true); // 🔹 instant feedback
+
     const res = await userService.login(email, password);
     const accessToken = res?.data?.accessToken;
     const user = res?.data?.user;
 
     if (!accessToken || !user) {
-      toast.error(res?.message || "Unexpected response from server.");
+      toast.error(res?.message || "Login failed");
       return;
     }
-    if (user?.isBlocked) {
+
+    if (user.isBlocked) {
       toast.error("Account is blocked");
       return;
     }
@@ -134,19 +108,24 @@ const handleLogin = async (e: React.FormEvent) => {
     login(accessToken, user);
     toast.success("Login successful!");
 
-    const role = user?.role;
-    if (role === "admin") {
+    if (user.role === "admin") {
       navigate(APP_ROUTES.ADMIN_DASHBOARD);
-    } else if (role === "doctor") {
+    } else if (user.role === "doctor") {
       navigate(APP_ROUTES.DOCTOR_DASHBOARD);
     } else {
       navigate(APP_ROUTES.USER_HOME);
     }
   } catch (error: any) {
-    const msg = error?.response?.data?.message || error?.response?.data?.error || "Login failed. Please check your credentials.";
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      "Invalid email or password";
     toast.error(msg);
+  } finally {
+    setIsLoggingIn(false);
   }
 };
+
 const handleGoogleLogin = () => {
   window.location.href = `${import.meta.env.VITE_API_BASE_URL}${AUTH_ROUTES.GOOGLE}`;
 };
@@ -223,17 +202,26 @@ const handleGoogleLogin = () => {
             >
               Forgot Password?
             </button>
-
-    <button
+<button
   type="submit"
-  disabled={!backendReady}
-  className={`w-full font-medium py-3 rounded-full transition-colors
-    ${backendReady
-      ? "bg-[#e4a574] hover:bg-[#d4956a] text-white"
-      : "bg-gray-300 text-gray-600 cursor-not-allowed"}
+  disabled={isLoggingIn}
+  className={`w-full font-medium py-3 rounded-full transition-all duration-200
+    ${
+      isLoggingIn
+        ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+        : "bg-[#e4a574] hover:bg-[#d4956a] text-white"
+    }
+    flex items-center justify-center gap-2
   `}
 >
-  {checkingBackend ? "Preparing server..." : "Login"}
+  {isLoggingIn ? (
+    <>
+      <Loader2 className="w-5 h-5 animate-spin" />
+      Logging in…
+    </>
+  ) : (
+    "Login"
+  )}
 </button>
 
 

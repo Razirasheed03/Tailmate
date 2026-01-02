@@ -3,7 +3,7 @@ export interface IUserRepository {
   createUser(user: IUserModel): Promise<IUserModel>;
   findByEmail(email: string): Promise<IUserModel | null>;
   findById(id: string): Promise<IUserModel | null>;
-
+  
   getAllUsers(
     page?: number,
     limit?: number,
@@ -30,4 +30,5 @@ export interface IUserRepository {
   }>;
 
   updateUsername(userId: string, username: string): Promise<Omit<IUserModel, "password"> | null>;
+  
 }

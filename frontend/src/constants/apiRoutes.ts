@@ -9,6 +9,7 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: "/auth/reset-password",
   RESEND_OTP: "/auth/resend-otp",
   GOOGLE: "/auth/google",
+  CHANGE_PASSWORD: "/auth/change-password",
 };
 
 export const USER_ROUTES = {

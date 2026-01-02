@@ -297,4 +297,26 @@ login = async (
     user.resetPasswordExpires = undefined;
     await (user as any).save();
   };
+  changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  const user = await this._userRepo.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) throw new Error("Current password is incorrect");
+
+  if (currentPassword === newPassword) {
+    throw new Error("New password must be different from current password");
+  }
+
+  user.password = await bcrypt.hash(newPassword, 10);
+  await (user as any).save();
+
+  // 🔐 Invalidate refresh token (force re-login)
+  await redisClient.del(`refresh:${userId}`);
+};
+
 }

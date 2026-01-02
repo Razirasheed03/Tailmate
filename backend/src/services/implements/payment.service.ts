@@ -44,6 +44,12 @@ export class PaymentService implements IPaymentService {
       paymentStatus: "pending",
     });
 
+    const frontendUrl = process.env.FRONTEND_URL;
+
+    if (!frontendUrl?.startsWith("http")) {
+      throw new Error("FRONTEND_URL must start with https://");
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -61,9 +67,8 @@ export class PaymentService implements IPaymentService {
         },
       ],
 
-      // ✅ MUST be HTTPS frontend (Vercel)
-      success_url: `${process.env.FRONTEND_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/payments/cancel`,
+      success_url: `${frontendUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/payments/cancel`,
 
       metadata: {
         kind: "doctor",
