@@ -13,6 +13,7 @@ import {
 } from "../interfaces/payment.service.interface";
 import { PaginatedResult } from "../../repositories/interfaces/payment.repository.interface";
 import { IPayment } from "../../models/implements/payment.model";
+import { getFrontendUrl } from "../../config/url.config";
 
 export class PaymentService implements IPaymentService {
   constructor(private repo: IPaymentRepository) {}
@@ -43,9 +44,7 @@ export class PaymentService implements IPaymentService {
       currency,
       paymentStatus: "pending",
     });
-
-    const frontendUrl = process.env.FRONTEND_URL;
-
+const frontendUrl = getFrontendUrl();
     if (!frontendUrl?.startsWith("http")) {
       throw new Error("FRONTEND_URL must start with https://");
     }

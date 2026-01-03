@@ -13,6 +13,7 @@ import {
   CreateCheckoutResult,
   UIMode,
 } from "../interfaces/checkout.service.interface";
+import { getFrontendUrl } from "../../config/url.config";
 
 function toUTCDate(date: string, time: string) {
   const d = new Date(`${date}T00:00:00Z`);
@@ -177,6 +178,8 @@ export class CheckoutService implements ICheckoutService {
 
     try {
       const unitAmountMinor = Math.round(fee * 100);
+      const frontendUrl = getFrontendUrl();
+
       const session = await stripe.checkout.sessions.create(
         {
           mode: "payment",
@@ -190,8 +193,8 @@ export class CheckoutService implements ICheckoutService {
               quantity: 1,
             },
           ],
-          success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${process.env.APP_URL}/payments/cancel`,
+    success_url: `${frontendUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+cancel_url: `${frontendUrl}/payments/cancel`,
           metadata: {
             bookingId: String(booking._id),
             userId: String(userId),

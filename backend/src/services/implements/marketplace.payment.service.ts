@@ -4,6 +4,7 @@ import { stripe } from "../../utils/stripe";
 import { MarketOrder } from "../../schema/marketOrder.schema";
 import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
 import { IMarketplacePaymentService, CreateSessionPayload, CreateSessionResp } from "../interfaces/marketplace.payment.service.interface";
+import { getFrontendUrl } from "../../config/url.config";
 
 export class MarketplacePaymentService implements IMarketplacePaymentService {
   async createCheckoutSession(payload: CreateSessionPayload, buyerId: string): Promise<CreateSessionResp> {
@@ -29,7 +30,7 @@ export class MarketplacePaymentService implements IMarketplacePaymentService {
       currency: "INR",
       status: "created",
     });
-
+const frontendUrl = getFrontendUrl();
     // Stripe Checkout Session (collect to platform)
     const session = await stripe.checkout.sessions.create(
       {
@@ -45,8 +46,8 @@ export class MarketplacePaymentService implements IMarketplacePaymentService {
             quantity: 1,
           },
         ],
-        success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`,
-        cancel_url: `${process.env.APP_URL}/payments/cancel?orderId=${order._id}`,
+        success_url: `${frontendUrl}/payments/Success?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`,
+        cancel_url: `${frontendUrl}/payments/cancel?orderId=${order._id}`,
         metadata: {
           kind: "marketplace",
           orderId: String(order._id),
