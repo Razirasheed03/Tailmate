@@ -6,6 +6,7 @@ import { OAuth2Client } from "google-auth-library";
 import { CookieHelper } from "../../utils/cookie.helper";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
+import { getFrontendUrl } from "../../config/url.config";
 
 export class AuthController {
   constructor(private readonly _authService: IAuthService) {}
@@ -157,8 +158,9 @@ export class AuthController {
         await this._authService.googleLogin(idToken);
       CookieHelper.setRefreshToken(res, refreshToken);
 
+const baseUrl = getFrontendUrl();
       const frontendUrl = `${
-        process.env.FRONTEND_BASE_URL
+    baseUrl
       }/login?accessToken=${encodeURIComponent(
         accessToken
       )}&user=${encodeURIComponent(

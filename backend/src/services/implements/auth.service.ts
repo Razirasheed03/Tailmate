@@ -13,6 +13,7 @@ import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { OAuth2Client } from "google-auth-library";
 import { DoctorModel } from "../../models/implements/doctor.model";
 import { Doctor } from "../../schema/doctor.schema";
+import { getFrontendUrl } from "../../config/url.config";
 
 const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -265,8 +266,9 @@ login = async (
     (user as any).resetPasswordExpires = expires;
     await (user as any).save();
 
-    // Frontend URL, adjust as needed
-    const resetUrl = `${process.env.FRONTEND_BASE_URL}/reset-password?token=${resetToken}&id=${user._id}`;
+    
+const baseUrl = getFrontendUrl();
+const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&id=${user._id}`;
     await sendResetPasswordLink(
       user.email,
       "Password Reset",
