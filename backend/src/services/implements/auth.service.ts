@@ -7,7 +7,7 @@ import type { SignupInput } from "../../validation/userSchemas";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
 import crypto from "crypto";
-import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink ";
+import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
 import { IUserModel } from "../../models/interfaces/user.model.interface";
 import { OAuth2Client } from "google-auth-library";
