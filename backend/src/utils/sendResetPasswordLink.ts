@@ -1,35 +1,23 @@
-import { mailer } from "./mailer";
+import { sendBrevoEmail } from "./brevoMailer";
 
-export const sendResetPasswordLink = async (
+export async function sendResetPasswordLink(
   to: string,
   subject: string,
   resetUrl: string
-): Promise<void> => {
-  console.log("📨 [RESET EMAIL] QUEUED", {
-    to,
-    at: new Date().toISOString(),
-  });
+): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, sans-serif">
+      <h2>Password Reset</h2>
+      <p>Click the button below to reset your password:</p>
+      <p><a href="${resetUrl}">${resetUrl}</a></p>
+      <p>This link expires in 1 hour.</p>
+    </div>
+  `;
 
-  mailer
-    .sendMail({
-      from: `"TailMate Support" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html: `
-        <h2>Password Reset</h2>
-        <p>Click the link below to reset your password:</p>
-        <a href="${resetUrl}">${resetUrl}</a>
-        <p><b>Link expires in 1 hour</b></p>
-      `,
-      text: `Reset your password: ${resetUrl}`,
-    })
-    .then(() => {
-      console.log("✅ [RESET EMAIL] SENT", to);
-    })
-    .catch((err) => {
-      console.error("❌ [RESET EMAIL] FAILED", {
-        to,
-        message: err.message,
-      });
-    });
-};
+  sendBrevoEmail({
+    to,
+    subject,
+    html,
+    text: `Reset your password: ${resetUrl}`,
+  });
+}
