@@ -44,7 +44,7 @@ export class AuthService implements IAuthService {
       })
     );
     console.log(result, otp);
-    await sendOtpEmail(user.email, otp);
+    sendOtpEmail(user.email, otp);
 
     return { success: true, message: "OTP sent to email" };
   };

@@ -1,54 +1,36 @@
-import nodemailer from "nodemailer";
+import { mailer } from "./mailer";
 
-export const sendOtpEmail = async (to: string, otp: string) => {
-  console.log("📨 [OTP SMTP] INIT", {
+export const sendOtpEmail = async (
+  to: string,
+  otp: string
+): Promise<void> => {
+  console.log("📨 [OTP EMAIL] QUEUED", {
     to,
     at: new Date().toISOString(),
-    env: process.env.NODE_ENV,
   });
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  // ❗ Only verify SMTP locally
-  if (process.env.NODE_ENV === "development") {
-    try {
-      console.log("📨 [OTP SMTP] VERIFY START");
-      await transporter.verify();
-      console.log("✅ [OTP SMTP] VERIFY SUCCESS");
-    } catch (err) {
-      console.error("❌ [OTP SMTP] VERIFY FAILED", err);
-      throw err;
-    }
-  }
-
-  const mailOptions = {
-    from: `"TailMate Support" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: "Your TailMate OTP Code",
-    html: `
-      <div style="font-family: Arial, sans-serif;">
-        <h2>Your TailMate Verification Code</h2>
-        <p>Your OTP is:</p>
-        <h1 style="letter-spacing: 4px;">${otp}</h1>
-        <p>This code is valid for <strong>2 minutes</strong>.</p>
-        <p>If you did not request this, please ignore this email.</p>
-      </div>
-    `,
-    text: `Your TailMate OTP is ${otp}. It is valid for 30 seconds.`,
-  };
-
-  try {
-    console.log("📨 [OTP SMTP] SEND START");
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ [OTP SMTP] SEND SUCCESS", info.response);
-  } catch (err) {
-    console.error("❌ [OTP SMTP] SEND FAILED", err);
-    throw err;
-  }
+  // 🔥 FIRE AND FORGET — DO NOT AWAIT
+  mailer
+    .sendMail({
+      from: `"TailMate Support" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: "Your TailMate OTP Code",
+      html: `
+        <div style="font-family: Arial, sans-serif;">
+          <h2>Your TailMate Verification Code</h2>
+          <h1 style="letter-spacing: 4px;">${otp}</h1>
+          <p>This code is valid for <b>5 minutes</b>.</p>
+        </div>
+      `,
+      text: `Your TailMate OTP is ${otp}. Valid for 5 minutes.`,
+    })
+    .then(() => {
+      console.log("✅ [OTP EMAIL] SENT", to);
+    })
+    .catch((err) => {
+      console.error("❌ [OTP EMAIL] FAILED", {
+        to,
+        message: err.message,
+      });
+    });
 };
