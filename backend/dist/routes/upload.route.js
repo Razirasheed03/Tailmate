@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const authJwt_1 = require("../middlewares/authJwt");
+const asyncHandler_1 = require("../utils/asyncHandler");
+const upload_1 = require("../middlewares/upload");
+const upload_controller_1 = require("../controllers/Implements/upload.controller");
+const router = (0, express_1.Router)();
+router.use(authJwt_1.authJwt);
+router.post("/chat", upload_1.uploadChatFile, (0, asyncHandler_1.asyncHandler)(upload_controller_1.uploadController.uploadChat));
+exports.default = router;

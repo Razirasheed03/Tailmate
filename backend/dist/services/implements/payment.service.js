@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentService = void 0;
 const stripe_1 = require("../../utils/stripe");
 const booking_schema_1 = require("../../schema/booking.schema");
+const url_config_1 = require("../../config/url.config");
 class PaymentService {
     constructor(repo) {
         this.repo = repo;
@@ -27,7 +28,7 @@ class PaymentService {
                 throw new Error("Forbidden");
             }
             const amount = Number(booking.amount || 0);
-            const platformFee = Math.round(amount * 0.20);
+            const platformFee = Math.round(amount * 0.2);
             const doctorEarning = amount - platformFee;
             const currency = booking.currency || "INR";
             const payment = yield this.repo.create({
@@ -40,6 +41,10 @@ class PaymentService {
                 currency,
                 paymentStatus: "pending",
             });
+            const frontendUrl = (0, url_config_1.getFrontendUrl)();
+            if (!(frontendUrl === null || frontendUrl === void 0 ? void 0 : frontendUrl.startsWith("http"))) {
+                throw new Error("FRONTEND_URL must start with https://");
+            }
             const session = yield stripe_1.stripe.checkout.sessions.create({
                 mode: "payment",
                 payment_method_types: ["card"],
@@ -48,17 +53,17 @@ class PaymentService {
                         price_data: {
                             currency: currency.toLowerCase(),
                             product_data: {
-                                name: "Doctor consultation",
-                                metadata: { bookingId: String(booking._id) },
+                                name: "Doctor Consultation",
                             },
                             unit_amount: Math.round(amount * 100),
                         },
                         quantity: 1,
                     },
                 ],
-                success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.APP_URL}/payments/cancel`,
+                success_url: `${frontendUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${frontendUrl}/payments/cancel`,
                 metadata: {
+                    kind: "doctor",
                     paymentDbId: String(payment._id),
                     bookingId: String(booking._id),
                     doctorId: String(booking.doctorId),
@@ -68,6 +73,10 @@ class PaymentService {
             return { url: (_a = session.url) !== null && _a !== void 0 ? _a : null };
         });
     }
+    /**
+     * Minimal webhook handler
+     * (Controller already handles full business logic)
+     */
     processWebhook(req) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
@@ -76,25 +85,22 @@ class PaymentService {
             try {
                 event = stripe_1.stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
             }
-            catch (e) {
-                console.error("Stripe webhook signature error:", e === null || e === void 0 ? void 0 : e.message);
-                throw new Error("Invalid signature");
+            catch (err) {
+                throw new Error("Invalid Stripe signature");
             }
             if (event.type === "checkout.session.completed") {
                 const session = event.data.object;
                 const paymentId = (_a = session.metadata) === null || _a === void 0 ? void 0 : _a.paymentDbId;
                 if (paymentId) {
-                    const paymentIntentId = String(session.payment_intent || "");
                     yield this.repo.update(paymentId, {
                         paymentStatus: "success",
-                        paymentIntentId,
-                        receiptUrl: session.url || "",
+                        paymentIntentId: String(session.payment_intent || ""),
                     });
                 }
                 return {
                     handled: true,
                     type: "checkout.session.completed",
-                    paymentId
+                    paymentId,
                 };
             }
             return { handled: false, type: event.type };
@@ -102,7 +108,7 @@ class PaymentService {
     }
     doctorPayments(doctorId_1) {
         return __awaiter(this, arguments, void 0, function* (doctorId, query = {}) {
-            return yield this.repo.byDoctorPaginated(doctorId, query);
+            return this.repo.byDoctorPaginated(doctorId, query);
         });
     }
 }

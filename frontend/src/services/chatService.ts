@@ -2,6 +2,13 @@ import httpClient from './httpClient';
 import type { AxiosResponse } from 'axios';
 import type { ApiResponse } from '@/types/marketplace.types';
 
+export type ChatAttachment = {
+  url: string;
+  name: string;
+  size: number;
+  mimeType: string;
+};
+
 export const chatService = {
   startChat: async (listingId: string, receiverId: string): Promise<any> => {
     const res: AxiosResponse<ApiResponse<any>> = await httpClient.post(
@@ -48,5 +55,22 @@ export const chatService = {
       `/chat/seen/${roomId}`
     );
     return res.data?.data ?? res.data;
+  },
+
+  uploadChatFile: async (file: File): Promise<ChatAttachment> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res: AxiosResponse<ApiResponse<ChatAttachment>> = await httpClient.post(
+      '/upload/chat',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    return (res.data?.data as ChatAttachment) ?? (res.data as any);
   },
 };

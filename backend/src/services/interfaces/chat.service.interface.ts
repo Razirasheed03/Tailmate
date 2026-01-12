@@ -22,7 +22,14 @@ export interface IChatService {
   sendMessage(
     currentUserId: string,
     roomId: string,
-    content: string
+    content: string,
+    type?: "text" | "image" | "file",
+    attachments?: {
+      url: string;
+      name: string;
+      size: number;
+      mimeType: string;
+    }[]
   ): Promise<any>;
 
   markDelivered(

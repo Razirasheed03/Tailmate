@@ -4,10 +4,21 @@ import { Send } from 'lucide-react';
 interface ChatInputProps {
   onSend: (content: string) => void;
   isLoading?: boolean;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
-export default function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
-  const [message, setMessage] = useState('');
+export default function ChatInput({ onSend, isLoading = false, value, onChange }: ChatInputProps) {
+  const [uncontrolledMessage, setUncontrolledMessage] = useState('');
+
+  const message = value !== undefined ? value : uncontrolledMessage;
+  const setMessage = (next: string) => {
+    if (onChange) {
+      onChange(next);
+    } else {
+      setUncontrolledMessage(next);
+    }
+  };
 
   const handleSend = () => {
     if (message.trim()) {

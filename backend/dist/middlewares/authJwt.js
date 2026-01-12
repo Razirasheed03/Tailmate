@@ -28,6 +28,13 @@ const authJwt = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid token user." });
         }
+        if (user.isBlocked) {
+            return res.status(403).json({
+                success: false,
+                code: "USER_BLOCKED",
+                message: "Your account has been blocked by admin.",
+            });
+        }
         const userId = ((_a = user._id) === null || _a === void 0 ? void 0 : _a.toString()) || decoded.id;
         req.user = {
             _id: userId,

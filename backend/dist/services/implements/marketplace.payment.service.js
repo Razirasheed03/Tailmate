@@ -15,6 +15,7 @@ const mongoose_1 = require("mongoose");
 const stripe_1 = require("../../utils/stripe");
 const marketOrder_schema_1 = require("../../schema/marketOrder.schema");
 const marketplaceListing_schema_1 = require("../../schema/marketplaceListing.schema");
+const url_config_1 = require("../../config/url.config");
 class MarketplacePaymentService {
     createCheckoutSession(payload, buyerId) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -43,6 +44,7 @@ class MarketplacePaymentService {
                 currency: "INR",
                 status: "created",
             });
+            const frontendUrl = (0, url_config_1.getFrontendUrl)();
             // Stripe Checkout Session (collect to platform)
             const session = yield stripe_1.stripe.checkout.sessions.create({
                 mode: "payment",
@@ -57,8 +59,8 @@ class MarketplacePaymentService {
                         quantity: 1,
                     },
                 ],
-                success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`,
-                cancel_url: `${process.env.APP_URL}/payments/cancel?orderId=${order._id}`,
+                success_url: `${frontendUrl}/payments/Success?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`,
+                cancel_url: `${frontendUrl}/payments/cancel?orderId=${order._id}`,
                 metadata: {
                     kind: "marketplace",
                     orderId: String(order._id),

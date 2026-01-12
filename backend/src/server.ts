@@ -27,6 +27,7 @@ import notificationRoutes from "./routes/notification.route";
 import matchmakingRoutes from "./routes/matchmaking.route"
 import chatRoutes from "./routes/chat.route";
 import consultationRoutes from "./routes/consultation.route";
+import uploadRoutes from "./routes/upload.route";
 
 import http from "http";
 import { Server } from "socket.io";
@@ -162,6 +163,7 @@ app.use("/api/marketplace-payments", marketplacePaymentRoutes);
 app.use("/api", notificationRoutes);
 app.use("/api/matchmaking", matchmakingRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/upload", uploadRoutes);
 app.use("/api/consultations", consultationRoutes);
 
 app.use((err: any, _req: any, res: any, _next: any) => {

@@ -146,14 +146,32 @@ export function initializeSocketServer(
       console.log(`[Chat] ✅ ${userId} joined chat:${data.roomId} | Room members: [${memberIds.join(', ')}]`);
     });
 
-socket.on("chat:send_message", async (data: { roomId: string; content: string }) => {
+socket.on(
+  "chat:send_message",
+  async (data: {
+    roomId: string;
+    content: string;
+    type?: "text" | "image" | "file";
+    attachments?: {
+      url: string;
+      name: string;
+      size: number;
+      mimeType: string;
+    }[];
+  }) => {
   try {
     console.log(`[Chat] 📤 ${userId} sending message to room ${data.roomId}`);
     
     // Ensure sender is in the room
     await socket.join(`chat:${data.roomId}`);
     
-    const message = await chatService.sendMessage(userId, data.roomId, data.content);
+    const message = await chatService.sendMessage(
+      userId,
+      data.roomId,
+      data.content,
+      data.type,
+      data.attachments
+    );
     
     console.log(`[Chat] 📨 Broadcasting message ${message._id} to room chat:${data.roomId}`);
     
@@ -170,6 +188,7 @@ socket.on("chat:send_message", async (data: { roomId: string; content: string })
       senderId: message.senderId.toString(), // ← CRITICAL FIX
       content: message.content,
       type: message.type,
+      attachments: message.attachments,
       deliveredTo: (message.deliveredTo || []).map((id: any) => id.toString()),
       seenBy: (message.seenBy || []).map((id: any) => id.toString()),
       createdAt: message.createdAt,

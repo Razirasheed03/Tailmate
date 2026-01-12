@@ -9,10 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// src/config/redisClient.ts
 const redis_1 = require("redis");
-const redisClient = (0, redis_1.createClient)();
-redisClient.on("error", (err) => console.error("❌ Redis Client Error", err));
+const redisClient = (0, redis_1.createClient)({
+    url: process.env.REDIS_URL,
+});
+redisClient.on("error", (err) => {
+    console.error("❌ Redis Client Error", err);
+});
 (() => __awaiter(void 0, void 0, void 0, function* () {
     yield redisClient.connect();
     console.log("✅ Redis connected");

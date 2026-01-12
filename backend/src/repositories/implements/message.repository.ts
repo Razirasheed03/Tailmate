@@ -6,12 +6,24 @@ import { IMessageRepository } from "../interfaces/message.repository.interface";
 export class MessageRepository implements IMessageRepository{
   constructor(private readonly model: Model<any> = Message) {}
 
-  async create(roomId: string, senderId: string, content: string) {
+  async create(
+    roomId: string,
+    senderId: string,
+    content: string,
+    type: "text" | "image" | "file" = "text",
+    attachments?: {
+      url: string;
+      name: string;
+      size: number;
+      mimeType: string;
+    }[]
+  ) {
     const doc = await this.model.create({
       roomId: new Types.ObjectId(roomId),
       senderId: new Types.ObjectId(senderId),
       content,
-      type: "text",
+      type,
+      attachments,
       seenBy: [],
     });
 

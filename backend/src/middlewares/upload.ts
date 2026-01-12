@@ -25,3 +25,8 @@ export const uploadImage = multer({
     cb(null, true);
   },
 }).single("avatar");
+
+export const uploadChatFile = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+}).single("file");

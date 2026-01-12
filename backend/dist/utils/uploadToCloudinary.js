@@ -16,6 +16,7 @@ exports.uploadPdfBufferToCloudinary = uploadPdfBufferToCloudinary;
 exports.uploadImageBufferToCloudinary = uploadImageBufferToCloudinary;
 exports.uploadPetImageBufferToCloudinary = uploadPetImageBufferToCloudinary;
 exports.uploadMarketplaceImageBufferToCloudinary = uploadMarketplaceImageBufferToCloudinary;
+exports.uploadChatBufferToCloudinary = uploadChatBufferToCloudinary;
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 function uploadPdfBufferToCloudinary(buffer, filename) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -83,6 +84,25 @@ function uploadMarketplaceImageBufferToCloudinary(buffer, filename) {
                 unique_filename: true,
                 overwrite: false,
                 public_id: filename.replace(/\.[^/.]+$/, ''),
+            }, (error, result) => {
+                if (error || !result)
+                    return reject(error);
+                resolve({ secure_url: result.secure_url, public_id: result.public_id });
+            });
+            uploadStream.end(buffer);
+        });
+    });
+}
+function uploadChatBufferToCloudinary(buffer, filename) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            const uploadStream = cloudinary_1.default.uploader.upload_stream({
+                resource_type: "auto",
+                folder: "chat-attachments",
+                use_filename: true,
+                unique_filename: true,
+                overwrite: false,
+                public_id: filename.replace(/\.[^/.]+$/, ""),
             }, (error, result) => {
                 if (error || !result)
                     return reject(error);

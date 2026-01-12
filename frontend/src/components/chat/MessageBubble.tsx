@@ -28,6 +28,56 @@ export default function MessageBubble({
 
   const tickStatus = getTickStatus();
 
+  const attachments = (message.attachments || []) as Array<{
+    url: string;
+    name: string;
+    size: number;
+    mimeType: string;
+  }>;
+
+  const renderBody = () => {
+    if (message.type === 'image') {
+      return (
+        <div className="space-y-2">
+          {attachments.map((a) => (
+            <a key={a.url} href={a.url} target="_blank" rel="noreferrer">
+              <img
+                src={a.url}
+                alt={a.name}
+                className="w-full max-w-xs rounded-md object-cover"
+              />
+            </a>
+          ))}
+          {message.content ? <p className="break-words">{message.content}</p> : null}
+        </div>
+      );
+    }
+
+    if (message.type === 'file') {
+      return (
+        <div className="space-y-2">
+          {attachments.map((a) => (
+            <a
+              key={a.url}
+              href={a.url}
+              target="_blank"
+              rel="noreferrer"
+              className={`block rounded-md px-3 py-2 ${
+                isOwn ? 'bg-orange-500/30' : 'bg-gray-300/70'
+              }`}
+            >
+              <div className="text-sm font-medium truncate">{a.name}</div>
+              <div className="text-xs opacity-80 truncate">{a.mimeType}</div>
+            </a>
+          ))}
+          {message.content ? <p className="break-words">{message.content}</p> : null}
+        </div>
+      );
+    }
+
+    return <p className="break-words">{message.content}</p>;
+  };
+
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3`}>
       <div
@@ -37,7 +87,7 @@ export default function MessageBubble({
             : 'bg-gray-200 text-gray-900 rounded-bl-none'
         }`}
       >
-        <p className="break-words">{message.content}</p>
+        {renderBody()}
         <div className="flex items-center justify-between gap-2 mt-1">
           <p
             className={`text-xs ${

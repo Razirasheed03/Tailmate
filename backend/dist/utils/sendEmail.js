@@ -8,33 +8,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendOtpEmail = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
-const sendOtpEmail = (to, otp) => __awaiter(void 0, void 0, void 0, function* () {
-    const transporter = nodemailer_1.default.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-    const mailOptions = {
-        from: `"TailMate" <${process.env.EMAIL_USER}>`,
-        to,
-        subject: "Your TailMate OTP Code",
-        text: `Your OTP for verification is: ${otp}. It is valid for 2 minutes.`,
-    };
-    try {
-        const info = yield transporter.sendMail(mailOptions);
-        console.log('Email sent:', info.response);
-    }
-    catch (err) {
-        console.error('Failed to send OTP mail:', err);
-        throw err;
-    }
-});
 exports.sendOtpEmail = sendOtpEmail;
+const brevoMailer_1 = require("./brevoMailer");
+function sendOtpEmail(to, otp) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const html = `
+    <div style="font-family: Arial, sans-serif">
+      <h2>Your TailMate Verification Code</h2>
+      <p>Your OTP is:</p>
+      <h1 style="letter-spacing:4px">${otp}</h1>
+      <p>This code is valid for <strong>30 seconds</strong>.</p>
+    </div>
+  `;
+        (0, brevoMailer_1.sendBrevoEmail)({
+            to,
+            subject: "Your TailMate OTP Code",
+            html,
+            text: `Your TailMate OTP is ${otp}. Valid for 30 seconds.`,
+        });
+    });
+}

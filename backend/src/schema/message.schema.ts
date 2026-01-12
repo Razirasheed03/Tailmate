@@ -15,7 +15,19 @@ const MessageSchema = new Schema(
       index: true,
     },
     content: { type: String, required: true, trim: true },
-    type: { type: String, enum: ["text"], default: "text" },
+    type: { type: String, enum: ["text", "image", "file"], default: "text" },
+    attachments: {
+      type: [
+        {
+          url: { type: String, required: true },
+          name: { type: String, required: true },
+          size: { type: Number, required: true },
+          mimeType: { type: String, required: true },
+        },
+      ],
+      required: false,
+      default: undefined,
+    },
     deliveredTo: {
       type: [Types.ObjectId],
       ref: "User",

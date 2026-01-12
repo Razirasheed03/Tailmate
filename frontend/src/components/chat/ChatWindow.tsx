@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
-import { Loader, PawPrint, ExternalLink } from 'lucide-react';
+import { Loader, PawPrint, ExternalLink, Smile, Paperclip, X } from 'lucide-react';
+import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
+import { chatService, type ChatAttachment } from '@/services/chatService';
 
 interface ChatWindowProps {
   roomId: string;
@@ -22,16 +24,24 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({
+  roomId,
   messages,
   currentUserId,
   onSendMessage,
   isLoading = false,
   otherUserName = 'User',
   listingId,
+  socket,
 }: ChatWindowProps) {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [messageText, setMessageText] = useState<string>('');
+  const [isEmojiOpen, setIsEmojiOpen] = useState<boolean>(false);
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,6 +55,57 @@ export default function ChatWindow({
     if (listingId?._id) {
       navigate(`/matchmaking/${listingId._id}`, { state: { listing: listingId } });
     }
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setMessageText((prev) => `${prev}${emojiData.emoji}`);
+  };
+
+  const handlePickFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      setIsUploading(true);
+      const uploaded = await Promise.all(files.map((f) => chatService.uploadChatFile(f)));
+      setAttachments((prev) => [...prev, ...uploaded]);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const sendWithAttachmentsIfNeeded = async (content: string) => {
+    if (attachments.length === 0) {
+      await onSendMessage(content);
+      return;
+    }
+
+    if (!socket) {
+      return;
+    }
+
+    const isAllImages = attachments.every((a) => a.mimeType?.startsWith('image/'));
+    const type: 'image' | 'file' = isAllImages ? 'image' : 'file';
+
+    socket.emit('chat:send_message', {
+      roomId,
+      content,
+      attachments,
+      type,
+    });
+
+    setMessageText('');
+    setAttachments([]);
+    setIsEmojiOpen(false);
   };
 
   return (
@@ -115,7 +176,68 @@ export default function ChatWindow({
       )}
 
       {/* Input */}
-      <ChatInput onSend={onSendMessage} isLoading={isLoading} />
+      <div className="border-t border-gray-200 bg-white">
+        {attachments.length > 0 && (
+          <div className="px-4 pt-3 flex flex-wrap gap-2">
+            {attachments.map((a, idx) => (
+              <div
+                key={`${a.url}-${idx}`}
+                className="flex items-center gap-2 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-md"
+              >
+                <span className="max-w-[200px] truncate">{a.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(idx)}
+                  className="text-gray-500 hover:text-gray-800"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-end gap-2 px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => setIsEmojiOpen((v) => !v)}
+            className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
+            disabled={isLoading}
+          >
+            <Smile size={20} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePickFile}
+            className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
+            disabled={isLoading || isUploading}
+          >
+            <Paperclip size={20} />
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFilesSelected}
+          />
+        </div>
+
+        {isEmojiOpen && (
+          <div className="px-4 pt-2">
+            <EmojiPicker onEmojiClick={handleEmojiClick} />
+          </div>
+        )}
+
+        <ChatInput
+          value={messageText}
+          onChange={setMessageText}
+          onSend={sendWithAttachmentsIfNeeded}
+          isLoading={isLoading || isUploading}
+        />
+      </div>
     </div>
   );
 }

@@ -40,6 +40,7 @@ const notification_route_1 = __importDefault(require("./routes/notification.rout
 const matchmaking_route_1 = __importDefault(require("./routes/matchmaking.route"));
 const chat_route_1 = __importDefault(require("./routes/chat.route"));
 const consultation_route_1 = __importDefault(require("./routes/consultation.route"));
+const upload_route_1 = __importDefault(require("./routes/upload.route"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const index_1 = require("./sockets/index");
@@ -47,11 +48,17 @@ const consultation_di_1 = require("./dependencies/consultation.di");
 const chat_di_1 = require("./dependencies/chat.di");
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
+const allowedOrigins = [
+    "http://localhost:3000",
+    "https://tailmate-care.vercel.app"
+];
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: allowedOrigins,
         credentials: true,
     },
+    transports: ["websocket", "polling"],
+    allowUpgrades: true,
 });
 exports.io = io;
 // Extract services from DI containers and inject into socket layer
@@ -59,12 +66,30 @@ const consultationService = consultation_di_1.consultationController.getService(
 const chatService = chat_di_1.chatController.getService();
 (0, index_1.initializeSocketServer)(io, consultationService, chatService);
 app.use((0, cors_1.default)({
-    origin: "http://localhost:3000",
+    origin: (origin, callback) => {
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(null, false);
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
 app.post("/api/payments/webhook", express_1.default.raw({ type: "application/json" }), (req, _res, next) => { console.log("HIT /api/payments/webhook"); next(); }, payment_webhook_controller_1.paymentsWebhook);
 app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
+app.get("/api/health", (_req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({
+            status: "warming",
+            message: "Database initializing",
+        });
+    }
+    res.status(200).json({ status: "ready" });
+});
 // Initialize database and drop old indexes BEFORE registering routes
 let dbReady = false;
 (0, mongodb_1.connectDB)().then(() => __awaiter(void 0, void 0, void 0, function* () {
@@ -94,10 +119,18 @@ let dbReady = false;
     console.error("Mongo connect error:", err);
     process.exit(1);
 });
-// Middleware to ensure DB is ready before processing requests
 app.use((req, res, next) => {
+    if (req.path.startsWith("/socket.io")) {
+        return next();
+    }
+    if (req.path === "/api/health") {
+        return next();
+    }
     if (!dbReady) {
-        return res.status(503).json({ success: false, message: "Database initializing..." });
+        return res.status(503).json({
+            success: false,
+            message: "Database initializing...",
+        });
     }
     next();
 });
@@ -117,6 +150,7 @@ app.use("/api/marketplace-payments", marketplace_payment_route_1.default);
 app.use("/api", notification_route_1.default);
 app.use("/api/matchmaking", matchmaking_route_1.default);
 app.use("/api/chat", chat_route_1.default);
+app.use("/api/upload", upload_route_1.default);
 app.use("/api/consultations", consultation_route_1.default);
 app.use((err, _req, res, _next) => {
     console.error("Error handler:", err === null || err === void 0 ? void 0 : err.message);

@@ -68,7 +68,18 @@ return {
 
   }
 
-  async sendMessage(currentUserId: string, roomId: string, content: string) {
+  async sendMessage(
+    currentUserId: string,
+    roomId: string,
+    content: string,
+    type: "text" | "image" | "file" = "text",
+    attachments?: {
+      url: string;
+      name: string;
+      size: number;
+      mimeType: string;
+    }[]
+  ) {
     if (!content?.trim()) {
       throw Object.assign(new Error("Message content required"), {
         status: 400,
@@ -90,7 +101,9 @@ return {
     const message = await this.messageRepo.create(
       roomId,
       currentUserId,
-      content
+      content,
+      type,
+      attachments
     );
 
     // Update room's last message

@@ -31,10 +31,11 @@ const sendEmail_1 = require("../../utils/sendEmail");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_1 = require("../../utils/jwt");
 const crypto_2 = __importDefault(require("crypto"));
-const sendResetPasswordLink_1 = require("../../utils/sendResetPasswordLink ");
+const sendResetPasswordLink_1 = require("../../utils/sendResetPasswordLink");
 const google_auth_library_1 = require("google-auth-library");
 const doctor_model_1 = require("../../models/implements/doctor.model");
 const doctor_schema_1 = require("../../schema/doctor.schema");
+const url_config_1 = require("../../config/url.config");
 const googleClient = new google_auth_library_1.OAuth2Client({
     clientId: process.env.GOOGLE_CLIENT_ID,
 });
@@ -52,7 +53,7 @@ class AuthService {
             const result = yield redisClient_1.default.setEx(key, 300, JSON.stringify(Object.assign(Object.assign({}, user), { password: hashedPassword, isBlocked: false, otp,
                 createdAt })));
             console.log(result, otp);
-            yield (0, sendEmail_1.sendOtpEmail)(user.email, otp);
+            (0, sendEmail_1.sendOtpEmail)(user.email, otp);
             return { success: true, message: "OTP sent to email" };
         });
         this.verifyOtp = (email, otp) => __awaiter(this, void 0, void 0, function* () {
@@ -212,8 +213,8 @@ class AuthService {
             user.resetPasswordToken = tokenHash;
             user.resetPasswordExpires = expires;
             yield user.save();
-            // Frontend URL, adjust as needed
-            const resetUrl = `${process.env.FRONTEND_BASE_URL}/reset-password?token=${resetToken}&id=${user._id}`;
+            const baseUrl = (0, url_config_1.getFrontendUrl)();
+            const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&id=${user._id}`;
             yield (0, sendResetPasswordLink_1.sendResetPasswordLink)(user.email, "Password Reset", `Click here to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore.`);
             // NOTE: sendOtpEmail could be renamed for generic mail
         });
@@ -230,6 +231,21 @@ class AuthService {
             user.resetPasswordToken = undefined;
             user.resetPasswordExpires = undefined;
             yield user.save();
+        });
+        this.changePassword = (userId, currentPassword, newPassword) => __awaiter(this, void 0, void 0, function* () {
+            const user = yield this._userRepo.findById(userId);
+            if (!user)
+                throw new Error("User not found");
+            const isMatch = yield bcryptjs_1.default.compare(currentPassword, user.password);
+            if (!isMatch)
+                throw new Error("Current password is incorrect");
+            if (currentPassword === newPassword) {
+                throw new Error("New password must be different from current password");
+            }
+            user.password = yield bcryptjs_1.default.hash(newPassword, 10);
+            yield user.save();
+            // 🔐 Invalidate refresh token (force re-login)
+            yield redisClient_1.default.del(`refresh:${userId}`);
         });
     }
 }

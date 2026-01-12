@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadImage = exports.uploadPdf = void 0;
+exports.uploadChatFile = exports.uploadImage = exports.uploadPdf = void 0;
 //middlewares/upload.ts
 const multer_1 = __importDefault(require("multer"));
 const storage = multer_1.default.memoryStorage();
@@ -28,3 +28,7 @@ exports.uploadImage = (0, multer_1.default)({
         cb(null, true);
     },
 }).single("avatar");
+exports.uploadChatFile = (0, multer_1.default)({
+    storage,
+    limits: { fileSize: 20 * 1024 * 1024 },
+}).single("file");

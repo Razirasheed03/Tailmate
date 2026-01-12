@@ -16,7 +16,19 @@ const MessageSchema = new mongoose_1.Schema({
         index: true,
     },
     content: { type: String, required: true, trim: true },
-    type: { type: String, enum: ["text"], default: "text" },
+    type: { type: String, enum: ["text", "image", "file"], default: "text" },
+    attachments: {
+        type: [
+            {
+                url: { type: String, required: true },
+                name: { type: String, required: true },
+                size: { type: Number, required: true },
+                mimeType: { type: String, required: true },
+            },
+        ],
+        required: false,
+        default: undefined,
+    },
     deliveredTo: {
         type: [mongoose_1.Types.ObjectId],
         ref: "User",

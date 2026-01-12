@@ -23,27 +23,23 @@ class ChatRepository {
                 new mongoose_1.Types.ObjectId(userId2),
             ].sort((a, b) => a.toString().localeCompare(b.toString()));
             const room = yield this.model
-                .findOne({
-                listingId: new mongoose_1.Types.ObjectId(listingId),
-                users: { $all: users },
-            })
-                .populate('listingId', 'title photos userId')
-                .populate('users', 'username avatar _id')
-                .lean();
-            if (room) {
-                return room;
-            }
-            const newRoom = yield this.model
-                .create({
+                .findOneAndUpdate({
                 listingId: new mongoose_1.Types.ObjectId(listingId),
                 users,
-            });
-            const populatedRoom = yield this.model
-                .findById(newRoom._id)
-                .populate('listingId', 'title photos userId')
-                .populate('users', 'username avatar _id')
+            }, {
+                $setOnInsert: {
+                    listingId: new mongoose_1.Types.ObjectId(listingId),
+                    users,
+                    createdAt: new Date(),
+                },
+            }, {
+                upsert: true,
+                new: true,
+            })
+                .populate("listingId", "title photos userId")
+                .populate("users", "username avatar _id")
                 .lean();
-            return populatedRoom;
+            return room;
         });
     }
     findRoomById(roomId) {
@@ -56,15 +52,15 @@ class ChatRepository {
     }
     listRoomsByUser(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const rooms = yield this.model
-                .find({
-                users: new mongoose_1.Types.ObjectId(userId),
-            })
+            return this.model
+                .find({ users: new mongoose_1.Types.ObjectId(userId) })
                 .populate('listingId', 'title photos userId')
                 .populate('users', 'username avatar _id')
-                .sort({ lastMessageAt: -1 })
+                .sort({
+                lastMessageAt: -1, // newest chat first
+                createdAt: -1 // fallback for no messages
+            })
                 .lean();
-            return rooms;
         });
     }
     updateLastMessage(roomId, message) {

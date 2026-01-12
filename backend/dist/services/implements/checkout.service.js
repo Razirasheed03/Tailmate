@@ -15,6 +15,7 @@ const mongoose_1 = require("mongoose");
 const generateBookingNumber_1 = require("../../utils/generateBookingNumber");
 const booking_schema_1 = require("../../schema/booking.schema");
 const stripe_1 = require("../../utils/stripe");
+const url_config_1 = require("../../config/url.config");
 function toUTCDate(date, time) {
     const d = new Date(`${date}T00:00:00Z`);
     const [h, m] = time.split(":").map(Number);
@@ -128,6 +129,7 @@ class CheckoutService {
             });
             try {
                 const unitAmountMinor = Math.round(fee * 100);
+                const frontendUrl = (0, url_config_1.getFrontendUrl)();
                 const session = yield stripe_1.stripe.checkout.sessions.create({
                     mode: "payment",
                     line_items: [
@@ -140,8 +142,8 @@ class CheckoutService {
                             quantity: 1,
                         },
                     ],
-                    success_url: `${process.env.APP_URL}/payments/Success?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: `${process.env.APP_URL}/payments/cancel`,
+                    success_url: `${frontendUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${frontendUrl}/payments/cancel`,
                     metadata: {
                         bookingId: String(booking._id),
                         userId: String(userId),

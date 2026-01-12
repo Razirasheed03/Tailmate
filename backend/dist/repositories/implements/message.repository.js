@@ -17,13 +17,14 @@ class MessageRepository {
     constructor(model = message_schema_1.Message) {
         this.model = model;
     }
-    create(roomId, senderId, content) {
-        return __awaiter(this, void 0, void 0, function* () {
+    create(roomId_1, senderId_1, content_1) {
+        return __awaiter(this, arguments, void 0, function* (roomId, senderId, content, type = "text", attachments) {
             const doc = yield this.model.create({
                 roomId: new mongoose_1.Types.ObjectId(roomId),
                 senderId: new mongoose_1.Types.ObjectId(senderId),
                 content,
-                type: "text",
+                type,
+                attachments,
                 seenBy: [],
             });
             return doc.toObject();

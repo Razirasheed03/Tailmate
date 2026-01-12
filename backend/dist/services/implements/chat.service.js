@@ -60,8 +60,8 @@ class ChatService {
             };
         });
     }
-    sendMessage(currentUserId, roomId, content) {
-        return __awaiter(this, void 0, void 0, function* () {
+    sendMessage(currentUserId_1, roomId_1, content_1) {
+        return __awaiter(this, arguments, void 0, function* (currentUserId, roomId, content, type = "text", attachments) {
             if (!(content === null || content === void 0 ? void 0 : content.trim())) {
                 throw Object.assign(new Error("Message content required"), {
                     status: 400,
@@ -77,7 +77,7 @@ class ChatService {
                 throw Object.assign(new Error("Unauthorized"), { status: 403 });
             }
             // Create message
-            const message = yield this.messageRepo.create(roomId, currentUserId, content);
+            const message = yield this.messageRepo.create(roomId, currentUserId, content, type, attachments);
             // Update room's last message
             yield this.chatRepo.updateLastMessage(roomId, content);
             return message;

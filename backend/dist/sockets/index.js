@@ -118,20 +118,32 @@ function initializeSocketServer(io, consultationService, chatService) {
             const memberIds = roomSockets.map(s => s.userId);
             console.log(`[Chat] ✅ ${userId} joined chat:${data.roomId} | Room members: [${memberIds.join(', ')}]`);
         }));
-        // Send message - store in DB and broadcast to room (including sender)
         socket.on("chat:send_message", (data) => __awaiter(this, void 0, void 0, function* () {
             try {
                 console.log(`[Chat] 📤 ${userId} sending message to room ${data.roomId}`);
                 // Ensure sender is in the room
                 yield socket.join(`chat:${data.roomId}`);
-                const message = yield chatService.sendMessage(userId, data.roomId, data.content);
+                const message = yield chatService.sendMessage(userId, data.roomId, data.content, data.type, data.attachments);
                 console.log(`[Chat] 📨 Broadcasting message ${message._id} to room chat:${data.roomId}`);
                 // Get room members before broadcasting
                 const roomSockets = yield io.in(`chat:${data.roomId}`).fetchSockets();
                 const memberIds = roomSockets.map(s => s.userId);
                 console.log(`[Chat] 👥 Room members who will receive: [${memberIds.join(', ')}]`);
+                // ✅ FIX: Convert ObjectIds to strings before broadcasting
+                const messageToSend = {
+                    _id: message._id.toString(),
+                    roomId: message.roomId.toString(),
+                    senderId: message.senderId.toString(), // ← CRITICAL FIX
+                    content: message.content,
+                    type: message.type,
+                    attachments: message.attachments,
+                    deliveredTo: (message.deliveredTo || []).map((id) => id.toString()),
+                    seenBy: (message.seenBy || []).map((id) => id.toString()),
+                    createdAt: message.createdAt,
+                    updatedAt: message.updatedAt,
+                };
                 // Broadcast to ALL in room (sender will also receive via their own listener)
-                io.to(`chat:${data.roomId}`).emit("chat:receive_message", message);
+                io.to(`chat:${data.roomId}`).emit("chat:receive_message", messageToSend);
                 console.log(`[Chat] ✅ Message broadcasted successfully`);
             }
             catch (err) {

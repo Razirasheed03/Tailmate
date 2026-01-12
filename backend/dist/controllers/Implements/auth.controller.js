@@ -15,6 +15,7 @@ const google_auth_library_1 = require("google-auth-library");
 const cookie_helper_1 = require("../../utils/cookie.helper");
 const ResponseHelper_1 = require("../../http/ResponseHelper");
 const messageConstant_1 = require("../../constants/messageConstant");
+const url_config_1 = require("../../config/url.config");
 class AuthController {
     constructor(_authService) {
         this._authService = _authService;
@@ -131,7 +132,8 @@ class AuthController {
                 }
                 const { accessToken, refreshToken, user } = yield this._authService.googleLogin(idToken);
                 cookie_helper_1.CookieHelper.setRefreshToken(res, refreshToken);
-                const frontendUrl = `${process.env.FRONTEND_BASE_URL}/login?accessToken=${encodeURIComponent(accessToken)}&user=${encodeURIComponent(JSON.stringify({
+                const baseUrl = (0, url_config_1.getFrontendUrl)();
+                const frontendUrl = `${baseUrl}/login?accessToken=${encodeURIComponent(accessToken)}&user=${encodeURIComponent(JSON.stringify({
                     _id: user._id, //(user as any._id)
                     username: user.username,
                     email: user.email,
@@ -161,6 +163,21 @@ class AuthController {
                 const { id, token, newPassword } = req.body;
                 yield this._authService.resetPassword(id, token, newPassword);
                 return ResponseHelper_1.ResponseHelper.ok(res, { ok: true }, "Password reset successful.");
+            }
+            catch (err) {
+                next(err);
+            }
+        });
+        this.changePassword = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+                if (!userId) {
+                    return ResponseHelper_1.ResponseHelper.unauthorized(res, "Unauthorized");
+                }
+                const { currentPassword, newPassword } = req.body;
+                yield this._authService.changePassword(userId, currentPassword, newPassword);
+                return ResponseHelper_1.ResponseHelper.ok(res, { ok: true }, "Password updated successfully. Please login again.");
             }
             catch (err) {
                 next(err);
