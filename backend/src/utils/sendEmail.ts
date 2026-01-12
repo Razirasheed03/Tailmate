@@ -10,7 +10,6 @@ export async function sendOtpEmail(to: string, otp: string): Promise<void> {
     </div>
   `;
 
-  // fire-and-forget (do not block signup)
   sendBrevoEmail({
     to,
     subject: "Your TailMate OTP Code",
