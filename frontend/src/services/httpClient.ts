@@ -3,6 +3,13 @@ import axios, { type AxiosInstance, AxiosError } from "axios";
 import { AUTH_ROUTES } from "@/constants/apiRoutes";
 import { toast } from "sonner";
 
+// Allow per-request opt-out from global error toast
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    suppressGlobalErrorToast?: boolean;
+  }
+}
+
 const httpClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
@@ -34,6 +41,8 @@ httpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config;
+    const suppressToast = (original as any)?.suppressGlobalErrorToast === true;
+
     if (error.response) {
       const { status } = error.response;
 
@@ -46,40 +55,40 @@ httpClient.interceptors.response.use(
             if (data?.code === "USER_BLOCKED") {
               localStorage.removeItem("auth_token");
               localStorage.removeItem("auth_user");
-              toast.error("Your account has been blocked by admin.");
+              if (!suppressToast) toast.error("Your account has been blocked by admin.");
               window.location.href = "/login?blocked=true";
               return Promise.reject(error);
             }
 
-            handleForbidden(error);
+            handleForbidden(error, suppressToast);
             break;
           }
 
           break;
         case 404:
-          handleNotFound(error);
+          handleNotFound(error, suppressToast);
           break;
         case 422:
-          handleValidationError(error);
+          handleValidationError(error, suppressToast);
           break;
         case 429:
-          handleRateLimit(error);
+          handleRateLimit(error, suppressToast);
           break;
         case 500:
         case 502:
         case 503:
         case 504:
-          handleServerError(error);
+          handleServerError(error, suppressToast);
           break;
         default:
-          handleGenericError(error);
+          handleGenericError(error, suppressToast);
       }
     } else if (error.request) {
       // Network error - no response received
-      handleNetworkError(error);
+      handleNetworkError(error, suppressToast);
     } else {
       // Something else happened
-      handleRequestError(error);
+      handleRequestError(error, suppressToast);
     }
 
     return Promise.reject(error);
@@ -146,52 +155,52 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
   return Promise.reject(error);
 };
 
-const handleForbidden = (error: AxiosError) => {
+const handleForbidden = (error: AxiosError, suppressToast?: boolean) => {
   const message = "You do not have permission to perform this action.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Forbidden (403):", error);
 };
 
-const handleNotFound = (error: AxiosError) => {
+const handleNotFound = (error: AxiosError, suppressToast?: boolean) => {
   const message = "The requested resource was not found.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Not Found (404):", error);
 };
 
-const handleValidationError = (error: AxiosError) => {
+const handleValidationError = (error: AxiosError, suppressToast?: boolean) => {
   const message =
     getErrorMessage(error) || "Validation failed. Please check your input.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Validation Error (422):", error);
 };
 
-const handleRateLimit = (error: AxiosError) => {
+const handleRateLimit = (error: AxiosError, suppressToast?: boolean) => {
   const message = "Too many requests. Please try again later.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Rate Limited (429):", error);
 };
 
-const handleServerError = (error: AxiosError) => {
+const handleServerError = (error: AxiosError, suppressToast?: boolean) => {
   const message = "Server error. Please try again later.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Server Error (5xx):", error);
 };
 
-const handleNetworkError = (error: AxiosError) => {
+const handleNetworkError = (error: AxiosError, suppressToast?: boolean) => {
   const message = "Network error. Please check your internet connection.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Network Error:", error);
 };
 
-const handleRequestError = (error: AxiosError) => {
+const handleRequestError = (error: AxiosError, suppressToast?: boolean) => {
   const message = "Request failed. Please try again.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Request Error:", error);
 };
 
-const handleGenericError = (error: AxiosError) => {
+const handleGenericError = (error: AxiosError, suppressToast?: boolean) => {
   const message = getErrorMessage(error) || "An unexpected error occurred.";
-  toast.error(message);
+  if (!suppressToast) toast.error(message);
   console.error("Generic Error:", error);
 };
 

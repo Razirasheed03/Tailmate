@@ -14,10 +14,12 @@ export interface SignupPayload {
 
 const userService = {
   login: async (email: string, password: string) => {
-    const { data } = await httpClient.post(AUTH_ROUTES.LOGIN, {
-      email,
-      password,
-    });
+    const { data } = await httpClient.post(
+      AUTH_ROUTES.LOGIN,
+      { email, password },
+      // Suppress global interceptor toast so UI can decide (prevents double toasts)
+      { suppressGlobalErrorToast: true }
+    );
     return { success: data?.success, data: data?.data, message: data?.message };
   },
 
