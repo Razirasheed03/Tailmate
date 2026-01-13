@@ -7,17 +7,22 @@ export async function sendResetPasswordLink(
 ): Promise<void> {
   const html = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reset your password</title>
   </head>
-  <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;">
+  <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px;">
       <tr>
         <td align="center">
-          <table width="600" cellpadding="0" cellspacing="0"
-            style="background:#ffffff; border-radius:8px; overflow:hidden;">
+          <table
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            style="background:#ffffff; border-radius:8px; overflow:hidden;"
+          >
 
             <!-- Header -->
             <tr>
@@ -45,9 +50,9 @@ export async function sendResetPasswordLink(
                     style="
                       background:#e4a574;
                       color:#ffffff;
-                      padding:14px 32px;
+                      padding:14px 36px;
                       text-decoration:none;
-                      border-radius:30px;
+                      border-radius:32px;
                       font-weight:bold;
                       display:inline-block;
                       font-size:15px;
@@ -57,34 +62,34 @@ export async function sendResetPasswordLink(
                   </a>
                 </div>
 
-                <!-- Fallback text -->
-                <p style="color:#777; font-size:13px; line-height:20px; margin-bottom:8px;">
-                  If the button doesn’t work, copy and paste this link into your browser:
+                <!-- Divider -->
+                <hr style="border:none; border-top:1px solid #e6e6e6; margin:32px 0;" />
+
+                <!-- Fallback -->
+                <p style="color:#777; font-size:13px; margin-bottom:10px;">
+                  If the button doesn’t work, copy and paste the link below into your browser:
                 </p>
 
-                <!-- Fallback URL (isolated to avoid auto-link issues) -->
-                <div
-                  style="
-                    background:#f6f6f6;
-                    border-radius:4px;
-                    padding:12px;
-                    font-size:13px;
-                    word-break:break-all;
-                  "
+                <!-- URL isolated -->
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="background:#f6f6f6; border-radius:6px;"
                 >
-                  <a
-                    href="${resetUrl}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style="
-                      color:#e4a574;
-                      text-decoration:none;
-                      font-family:monospace;
-                    "
-                  >
-                    ${resetUrl}
-                  </a>
-                </div>
+                  <tr>
+                    <td style="padding:12px; font-size:13px; word-break:break-all; font-family:monospace;">
+                      <a
+                        href="${resetUrl}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="color:#e4a574; text-decoration:none;"
+                      >
+                        ${resetUrl}
+                      </a>
+                    </td>
+                  </tr>
+                </table>
 
                 <p style="margin-top:24px; color:#888; font-size:13px;">
                   ⏳ This link will expire in <strong>1 hour</strong>.
@@ -118,14 +123,11 @@ export async function sendResetPasswordLink(
     subject,
     html,
     text: [
-      "Reset your password",
-      "",
-      "We received a request to reset your TailMate account password.",
+      "TailMate Password Reset",
       "",
       resetUrl,
       "",
       "This link expires in 1 hour.",
-      "",
       "If you did not request this, please ignore this email."
     ].join("\n"),
   });

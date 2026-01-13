@@ -215,7 +215,9 @@ class AuthService {
             yield user.save();
             const baseUrl = (0, url_config_1.getFrontendUrl)();
             const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&id=${user._id}`;
-            yield (0, sendResetPasswordLink_1.sendResetPasswordLink)(user.email, "Password Reset", `Click here to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore.`);
+            // Log for validation: resetUrl should be a pure URL (no extra text)
+            console.log("[FORGOT_PASSWORD] resetUrl:", resetUrl);
+            yield (0, sendResetPasswordLink_1.sendResetPasswordLink)(user.email, "Password Reset", resetUrl);
             // NOTE: sendOtpEmail could be renamed for generic mail
         });
         this.resetPassword = (userId, token, newPassword) => __awaiter(this, void 0, void 0, function* () {

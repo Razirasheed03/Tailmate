@@ -16,8 +16,8 @@ const requireEnvVar = (key) => {
 exports.env = {
     PORT: requireEnvVar("PORT"),
     MONGO_URI: requireEnvVar("MONGO_URI"),
-    REDIS_URL: requireEnvVar("REDIS_URL"),
+    // REDIS_URL: requireEnvVar("REDIS_URL"),
+    REDIS_HOST: requireEnvVar("REDIS_HOST"),
+    REDIS_PORT: requireEnvVar("REDIS_PORT"),
 };
 //for local
-//REDIS_HOST: requireEnvVar("REDIS_HOST"),
-//REDIS_PORT: requireEnvVar("REDIS_PORT"),

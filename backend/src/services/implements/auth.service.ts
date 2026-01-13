@@ -266,14 +266,13 @@ login = async (
     (user as any).resetPasswordExpires = expires;
     await (user as any).save();
 
-    
-const baseUrl = getFrontendUrl();
-const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&id=${user._id}`;
-    await sendResetPasswordLink(
-      user.email,
-      "Password Reset",
-      `Click here to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore.`
-    );
+    const baseUrl = getFrontendUrl();
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&id=${user._id}`;
+
+    // Log for validation: resetUrl should be a pure URL (no extra text)
+    console.log("[FORGOT_PASSWORD] resetUrl:", resetUrl);
+
+    await sendResetPasswordLink(user.email, "Password Reset", resetUrl);
     // NOTE: sendOtpEmail could be renamed for generic mail
   };
 
