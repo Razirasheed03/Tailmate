@@ -15,6 +15,7 @@ const mongoose_1 = require("mongoose");
 const generateBookingNumber_1 = require("../../utils/generateBookingNumber");
 const booking_schema_1 = require("../../schema/booking.schema");
 const stripe_1 = require("../../utils/stripe");
+const payment_model_1 = require("../../models/implements/payment.model");
 const url_config_1 = require("../../config/url.config");
 function toUTCDate(date, time) {
     const d = new Date(`${date}T00:00:00Z`);
@@ -127,6 +128,19 @@ class CheckoutService {
                 status: "pending",
                 paymentProvider: "stripe",
             });
+            const amountMajor = Number(fee);
+            const platformFeeMajor = Math.round(amountMajor * 0.2);
+            const doctorEarningMajor = amountMajor - platformFeeMajor;
+            const payment = yield payment_model_1.PaymentModel.create({
+                patientId: new mongoose_1.Types.ObjectId(userId),
+                doctorId: new mongoose_1.Types.ObjectId(doctorId),
+                bookingId: booking._id,
+                amount: amountMajor,
+                platformFee: platformFeeMajor,
+                doctorEarning: doctorEarningMajor,
+                currency,
+                paymentStatus: "pending",
+            });
             try {
                 const unitAmountMinor = Math.round(fee * 100);
                 const frontendUrl = (0, url_config_1.getFrontendUrl)();
@@ -148,6 +162,9 @@ class CheckoutService {
                         bookingId: String(booking._id),
                         userId: String(userId),
                         doctorId: String(doctorId),
+                        kind: "doctor",
+                        paymentDbId: String(payment._id),
+                        patientId: String(userId),
                     },
                 }, { idempotencyKey: `chk:${booking._id}:${userId}` });
                 yield booking_schema_1.Booking.updateOne({ _id: booking._id }, {
@@ -162,6 +179,7 @@ class CheckoutService {
                 };
             }
             catch (err) {
+                yield payment_model_1.PaymentModel.deleteOne({ _id: payment._id });
                 yield booking_schema_1.Booking.deleteOne({ _id: booking._id });
                 throw Object.assign(new Error("Failed to create payment session"), { status: 502 });
             }

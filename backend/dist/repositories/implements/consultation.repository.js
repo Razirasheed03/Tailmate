@@ -77,7 +77,7 @@ class ConsultationRepository {
         return __awaiter(this, void 0, void 0, function* () {
             const doc = yield this.populate(this.model.findOne({
                 bookingId: bookingId,
-                status: { $ne: "cancelled" },
+                status: { $nin: ["cancelled", "cancelled_by_doctor"] },
             }));
             return doc ? doc.toObject() : null;
         });

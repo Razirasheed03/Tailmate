@@ -1,8 +1,14 @@
 // services/implements/consultation.service.ts
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { IConsultationRepository } from "../../repositories/interfaces/consultation.repository.interface";
 import { IBookingRepository } from "../../repositories/interfaces/booking.repository.interface";
 import { Doctor } from "../../schema/doctor.schema";
+import { Booking } from "../../schema/booking.schema";
+import { PaymentModel } from "../../models/implements/payment.model";
+import { Wallet } from "../../schema/wallet.schema";
+import { WalletHistory } from "../../schema/walletHistory.schema";
+import { NotificationModel } from "../../schema/notification.schema";
+import { Consultation } from "../../schema/consultation.schema";
 import { IConsultationService } from "../interfaces/consultation.service.interface";
 
 // Helper function to safely extract ObjectId string from populated or non-populated field
@@ -265,6 +271,260 @@ export class ConsultationService implements IConsultationService {
     }
 
     return this._repo.cancel(consultationId, userId, reason);
+  }
+
+  async cancelByDoctor(
+    consultationId: string,
+    authUserId: string,
+    authDoctorId: string | undefined,
+    role: string | undefined,
+    reason: string,
+    io?: any
+  ) {
+    if (!Types.ObjectId.isValid(consultationId)) {
+      throw Object.assign(new Error("Invalid consultation id"), { status: 400 });
+    }
+
+    if (role !== "doctor" || !authDoctorId) {
+      throw Object.assign(new Error("Unauthorized"), { status: 403 });
+    }
+
+    const session = await mongoose.startSession();
+    try {
+      let notificationDoc: any = null;
+
+      await session.withTransaction(async () => {
+        const consultation = await Consultation.findById(
+          new Types.ObjectId(consultationId)
+        )
+          .session(session)
+          .lean();
+
+        if (!consultation) {
+          throw Object.assign(new Error("Consultation not found"), { status: 404 });
+        }
+
+        const consultationDoctorId = consultation.doctorId?.toString();
+        const consultationUserId = consultation.userId?.toString();
+
+        if (!consultationDoctorId || !consultationUserId) {
+          throw Object.assign(new Error("Consultation is missing doctor/user"), { status: 400 });
+        }
+
+        if (consultationDoctorId !== authDoctorId?.toString()) {
+          throw Object.assign(new Error("Unauthorized"), { status: 403 });
+        }
+
+        if (consultation.status === "cancelled_by_doctor") {
+          return;
+        }
+
+        if (consultation.status === "completed" || consultation.status === "cancelled") {
+          throw Object.assign(new Error("Consultation cannot be cancelled"), { status: 400 });
+        }
+
+        if (consultation.status !== "upcoming" && consultation.status !== "in_progress") {
+          throw Object.assign(new Error("Consultation cannot be cancelled"), { status: 400 });
+        }
+
+        const bookingIdStr = consultation.bookingId;
+        if (!bookingIdStr || !Types.ObjectId.isValid(String(bookingIdStr))) {
+          throw Object.assign(new Error("Consultation bookingId is missing"), { status: 400 });
+        }
+
+        const booking = await Booking.findById(new Types.ObjectId(String(bookingIdStr)))
+          .session(session)
+          .lean();
+        if (!booking) {
+          throw Object.assign(new Error("Booking not found"), { status: 404 });
+        }
+
+        // Payment is required for wallet reversal. If not found, still allow cancellation
+        // but do not mutate wallets.
+        const payment = await PaymentModel.findOne({
+          bookingId: booking._id,
+          paymentStatus: { $in: ["success", "refunded"] },
+        })
+          .sort({ createdAt: -1 })
+          .session(session)
+          .lean();
+
+        // Update consultation + booking status first.
+        await Consultation.updateOne(
+          { _id: new Types.ObjectId(consultationId) },
+          {
+            $set: {
+              status: "cancelled_by_doctor",
+              cancelledBy: new Types.ObjectId(authUserId),
+              cancelledAt: new Date(),
+              cancelledByRole: "doctor",
+              cancellationReason: reason || "",
+            },
+          },
+          { session }
+        );
+
+        await Booking.updateOne(
+          { _id: booking._id },
+          { $set: { status: "cancelled" } },
+          { session }
+        );
+
+        if (payment && payment.paymentStatus === "success") {
+          const currencyCode = (payment.currency || "INR").toUpperCase();
+          const amountMinor = Math.round(Number(payment.amount || 0) * 100);
+          const doctorDeductMinor = Math.round(Number(payment.doctorEarning || 0) * 100);
+          const adminDeductMinor = Math.round(Number(payment.platformFee || 0) * 100);
+
+          if (amountMinor <= 0) {
+            throw Object.assign(new Error("Invalid payment amount"), { status: 400 });
+          }
+
+          const walletCreditGate = await PaymentModel.updateOne(
+            { _id: payment._id, paymentStatus: "success", walletCredited: { $ne: true } },
+            { $set: { walletCredited: true, walletCreditedAt: new Date() } },
+            { session }
+          );
+
+          if (walletCreditGate.modifiedCount === 1) {
+            if (doctorDeductMinor > 0) {
+              await Wallet.updateOne(
+                { ownerType: "doctor", ownerId: payment.doctorId, currency: currencyCode },
+                { $inc: { balanceMinor: doctorDeductMinor } },
+                { upsert: true, session }
+              );
+            }
+
+            if (adminDeductMinor > 0) {
+              await Wallet.updateOne(
+                { ownerType: "admin", currency: currencyCode },
+                { $inc: { balanceMinor: adminDeductMinor } },
+                { upsert: true, session }
+              );
+            }
+          }
+
+          const refundUpdate = await PaymentModel.updateOne(
+            { _id: payment._id, paymentStatus: "success" },
+            { $set: { paymentStatus: "refunded" } },
+            { session }
+          );
+
+          // Idempotency: only apply wallet movements + history once
+          if (refundUpdate.modifiedCount === 1) {
+            await Wallet.updateOne(
+              { ownerType: "user", ownerId: payment.patientId, currency: currencyCode },
+              { $inc: { balanceMinor: amountMinor } },
+              { upsert: true, session }
+            );
+
+            const doctorDebit = await Wallet.updateOne(
+              {
+                ownerType: "doctor",
+                ownerId: payment.doctorId,
+                currency: currencyCode,
+                balanceMinor: { $gte: doctorDeductMinor },
+              },
+              { $inc: { balanceMinor: -doctorDeductMinor } },
+              { session }
+            );
+
+            if (doctorDebit.modifiedCount !== 1) {
+              throw Object.assign(new Error("Insufficient doctor wallet balance"), { status: 400 });
+            }
+
+            const adminDebit = await Wallet.updateOne(
+              {
+                ownerType: "admin",
+                currency: currencyCode,
+                balanceMinor: { $gte: adminDeductMinor },
+              },
+              { $inc: { balanceMinor: -adminDeductMinor } },
+              { session }
+            );
+
+            if (adminDebit.modifiedCount !== 1) {
+              throw Object.assign(new Error("Insufficient admin wallet balance"), { status: 400 });
+            }
+
+            await WalletHistory.create(
+              [
+                {
+                  ownerType: "user",
+                  ownerId: payment.patientId as any,
+                  currency: currencyCode,
+                  amountMinor,
+                  direction: "credit",
+                  type: "CONSULTATION_CANCEL_REFUND",
+                  referenceId: new Types.ObjectId(consultationId),
+                  bookingId: booking._id,
+                },
+                {
+                  ownerType: "doctor",
+                  ownerId: payment.doctorId as any,
+                  currency: currencyCode,
+                  amountMinor: doctorDeductMinor,
+                  direction: "debit",
+                  type: "CONSULTATION_CANCEL_DEDUCTION",
+                  referenceId: new Types.ObjectId(consultationId),
+                  bookingId: booking._id,
+                },
+                {
+                  ownerType: "admin",
+                  currency: currencyCode,
+                  amountMinor: adminDeductMinor,
+                  direction: "debit",
+                  type: "CONSULTATION_CANCEL_DEDUCTION",
+                  referenceId: new Types.ObjectId(consultationId),
+                  bookingId: booking._id,
+                },
+              ],
+              { session, ordered: true }
+            );
+
+            await Booking.updateOne(
+              { _id: booking._id },
+              { $set: { status: "refunded" } },
+              { session }
+            );
+          }
+        }
+
+        notificationDoc = await NotificationModel.create(
+          [
+            {
+              userId: new Types.ObjectId(consultationUserId),
+              userRole: "user",
+              type: "CONSULTATION_CANCELLED",
+              message:
+                "Your consultation was cancelled by the doctor. Amount refunded to wallet.",
+              meta: {
+                consultationId,
+                bookingId: String(booking._id),
+              },
+              read: false,
+            },
+          ],
+          { session, ordered: true }
+        );
+      });
+
+      const notif = Array.isArray(notificationDoc) ? notificationDoc[0] : notificationDoc;
+      if (io && notif) {
+        io.to(`user:${notif.userId.toString()}`).emit("notification:new", {
+          _id: notif._id,
+          message: notif.message,
+          createdAt: notif.createdAt,
+          read: notif.read,
+          type: notif.type,
+          meta: notif.meta,
+        });
+      }
+
+      return { success: true };
+    } finally {
+      session.endSession();
+    }
   }
 
   async getConsultationByVideoRoomId(videoRoomId: string) {

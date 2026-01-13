@@ -14,6 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeSocketServer = initializeSocketServer;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const notification_schema_1 = require("../schema/notification.schema");
+const mongoose_1 = require("mongoose");
 function initializeSocketServer(io, consultationService, chatService) {
     // Middleware: Authenticate ALL connections
     io.use((socket, next) => {
@@ -36,6 +38,7 @@ function initializeSocketServer(io, consultationService, chatService) {
     io.on("connection", (socket) => {
         const userId = socket.userId;
         console.log(`[Socket] ✅ Connected: ${socket.id} | User: ${userId}`);
+        socket.join(`user:${userId}`);
         // ========================================
         // CONSULTATION / WEBRTC EVENTS
         // ========================================
@@ -205,6 +208,25 @@ function initializeSocketServer(io, consultationService, chatService) {
         socket.on("disconnect", (reason) => {
             console.log(`[Socket] ❌ Disconnected: ${socket.id} | User: ${userId} | Reason: ${reason}`);
         });
+        // ========================================
+        // NOTIFICATION EVENTS (Additive)
+        // ========================================
+        socket.on("notification:mark_seen", (data) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!(data === null || data === void 0 ? void 0 : data.notificationId) || !mongoose_1.Types.ObjectId.isValid(data.notificationId)) {
+                    return;
+                }
+                const updated = yield notification_schema_1.NotificationModel.findOneAndUpdate({ _id: new mongoose_1.Types.ObjectId(data.notificationId), userId: new mongoose_1.Types.ObjectId(userId) }, { $set: { read: true } }, { new: true }).lean();
+                if (!updated)
+                    return;
+                io.to(`user:${userId}`).emit("notification:mark_seen", {
+                    notificationId: data.notificationId,
+                });
+            }
+            catch (err) {
+                console.error("[Notification] ❌ mark_seen error:", err.message);
+            }
+        }));
     });
 }
 function extractUserId(field) {

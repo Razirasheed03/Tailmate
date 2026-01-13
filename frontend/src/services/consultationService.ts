@@ -15,7 +15,7 @@ export interface Consultation {
   };
   scheduledFor: string;
   durationMinutes: number;
-  status: 'upcoming' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'in_progress' | 'completed' | 'cancelled' | 'cancelled_by_doctor';
   videoRoomId: string | null;
   callStartedAt: string | null;
   callEndedAt: string | null;
@@ -88,6 +88,14 @@ export const consultationService = {
   cancelConsultation: async (id: string, reason: string): Promise<Consultation> => {
     const res: AxiosResponse<ApiResponse<Consultation>> = await httpClient.post(
       `/consultations/${id}/cancel`,
+      { reason }
+    );
+    return res.data?.data ?? res.data;
+  },
+
+  cancelByDoctor: async (id: string, reason: string): Promise<any> => {
+    const res: AxiosResponse<ApiResponse<any>> = await httpClient.post(
+      `/consultations/${id}/cancel-by-doctor`,
       { reason }
     );
     return res.data?.data ?? res.data;

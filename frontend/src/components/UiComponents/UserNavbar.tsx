@@ -1,11 +1,22 @@
 // src/components/layout/Navbar.tsx
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { PawPrint, ChevronDown, LogOut, User, MessageSquare } from "lucide-react";
+import { PawPrint, ChevronDown, LogOut, User, MessageSquare, Bell } from "lucide-react";
 import { Button } from "@/components/UiComponents/button";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
 import clsx from "clsx";
+import httpClient from "@/services/httpClient";
+import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
+
+type UserNotification = {
+  id: string;
+  message: string;
+  createdAt?: string;
+  read: boolean;
+  bookingId?: string;
+};
 
 const NavLink = ({
   to,
@@ -35,9 +46,89 @@ const NavLink = ({
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const socketRef = useRef<Socket | null>(null);
+  const shownToastRef = useRef<Set<string>>(new Set());
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const { data } = await httpClient.get<{ data: any[] }>("/notifications?limit=30");
+      if (!Array.isArray(data?.data)) return;
+      setNotifications(
+        data.data.map((n) => ({
+          id: n._id,
+          message: n.message,
+          createdAt: n.createdAt,
+          read: n.read,
+          bookingId: n.meta?.bookingId,
+        }))
+      );
+    } catch (err) {
+      console.error("Fetch notifications failed", err);
+    }
+  }, []);
+
+  const markAllAsRead = async () => {
+    try {
+      await httpClient.patch("/notifications/mark-all-read");
+      fetchNotifications();
+    } catch {
+      toast.error("Failed to mark notifications as read");
+    }
+  };
+
+  const handleNotificationClick = async (n: UserNotification) => {
+    try {
+      await httpClient.patch(`/notifications/${n.id}/read`);
+      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    } catch {}
+
+    if (n.bookingId) {
+      setNotifOpen(false);
+      navigate(`/profile/bookings?booking=${n.bookingId}`);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "user" || !user?._id) return;
+
+    fetchNotifications();
+
+    if (socketRef.current) return;
+
+    const token = localStorage.getItem("auth_token");
+    const backendUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, "");
+
+    const socket = io(backendUrl, {
+      auth: { token },
+      transports: ["websocket"],
+      withCredentials: true,
+    });
+
+    socketRef.current = socket;
+
+    socket.on("notification:new", async (payload: any) => {
+      const key = payload?._id ?? `${Date.now()}`;
+      if (!shownToastRef.current.has(key)) {
+        toast.info(payload?.message || "New notification");
+        shownToastRef.current.add(key);
+        setTimeout(() => shownToastRef.current.delete(key), 5000);
+      }
+      fetchNotifications();
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [isAuthenticated, user?._id, user?.role, fetchNotifications]);
 
   const handleLogout = async () => {
     await logout();
@@ -101,6 +192,67 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
+                <div className="relative">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setNotifOpen((s) => !s)}
+                    className="flex items-center gap-2 text-[#374151] relative"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-600 text-white w-4 h-4 flex items-center justify-center rounded-full text-xs">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Button>
+
+                  {notifOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setNotifOpen(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-80 bg-white border rounded-xl shadow-lg z-30">
+                        <div className="p-4 border-b font-semibold text-gray-700 flex items-center justify-between">
+                          <span>Notifications</span>
+                          <button
+                            className="text-xs text-[#F97316] hover:underline"
+                            onClick={markAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                        </div>
+
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="p-4 text-sm text-gray-500">No notifications</div>
+                          ) : (
+                            notifications.map((n) => (
+                              <div
+                                key={n.id}
+                                onClick={() => handleNotificationClick(n)}
+                                className={`p-4 border-b cursor-pointer ${
+                                  !n.read ? "bg-orange-50" : "hover:bg-gray-50"
+                                }`}
+                              >
+                                <p className="text-sm font-medium">
+                                  {n.message}
+                                  {!n.read && (
+                                    <span className="ml-2 w-2 h-2 bg-orange-500 rounded-full inline-block" />
+                                  )}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {n.createdAt && new Date(n.createdAt).toLocaleString()}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"

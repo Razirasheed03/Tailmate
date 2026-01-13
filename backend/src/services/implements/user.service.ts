@@ -8,6 +8,10 @@ import { UIMode } from "../interfaces/checkout.service.interface";
 import { PaymentModel } from "../../models/implements/payment.model";
 import { stripe } from "../../utils/stripe";
 import { Wallet } from "../../schema/wallet.schema";
+import mongoose from "mongoose";
+import { WalletHistory } from "../../schema/walletHistory.schema";
+import { NotificationModel } from "../../schema/notification.schema";
+import { io } from "../../server";
 
 export type PublicDoctor = any;
 export type PublicDoctorWithNextSlot = any;
@@ -136,10 +140,16 @@ export class UserService implements IUserService {
     );
 
     if (!cancelled) {
-      return {
-        success: false,
-        message: "Booking not found or cannot be cancelled",
-      };
+      const existing = await this._bookingRepo.findById(bookingId);
+      if (
+        existing &&
+        String(existing.patientId) === String(userId) &&
+        (existing.status === "cancelled" || existing.status === "refunded")
+      ) {
+        return { success: true, message: "Booking cancelled successfully." };
+      }
+
+      return { success: false, message: "Booking not found or cannot be cancelled" };
     }
     const payment = await PaymentModel.findOne({
       bookingId: cancelled._id,
@@ -172,40 +182,161 @@ export class UserService implements IUserService {
       };
     }
 
-    // === Update wallets ===
-    const { amount, platformFee, doctorEarning, currency } = payment;
+    // === Update wallets + mark refunded atomically (DB transaction) ===
+    const currencyCode = (payment.currency || "INR").toUpperCase();
+    const amountMinor = Math.round(Number(payment.amount || 0) * 100);
+    const doctorDeductMinor = Math.round(Number(payment.doctorEarning || 0) * 100);
+    const adminDeductMinor = Math.round(Number(payment.platformFee || 0) * 100);
 
-    const currencyCode = (currency || "INR").toUpperCase();
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const walletCreditGate = await PaymentModel.updateOne(
+          { _id: payment._id, paymentStatus: "success", walletCredited: { $ne: true } },
+          { $set: { walletCredited: true, walletCreditedAt: new Date() } },
+          { session }
+        );
 
-    // Decrement doctor wallet
-    await Wallet.updateOne(
-      {
-        ownerType: "doctor",
-        ownerId: payment.doctorId,
-        currency: currencyCode,
-      },
-      { $inc: { balanceMinor: -Math.round(doctorEarning * 100) } }
-    );
+        if (walletCreditGate.modifiedCount === 1) {
+          if (doctorDeductMinor > 0) {
+            await Wallet.updateOne(
+              { ownerType: "doctor", ownerId: payment.doctorId, currency: currencyCode },
+              { $inc: { balanceMinor: doctorDeductMinor } },
+              { upsert: true, session }
+            );
+          }
 
-    // Decrement admin wallet
-    await Wallet.updateOne(
-      { ownerType: "admin", currency: currencyCode },
-      { $inc: { balanceMinor: -Math.round(platformFee * 100) } }
-    );
+          if (adminDeductMinor > 0) {
+            await Wallet.updateOne(
+              { ownerType: "admin", currency: currencyCode },
+              { $inc: { balanceMinor: adminDeductMinor } },
+              { upsert: true, session }
+            );
+          }
+        }
 
-    // Credit user wallet
-    await Wallet.updateOne(
-      { ownerType: "user", ownerId: payment.patientId, currency: currencyCode },
-      { $inc: { balanceMinor: Math.round(amount * 100) } },
-      { upsert: true }
-    );
+        const refundUpdate = await PaymentModel.updateOne(
+          { _id: payment._id, paymentStatus: "success" },
+          { $set: { paymentStatus: "refunded" } },
+          { session }
+        );
 
-    // Optionally, mark booking as 'refunded'
-    await this._bookingRepo.updateBookingStatus(bookingId, "refunded");
+        // Idempotency: only apply wallet movements + history once
+        if (refundUpdate.modifiedCount === 1) {
+          await Wallet.updateOne(
+            { ownerType: "user", ownerId: payment.patientId, currency: currencyCode },
+            { $inc: { balanceMinor: amountMinor } },
+            { upsert: true, session }
+          );
 
-await PaymentModel.findByIdAndUpdate(payment._id, {
-  paymentStatus: "refunded", 
-});
+          const doctorDebit = await Wallet.updateOne(
+            {
+              ownerType: "doctor",
+              ownerId: payment.doctorId,
+              currency: currencyCode,
+              balanceMinor: { $gte: doctorDeductMinor },
+            },
+            { $inc: { balanceMinor: -doctorDeductMinor } },
+            { session }
+          );
+
+          if (doctorDebit.modifiedCount !== 1) {
+            throw Object.assign(new Error("Insufficient doctor wallet balance"), { status: 400 });
+          }
+
+          const adminDebit = await Wallet.updateOne(
+            {
+              ownerType: "admin",
+              currency: currencyCode,
+              balanceMinor: { $gte: adminDeductMinor },
+            },
+            { $inc: { balanceMinor: -adminDeductMinor } },
+            { session }
+          );
+
+          if (adminDebit.modifiedCount !== 1) {
+            throw Object.assign(new Error("Insufficient admin wallet balance"), { status: 400 });
+          }
+
+          await WalletHistory.create(
+            [
+              {
+                ownerType: "user",
+                ownerId: payment.patientId as any,
+                currency: currencyCode,
+                amountMinor,
+                direction: "credit",
+                type: "CONSULTATION_CANCEL_REFUND",
+                referenceId: payment._id as any,
+                bookingId: (payment.bookingId as any) || null,
+              },
+              {
+                ownerType: "doctor",
+                ownerId: payment.doctorId as any,
+                currency: currencyCode,
+                amountMinor: doctorDeductMinor,
+                direction: "debit",
+                type: "CONSULTATION_CANCEL_DEDUCTION",
+                referenceId: payment._id as any,
+                bookingId: (payment.bookingId as any) || null,
+              },
+              {
+                ownerType: "admin",
+                currency: currencyCode,
+                amountMinor: adminDeductMinor,
+                direction: "debit",
+                type: "CONSULTATION_CANCEL_DEDUCTION",
+                referenceId: payment._id as any,
+                bookingId: (payment.bookingId as any) || null,
+              },
+            ],
+            { session, ordered: true }
+          );
+
+          // Keep existing behavior: booking becomes refunded
+          await this._bookingRepo.updateBookingStatus(bookingId, "refunded", session);
+        }
+      });
+    } finally {
+      session.endSession();
+    }
+
+    // Notify doctor (real-time + DB) about cancellation/refund
+    try {
+      const notificationMsg = "Booking cancelled by user. Amount refunded to patient wallet.";
+      const doctorIdStr = payment?.doctorId?.toString?.() || String(payment.doctorId);
+      const bookingIdStr = (payment?.bookingId as any)?.toString?.() || bookingId;
+
+      const notif = await NotificationModel.findOneAndUpdate(
+        {
+          userId: doctorIdStr,
+          userRole: "doctor",
+          type: "CONSULTATION_CANCELLED",
+          "meta.bookingId": bookingIdStr,
+        },
+        {
+          $setOnInsert: {
+            message: notificationMsg,
+            meta: { bookingId: bookingIdStr },
+            read: false,
+          },
+        },
+        { upsert: true, new: true }
+      ).lean();
+
+      if (io && doctorIdStr && notif?._id) {
+        io.to(`user:${doctorIdStr}`).emit("notification:new", {
+          _id: notif._id,
+          message: notif.message,
+          createdAt: notif.createdAt,
+          read: notif.read,
+          type: notif.type,
+          meta: notif.meta,
+        });
+      }
+    } catch (notifyErr) {
+      console.error("[NOTIFICATION] doctor cancel notify error:", notifyErr);
+    }
 
     return {
       success: true,

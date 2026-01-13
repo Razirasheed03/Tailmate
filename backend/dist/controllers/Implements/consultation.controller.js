@@ -129,6 +129,25 @@ class ConsultationController {
                 next(err);
             }
         });
+        this.cancelByDoctor = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d, _e, _f, _g;
+            try {
+                const userId = ((_b = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id) === null || _b === void 0 ? void 0 : _b.toString()) || ((_d = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id) === null || _d === void 0 ? void 0 : _d.toString());
+                const doctorId = ((_f = (_e = req.user) === null || _e === void 0 ? void 0 : _e.doctorId) === null || _f === void 0 ? void 0 : _f.toString()) || undefined;
+                const role = (_g = req.user) === null || _g === void 0 ? void 0 : _g.role;
+                if (!userId) {
+                    return ResponseHelper_1.ResponseHelper.unauthorized(res, messageConstant_1.HttpResponse.UNAUTHORIZED);
+                }
+                const { id } = req.params;
+                const { reason } = req.body;
+                const { io } = require("../../server");
+                const result = yield this.consultationService.cancelByDoctor(id, userId, doctorId, role, reason || "", io);
+                return ResponseHelper_1.ResponseHelper.ok(res, result, "Consultation cancelled by doctor");
+            }
+            catch (err) {
+                next(err);
+            }
+        });
         this.getOrCreateFromBooking = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d;
             try {

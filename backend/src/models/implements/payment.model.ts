@@ -11,9 +11,12 @@ export interface IPayment extends Document {
   doctorEarning: number;   // 80% of amount
   currency: string;        // "INR"
 
-  paymentStatus: "pending" | "success" | "failed";
+  paymentStatus: "pending" | "success" | "failed" | "refunded";
   paymentIntentId?: string;
   receiptUrl?: string;
+
+  walletCredited?: boolean;
+  walletCreditedAt?: Date;
 
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +42,9 @@ const PaymentSchema = new Schema<IPayment>(
 
     paymentIntentId: String,
     receiptUrl: String,
+
+    walletCredited: { type: Boolean, default: false },
+    walletCreditedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

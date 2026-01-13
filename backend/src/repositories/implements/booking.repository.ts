@@ -1,5 +1,5 @@
 // backend/src/repositories/implements/booking.repository.ts
-import { Model, Types } from "mongoose";
+import { Model, Types, type ClientSession } from "mongoose";
 import { Booking, type BookingAttrs, type BookingLean } from "../../schema/booking.schema";
 import { IBookingRepository } from "../interfaces/booking.repository.interface";
 
@@ -255,13 +255,15 @@ export class BookingRepository implements IBookingRepository{
 
     return updated ?? null;
   }
-  async updateBookingStatus(bookingId: string, newStatus: string) {
-  if (!Types.ObjectId.isValid(bookingId)) return null;
-  return await this.model.findByIdAndUpdate(
-    bookingId,
-    { $set: { status: newStatus } },
-    { new: true }
-  ).lean();
-}
+  async updateBookingStatus(bookingId: string, newStatus: string, session?: ClientSession) {
+    if (!Types.ObjectId.isValid(bookingId)) return null;
+    return await this.model
+      .findByIdAndUpdate(
+        bookingId,
+        { $set: { status: newStatus } },
+        { new: true, session }
+      )
+      .lean();
+  }
 }
 

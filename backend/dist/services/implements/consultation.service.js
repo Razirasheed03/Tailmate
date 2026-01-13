@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -11,8 +44,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConsultationService = void 0;
 // services/implements/consultation.service.ts
-const mongoose_1 = require("mongoose");
+const mongoose_1 = __importStar(require("mongoose"));
 const doctor_schema_1 = require("../../schema/doctor.schema");
+const booking_schema_1 = require("../../schema/booking.schema");
+const payment_model_1 = require("../../models/implements/payment.model");
+const wallet_schema_1 = require("../../schema/wallet.schema");
+const walletHistory_schema_1 = require("../../schema/walletHistory.schema");
+const notification_schema_1 = require("../../schema/notification.schema");
+const consultation_schema_1 = require("../../schema/consultation.schema");
 // Helper function to safely extract ObjectId string from populated or non-populated field
 const extractObjectIdString = (field) => {
     if (!field)
@@ -233,6 +272,176 @@ class ConsultationService {
                 return consultation;
             }
             return this._repo.cancel(consultationId, userId, reason);
+        });
+    }
+    cancelByDoctor(consultationId, authUserId, authDoctorId, role, reason, io) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!mongoose_1.Types.ObjectId.isValid(consultationId)) {
+                throw Object.assign(new Error("Invalid consultation id"), { status: 400 });
+            }
+            if (role !== "doctor" || !authDoctorId) {
+                throw Object.assign(new Error("Unauthorized"), { status: 403 });
+            }
+            const session = yield mongoose_1.default.startSession();
+            try {
+                let notificationDoc = null;
+                yield session.withTransaction(() => __awaiter(this, void 0, void 0, function* () {
+                    var _a, _b;
+                    const consultation = yield consultation_schema_1.Consultation.findById(new mongoose_1.Types.ObjectId(consultationId))
+                        .session(session)
+                        .lean();
+                    if (!consultation) {
+                        throw Object.assign(new Error("Consultation not found"), { status: 404 });
+                    }
+                    const consultationDoctorId = (_a = consultation.doctorId) === null || _a === void 0 ? void 0 : _a.toString();
+                    const consultationUserId = (_b = consultation.userId) === null || _b === void 0 ? void 0 : _b.toString();
+                    if (!consultationDoctorId || !consultationUserId) {
+                        throw Object.assign(new Error("Consultation is missing doctor/user"), { status: 400 });
+                    }
+                    if (consultationDoctorId !== (authDoctorId === null || authDoctorId === void 0 ? void 0 : authDoctorId.toString())) {
+                        throw Object.assign(new Error("Unauthorized"), { status: 403 });
+                    }
+                    if (consultation.status === "cancelled_by_doctor") {
+                        return;
+                    }
+                    if (consultation.status === "completed" || consultation.status === "cancelled") {
+                        throw Object.assign(new Error("Consultation cannot be cancelled"), { status: 400 });
+                    }
+                    if (consultation.status !== "upcoming" && consultation.status !== "in_progress") {
+                        throw Object.assign(new Error("Consultation cannot be cancelled"), { status: 400 });
+                    }
+                    const bookingIdStr = consultation.bookingId;
+                    if (!bookingIdStr || !mongoose_1.Types.ObjectId.isValid(String(bookingIdStr))) {
+                        throw Object.assign(new Error("Consultation bookingId is missing"), { status: 400 });
+                    }
+                    const booking = yield booking_schema_1.Booking.findById(new mongoose_1.Types.ObjectId(String(bookingIdStr)))
+                        .session(session)
+                        .lean();
+                    if (!booking) {
+                        throw Object.assign(new Error("Booking not found"), { status: 404 });
+                    }
+                    // Payment is required for wallet reversal. If not found, still allow cancellation
+                    // but do not mutate wallets.
+                    const payment = yield payment_model_1.PaymentModel.findOne({
+                        bookingId: booking._id,
+                        paymentStatus: { $in: ["success", "refunded"] },
+                    })
+                        .sort({ createdAt: -1 })
+                        .session(session)
+                        .lean();
+                    // Update consultation + booking status first.
+                    yield consultation_schema_1.Consultation.updateOne({ _id: new mongoose_1.Types.ObjectId(consultationId) }, {
+                        $set: {
+                            status: "cancelled_by_doctor",
+                            cancelledBy: new mongoose_1.Types.ObjectId(authUserId),
+                            cancelledAt: new Date(),
+                            cancelledByRole: "doctor",
+                            cancellationReason: reason || "",
+                        },
+                    }, { session });
+                    yield booking_schema_1.Booking.updateOne({ _id: booking._id }, { $set: { status: "cancelled" } }, { session });
+                    if (payment && payment.paymentStatus === "success") {
+                        const currencyCode = (payment.currency || "INR").toUpperCase();
+                        const amountMinor = Math.round(Number(payment.amount || 0) * 100);
+                        const doctorDeductMinor = Math.round(Number(payment.doctorEarning || 0) * 100);
+                        const adminDeductMinor = Math.round(Number(payment.platformFee || 0) * 100);
+                        if (amountMinor <= 0) {
+                            throw Object.assign(new Error("Invalid payment amount"), { status: 400 });
+                        }
+                        const walletCreditGate = yield payment_model_1.PaymentModel.updateOne({ _id: payment._id, paymentStatus: "success", walletCredited: { $ne: true } }, { $set: { walletCredited: true, walletCreditedAt: new Date() } }, { session });
+                        if (walletCreditGate.modifiedCount === 1) {
+                            if (doctorDeductMinor > 0) {
+                                yield wallet_schema_1.Wallet.updateOne({ ownerType: "doctor", ownerId: payment.doctorId, currency: currencyCode }, { $inc: { balanceMinor: doctorDeductMinor } }, { upsert: true, session });
+                            }
+                            if (adminDeductMinor > 0) {
+                                yield wallet_schema_1.Wallet.updateOne({ ownerType: "admin", currency: currencyCode }, { $inc: { balanceMinor: adminDeductMinor } }, { upsert: true, session });
+                            }
+                        }
+                        const refundUpdate = yield payment_model_1.PaymentModel.updateOne({ _id: payment._id, paymentStatus: "success" }, { $set: { paymentStatus: "refunded" } }, { session });
+                        // Idempotency: only apply wallet movements + history once
+                        if (refundUpdate.modifiedCount === 1) {
+                            yield wallet_schema_1.Wallet.updateOne({ ownerType: "user", ownerId: payment.patientId, currency: currencyCode }, { $inc: { balanceMinor: amountMinor } }, { upsert: true, session });
+                            const doctorDebit = yield wallet_schema_1.Wallet.updateOne({
+                                ownerType: "doctor",
+                                ownerId: payment.doctorId,
+                                currency: currencyCode,
+                                balanceMinor: { $gte: doctorDeductMinor },
+                            }, { $inc: { balanceMinor: -doctorDeductMinor } }, { session });
+                            if (doctorDebit.modifiedCount !== 1) {
+                                throw Object.assign(new Error("Insufficient doctor wallet balance"), { status: 400 });
+                            }
+                            const adminDebit = yield wallet_schema_1.Wallet.updateOne({
+                                ownerType: "admin",
+                                currency: currencyCode,
+                                balanceMinor: { $gte: adminDeductMinor },
+                            }, { $inc: { balanceMinor: -adminDeductMinor } }, { session });
+                            if (adminDebit.modifiedCount !== 1) {
+                                throw Object.assign(new Error("Insufficient admin wallet balance"), { status: 400 });
+                            }
+                            yield walletHistory_schema_1.WalletHistory.create([
+                                {
+                                    ownerType: "user",
+                                    ownerId: payment.patientId,
+                                    currency: currencyCode,
+                                    amountMinor,
+                                    direction: "credit",
+                                    type: "CONSULTATION_CANCEL_REFUND",
+                                    referenceId: new mongoose_1.Types.ObjectId(consultationId),
+                                    bookingId: booking._id,
+                                },
+                                {
+                                    ownerType: "doctor",
+                                    ownerId: payment.doctorId,
+                                    currency: currencyCode,
+                                    amountMinor: doctorDeductMinor,
+                                    direction: "debit",
+                                    type: "CONSULTATION_CANCEL_DEDUCTION",
+                                    referenceId: new mongoose_1.Types.ObjectId(consultationId),
+                                    bookingId: booking._id,
+                                },
+                                {
+                                    ownerType: "admin",
+                                    currency: currencyCode,
+                                    amountMinor: adminDeductMinor,
+                                    direction: "debit",
+                                    type: "CONSULTATION_CANCEL_DEDUCTION",
+                                    referenceId: new mongoose_1.Types.ObjectId(consultationId),
+                                    bookingId: booking._id,
+                                },
+                            ], { session, ordered: true });
+                            yield booking_schema_1.Booking.updateOne({ _id: booking._id }, { $set: { status: "refunded" } }, { session });
+                        }
+                    }
+                    notificationDoc = yield notification_schema_1.NotificationModel.create([
+                        {
+                            userId: new mongoose_1.Types.ObjectId(consultationUserId),
+                            userRole: "user",
+                            type: "CONSULTATION_CANCELLED",
+                            message: "Your consultation was cancelled by the doctor. Amount refunded to wallet.",
+                            meta: {
+                                consultationId,
+                                bookingId: String(booking._id),
+                            },
+                            read: false,
+                        },
+                    ], { session, ordered: true });
+                }));
+                const notif = Array.isArray(notificationDoc) ? notificationDoc[0] : notificationDoc;
+                if (io && notif) {
+                    io.to(`user:${notif.userId.toString()}`).emit("notification:new", {
+                        _id: notif._id,
+                        message: notif.message,
+                        createdAt: notif.createdAt,
+                        read: notif.read,
+                        type: notif.type,
+                        meta: notif.meta,
+                    });
+                }
+                return { success: true };
+            }
+            finally {
+                session.endSession();
+            }
         });
     }
     getConsultationByVideoRoomId(videoRoomId) {

@@ -3,6 +3,8 @@ import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { IConsultationService } from "../services/interfaces/consultation.service.interface";
 import { IChatService } from "../services/interfaces/chat.service.interface";
+import { NotificationModel } from "../schema/notification.schema";
+import { Types } from "mongoose";
 
 interface AuthSocket extends Socket {
   userId?: string;
@@ -39,6 +41,8 @@ export function initializeSocketServer(
   io.on("connection", (socket: AuthSocket) => {
     const userId = socket.userId!;
     console.log(`[Socket] ✅ Connected: ${socket.id} | User: ${userId}`);
+
+    socket.join(`user:${userId}`);
 
     // ========================================
     // CONSULTATION / WEBRTC EVENTS
@@ -270,6 +274,32 @@ socket.on(
     
     socket.on("disconnect", (reason) => {
       console.log(`[Socket] ❌ Disconnected: ${socket.id} | User: ${userId} | Reason: ${reason}`);
+    });
+
+    // ========================================
+    // NOTIFICATION EVENTS (Additive)
+    // ========================================
+
+    socket.on("notification:mark_seen", async (data: { notificationId: string }) => {
+      try {
+        if (!data?.notificationId || !Types.ObjectId.isValid(data.notificationId)) {
+          return;
+        }
+
+        const updated = await NotificationModel.findOneAndUpdate(
+          { _id: new Types.ObjectId(data.notificationId), userId: new Types.ObjectId(userId) },
+          { $set: { read: true } },
+          { new: true }
+        ).lean();
+
+        if (!updated) return;
+
+        io.to(`user:${userId}`).emit("notification:mark_seen", {
+          notificationId: data.notificationId,
+        });
+      } catch (err: any) {
+        console.error("[Notification] ❌ mark_seen error:", err.message);
+      }
     });
   });
 }

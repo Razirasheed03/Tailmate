@@ -11,7 +11,7 @@ const ConsultationSchema = new mongoose_1.Schema({
     durationMinutes: { type: Number, required: true, default: 30 },
     status: {
         type: String,
-        enum: ["upcoming", "in_progress", "completed", "cancelled"],
+        enum: ["upcoming", "in_progress", "completed", "cancelled", "cancelled_by_doctor"],
         default: "upcoming",
         index: true,
     },
@@ -20,6 +20,11 @@ const ConsultationSchema = new mongoose_1.Schema({
     callEndedAt: { type: Date, default: null },
     notes: { type: String, default: null },
     cancelledBy: { type: mongoose_1.Types.ObjectId, ref: "User", default: null },
+    cancelledByRole: {
+        type: String,
+        enum: ["doctor", "user", "system"],
+        default: null,
+    },
     cancelledAt: { type: Date, default: null },
     cancellationReason: { type: String, default: null },
 }, { timestamps: true });

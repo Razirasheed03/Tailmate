@@ -24,4 +24,6 @@ router.post("/:id/prepare-call", (0, asyncHandler_1.asyncHandler)(c.prepareCall)
 router.post("/:id/end-call", (0, asyncHandler_1.asyncHandler)(c.endCall));
 // Cancel consultation
 router.post("/:id/cancel", (0, asyncHandler_1.asyncHandler)(c.cancel));
+// Cancel consultation by doctor (refund + user notification)
+router.post("/:id/cancel-by-doctor", (0, asyncHandler_1.asyncHandler)(c.cancelByDoctor));
 exports.default = router;

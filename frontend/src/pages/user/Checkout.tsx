@@ -5,7 +5,6 @@ import Navbar from "@/components/UiComponents/UserNavbar";
 import { vetsService } from "@/services/vetsService";
 import { checkoutService } from "@/services/checkoutService";
 import type { CreateCheckoutPayload } from "@/types/checkout.types";
-import { paymentService } from "@/services/paymentService";
 import { PetSelectDialog } from "@/pages/pets/PetSelectDialog";
 
 type BookingState = {
@@ -132,11 +131,7 @@ export default function Checkout() {
         return;
       }
 
-      // 3) Ask the new payments API to create a Stripe Checkout Session
-      const { url } = await paymentService.createCheckoutSession(bookingId);
-
-      // 4) Redirect to Stripe-hosted Checkout
-      window.location.href = url;
+window.location.href = bookingRes.redirectUrl!;
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Could not create payment. Please try another time.";
       showError(msg);

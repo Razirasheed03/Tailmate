@@ -58,6 +58,15 @@ export interface IConsultationService {
     reason: string
   ): Promise<any>;
 
+  cancelByDoctor(
+    consultationId: string,
+    authUserId: string,
+    authDoctorId: string | undefined,
+    role: string | undefined,
+    reason: string,
+    io?: unknown
+  ): Promise<any>;
+
   getConsultationByVideoRoomId(videoRoomId: string): Promise<any>;
 
   getOrCreateConsultationFromBooking(

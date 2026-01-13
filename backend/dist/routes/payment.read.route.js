@@ -14,13 +14,22 @@ const payment_model_1 = require("../models/implements/payment.model");
 const router = (0, express_1.Router)();
 router.get("/payments/by-booking/:bookingId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const bookingId = req.params.bookingId;
         const row = yield payment_model_1.PaymentModel
-            .findOne({ bookingId: req.params.bookingId })
+            .findOne({ bookingId, paymentStatus: "success" })
             .select("_id bookingId amount platformFee doctorEarning currency paymentStatus createdAt")
             .lean();
-        if (!row)
+        const fallback = row
+            ? null
+            : yield payment_model_1.PaymentModel
+                .findOne({ bookingId })
+                .sort({ createdAt: -1 })
+                .select("_id bookingId amount platformFee doctorEarning currency paymentStatus createdAt")
+                .lean();
+        const found = row || fallback;
+        if (!found)
             return res.status(404).json({ success: false, message: "Not found" });
-        res.json({ success: true, data: row });
+        res.json({ success: true, data: found });
     }
     catch (e) {
         next(e);

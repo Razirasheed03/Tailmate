@@ -138,6 +138,34 @@ export class ConsultationController {
     }
   };
 
+  cancelByDoctor = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id?.toString() || req.user?.id?.toString();
+      const doctorId = req.user?.doctorId?.toString() || undefined;
+      const role = req.user?.role as string | undefined;
+      if (!userId) {
+        return ResponseHelper.unauthorized(res, HttpResponse.UNAUTHORIZED);
+      }
+
+      const { id } = req.params;
+      const { reason } = req.body;
+      const { io } = require("../../server");
+
+      const result = await this.consultationService.cancelByDoctor(
+        id,
+        userId,
+        doctorId,
+        role,
+        reason || "",
+        io
+      );
+
+      return ResponseHelper.ok(res, result, "Consultation cancelled by doctor");
+    } catch (err) {
+      next(err);
+    }
+  };
+
   getOrCreateFromBooking = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?._id?.toString() || req.user?.id?.toString();

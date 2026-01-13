@@ -70,7 +70,7 @@ export class ConsultationRepository implements IConsultationRepository{
     const doc = await this.populate(
       this.model.findOne({
         bookingId: bookingId,
-        status: { $ne: "cancelled" },
+        status: { $nin: ["cancelled", "cancelled_by_doctor"] },
       })
     );
     return doc ? doc.toObject() : null;

@@ -1,4 +1,5 @@
 import type { BookingLean } from "../../schema/booking.schema";
+import type { ClientSession } from "mongoose";
 
 export interface IBookingRepository {
   create(attrs: {
@@ -28,7 +29,8 @@ export interface IBookingRepository {
 
   updateBookingStatus(
     bookingId: string,
-    newStatus: string
+    newStatus: string,
+    session?: ClientSession
   ): Promise<any | null>;
 
   findById(bookingId: string): Promise<BookingLean | null>;

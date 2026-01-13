@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -17,7 +50,7 @@ const marketOrder_schema_1 = require("../../schema/marketOrder.schema");
 const marketplaceListing_schema_1 = require("../../schema/marketplaceListing.schema");
 const pet_schema_1 = require("../../schema/pet.schema");
 const wallet_schema_1 = require("../../schema/wallet.schema");
-const mongoose_1 = require("mongoose");
+const mongoose_1 = __importStar(require("mongoose"));
 const server_1 = require("../../server"); // ensure server exports io!
 const notification_schema_1 = require("../../schema/notification.schema");
 // Helper log function for clarity in logs
@@ -41,18 +74,39 @@ function paymentsWebhook(req, res) {
                     const paymentId = (_b = session.metadata) === null || _b === void 0 ? void 0 : _b.paymentDbId;
                     const bookingId = (_c = session.metadata) === null || _c === void 0 ? void 0 : _c.bookingId;
                     const doctorId = (_d = session.metadata) === null || _d === void 0 ? void 0 : _d.doctorId;
-                    if (!paymentId) {
-                        logWithTag("ERROR", "No paymentDbId in metadata. Metadata was:", session.metadata);
-                        return res.status(200).send("ok");
-                    }
                     const paymentIntentId = typeof session.payment_intent === "string"
                         ? session.payment_intent
                         : ((_e = session.payment_intent) === null || _e === void 0 ? void 0 : _e.id) || "";
-                    logWithTag("PAYMENT", "Updating PaymentModel with paymentIntentId:", paymentIntentId);
-                    yield payment_model_1.PaymentModel.findByIdAndUpdate(paymentId, {
-                        paymentStatus: "success",
-                        paymentIntentId,
-                    }, { new: true }).lean();
+                    // Ensure payment record exists and is updated (supports older sessions without paymentDbId)
+                    let updatedPayment = null;
+                    if (paymentId && mongoose_1.Types.ObjectId.isValid(paymentId)) {
+                        logWithTag("PAYMENT", "Updating PaymentModel by paymentDbId:", paymentId, "paymentIntentId:", paymentIntentId);
+                        updatedPayment = yield payment_model_1.PaymentModel.findOneAndUpdate({ _id: new mongoose_1.Types.ObjectId(paymentId), paymentStatus: { $ne: "refunded" } }, { $set: { paymentStatus: "success", paymentIntentId } }, { new: true }).lean();
+                    }
+                    if (!updatedPayment && bookingId && mongoose_1.Types.ObjectId.isValid(bookingId)) {
+                        logWithTag("PAYMENT", "Updating PaymentModel by bookingId:", bookingId, "paymentIntentId:", paymentIntentId);
+                        updatedPayment = yield payment_model_1.PaymentModel.findOneAndUpdate({ bookingId: new mongoose_1.Types.ObjectId(bookingId), paymentStatus: { $ne: "refunded" } }, { $set: { paymentStatus: "success", paymentIntentId } }, { new: true, sort: { createdAt: -1 } }).lean();
+                    }
+                    if (!updatedPayment && bookingId && mongoose_1.Types.ObjectId.isValid(bookingId)) {
+                        const bookingForPayment = yield booking_schema_1.Booking.findById(bookingId).lean();
+                        if (bookingForPayment) {
+                            const amountMajor = Number(bookingForPayment.amount || 0);
+                            const platformFeeMajor = Math.round(amountMajor * 0.2);
+                            const doctorEarningMajor = amountMajor - platformFeeMajor;
+                            logWithTag("PAYMENT", "Creating missing PaymentModel for bookingId:", bookingId);
+                            yield payment_model_1.PaymentModel.create({
+                                patientId: bookingForPayment.patientId,
+                                doctorId: bookingForPayment.doctorId,
+                                bookingId: bookingForPayment._id,
+                                amount: amountMajor,
+                                platformFee: platformFeeMajor,
+                                doctorEarning: doctorEarningMajor,
+                                currency: bookingForPayment.currency || "INR",
+                                paymentStatus: "success",
+                                paymentIntentId,
+                            });
+                        }
+                    }
                     if (!bookingId) {
                         logWithTag("ERROR", "No bookingId present in metadata for doctor checkout.");
                         return res.status(200).send("ok");
@@ -61,13 +115,50 @@ function paymentsWebhook(req, res) {
                         logWithTag("ERROR", "bookingId is not valid ObjectId:", bookingId);
                         return res.status(200).send("ok");
                     }
-                    logWithTag("BOOKING", "Marking booking as paid:", bookingId);
-                    yield booking_schema_1.Booking.updateOne({ _id: new mongoose_1.Types.ObjectId(bookingId) }, {
-                        status: "paid",
-                        paidAt: new Date(),
-                        paymentIntentId,
-                        paymentSessionId: session.id,
-                    });
+                    const dbSession = yield mongoose_1.default.startSession();
+                    try {
+                        yield dbSession.withTransaction(() => __awaiter(this, void 0, void 0, function* () {
+                            logWithTag("BOOKING", "Marking booking as paid:", bookingId);
+                            const bookingPaidUpdate = yield booking_schema_1.Booking.updateOne({ _id: new mongoose_1.Types.ObjectId(bookingId), status: { $in: ["pending", "failed"] } }, {
+                                status: "paid",
+                                paidAt: new Date(),
+                                paymentIntentId,
+                                paymentSessionId: session.id,
+                            }, { session: dbSession });
+                            // Wallet funding is required so later cancellations can debit doctor/admin without going negative.
+                            // Make it crash-safe + idempotent by gating via Payment.walletCredited inside the same DB transaction.
+                            if (bookingPaidUpdate.modifiedCount === 1) {
+                                const paymentRow = yield payment_model_1.PaymentModel.findOne({
+                                    bookingId: new mongoose_1.Types.ObjectId(bookingId),
+                                    paymentStatus: "success",
+                                })
+                                    .sort({ createdAt: -1 })
+                                    .session(dbSession)
+                                    .lean();
+                                if (!paymentRow) {
+                                    logWithTag("WALLET", "No success PaymentModel found to credit wallets. bookingId:", bookingId);
+                                    return;
+                                }
+                                const walletCreditGate = yield payment_model_1.PaymentModel.updateOne({ _id: paymentRow._id, walletCredited: { $ne: true }, paymentStatus: "success" }, { $set: { walletCredited: true, walletCreditedAt: new Date() } }, { session: dbSession });
+                                if (walletCreditGate.modifiedCount !== 1) {
+                                    return;
+                                }
+                                const currencyCode = (paymentRow.currency || "INR").toUpperCase();
+                                const doctorEarnMinor = Math.round(Number(paymentRow.doctorEarning || 0) * 100);
+                                const platformFeeMinor = Math.round(Number(paymentRow.platformFee || 0) * 100);
+                                if (doctorEarnMinor > 0) {
+                                    yield wallet_schema_1.Wallet.updateOne({ ownerType: "doctor", ownerId: paymentRow.doctorId, currency: currencyCode }, { $inc: { balanceMinor: doctorEarnMinor } }, { upsert: true, session: dbSession });
+                                }
+                                if (platformFeeMinor > 0) {
+                                    yield wallet_schema_1.Wallet.updateOne({ ownerType: "admin", currency: currencyCode }, { $inc: { balanceMinor: platformFeeMinor } }, { upsert: true, session: dbSession });
+                                }
+                                logWithTag("WALLET", "Credited doctor/admin wallets for bookingId:", bookingId);
+                            }
+                        }));
+                    }
+                    finally {
+                        dbSession.endSession();
+                    }
                     const paidBooking = yield booking_schema_1.Booking.findOne({ _id: bookingId, status: "paid" }).lean();
                     if (!paidBooking) {
                         logWithTag("ERROR", "Booking marked as paid not found in DB!", bookingId);
@@ -87,8 +178,8 @@ function paymentsWebhook(req, res) {
                     });
                     const timeMsg = paidBooking.time;
                     const notificationMsg = `${dateMsg} ${timeMsg} slot booked!`;
-                    // Emit to correct doctor room. Log emit event.
-                    const roomName = `doctor_${doctorId}`;
+                    // Emit to doctor user room (sockets join user:${userId})
+                    const roomName = `user:${doctorId}`;
                     logWithTag("NOTIFY", `Emitting notification to room: ${roomName}`);
                     server_1.io.to(roomName).emit("doctor_notification", {
                         message: notificationMsg,
@@ -99,19 +190,38 @@ function paymentsWebhook(req, res) {
                         createdAt: paidBooking.createdAt,
                         bookingsUrl: "/doctor/appointments",
                     });
-                    yield notification_schema_1.NotificationModel.create({
-                        userId: doctorId,
+                    // Idempotent notification (prevents duplicates on webhook retries); only emit when inserted
+                    const notifFilter = {
+                        userId: new mongoose_1.Types.ObjectId(doctorId),
                         userRole: "doctor",
                         type: "booking",
-                        message: notificationMsg,
-                        meta: {
-                            patientName: paidBooking.petName,
-                            date: paidBooking.date,
-                            time: paidBooking.time,
-                            bookingId: String(paidBooking._id),
+                        "meta.bookingId": String(paidBooking._id),
+                    };
+                    const notifUpsert = yield notification_schema_1.NotificationModel.updateOne(notifFilter, {
+                        $setOnInsert: {
+                            message: notificationMsg,
+                            meta: {
+                                patientName: paidBooking.petName,
+                                date: paidBooking.date,
+                                time: paidBooking.time,
+                                bookingId: String(paidBooking._id),
+                            },
+                            read: false,
                         },
-                        read: false,
-                    });
+                    }, { upsert: true, setDefaultsOnInsert: true });
+                    if (notifUpsert.upsertedCount === 1) {
+                        const notifDoc = yield notification_schema_1.NotificationModel.findOne(notifFilter).lean();
+                        if (notifDoc === null || notifDoc === void 0 ? void 0 : notifDoc._id) {
+                            server_1.io.to(roomName).emit("notification:new", {
+                                _id: notifDoc._id,
+                                message: notifDoc.message,
+                                createdAt: notifDoc.createdAt,
+                                read: notifDoc.read,
+                                type: notifDoc.type,
+                                meta: notifDoc.meta,
+                            });
+                        }
+                    }
                     logWithTag("NOTIFY", `Notification emitted for doctorId: ${doctorId}, bookingId: ${bookingId}`);
                 }
                 // --------- Marketplace Order Flow ---------

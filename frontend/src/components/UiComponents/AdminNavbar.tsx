@@ -25,6 +25,26 @@ const AdminNavbar: React.FC<NavbarProps> = ({ title, onMobileMenuToggle }) => {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const markAllAsRead = async () => {
+    try {
+      await httpClient.patch("/notifications/mark-all-read");
+      fetchNotifications();
+    } catch {
+      toast.error("Failed to mark notifications as read");
+    }
+  };
+
+  const handleNotificationClick = async (n: any) => {
+    try {
+      await httpClient.patch(`/notifications/${n.id}/read`);
+      setNotifications((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
+      );
+    } catch {
+      toast.error("Failed to mark notification as read");
+    }
+  };
+
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
@@ -116,9 +136,21 @@ const AdminNavbar: React.FC<NavbarProps> = ({ title, onMobileMenuToggle }) => {
                   className="fixed inset-0 z-20"
                   onClick={() => setIsNotifOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 bg-white border rounded-xl shadow-lg z-30">
+                <div
+                  className="absolute right-0 mt-2 w-80 bg-white border rounded-xl shadow-lg z-30"
+                >
                   <div className="p-4 border-b font-semibold text-gray-700">
-                    Notifications
+                    <div className="flex items-center justify-between">
+                      <span>Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          className="text-xs text-orange-600 hover:underline"
+                          onClick={markAllAsRead}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="max-h-80 overflow-y-auto">
@@ -128,11 +160,17 @@ const AdminNavbar: React.FC<NavbarProps> = ({ title, onMobileMenuToggle }) => {
                       notifications.map((n) => (
                         <div
                           key={n.id}
+                          onClick={() => handleNotificationClick(n)}
                           className={`p-4 border-b cursor-pointer ${
                             !n.read ? "bg-orange-50" : "hover:bg-gray-50"
                           }`}
                         >
-                          <p className="text-sm text-gray-900">{n.message}</p>
+                          <p className="text-sm text-gray-900">
+                            {n.message}
+                            {!n.read && (
+                              <span className="ml-2 w-2 h-2 bg-orange-500 rounded-full inline-block" />
+                            )}
+                          </p>
                           <p className="text-xs text-gray-500">
                             {new Date(n.createdAt).toLocaleString()}
                           </p>

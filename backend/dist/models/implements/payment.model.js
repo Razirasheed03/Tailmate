@@ -52,6 +52,8 @@ const PaymentSchema = new mongoose_1.Schema({
     },
     paymentIntentId: String,
     receiptUrl: String,
+    walletCredited: { type: Boolean, default: false },
+    walletCreditedAt: { type: Date, default: null },
 }, { timestamps: true });
 PaymentSchema.index({ doctorId: 1, createdAt: -1 });
 exports.PaymentModel = mongoose_1.default.model("Payment", PaymentSchema);

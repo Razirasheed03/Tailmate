@@ -224,11 +224,13 @@ class BookingRepository {
             return updated !== null && updated !== void 0 ? updated : null;
         });
     }
-    updateBookingStatus(bookingId, newStatus) {
+    updateBookingStatus(bookingId, newStatus, session) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!mongoose_1.Types.ObjectId.isValid(bookingId))
                 return null;
-            return yield this.model.findByIdAndUpdate(bookingId, { $set: { status: newStatus } }, { new: true }).lean();
+            return yield this.model
+                .findByIdAndUpdate(bookingId, { $set: { status: newStatus } }, { new: true, session })
+                .lean();
         });
     }
 }

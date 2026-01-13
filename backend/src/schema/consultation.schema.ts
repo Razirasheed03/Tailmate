@@ -12,7 +12,7 @@ const ConsultationSchema = new Schema(
     
     status: {
       type: String,
-      enum: ["upcoming", "in_progress", "completed", "cancelled"],
+      enum: ["upcoming", "in_progress", "completed", "cancelled", "cancelled_by_doctor"],
       default: "upcoming",
       index: true,
     },
@@ -23,6 +23,11 @@ const ConsultationSchema = new Schema(
     
     notes: { type: String, default: null },
     cancelledBy: { type: Types.ObjectId, ref: "User", default: null },
+    cancelledByRole: {
+      type: String,
+      enum: ["doctor", "user", "system"],
+      default: null,
+    },
     cancelledAt: { type: Date, default: null },
     cancellationReason: { type: String, default: null },
   },

@@ -165,6 +165,7 @@ app.use("/api/matchmaking", matchmakingRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/consultations", consultationRoutes);
+app.use("/api/consultation", consultationRoutes);
 
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error("Error handler:", err?.message);

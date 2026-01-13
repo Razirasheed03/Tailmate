@@ -7,7 +7,7 @@ import { MarketOrder } from "../../schema/marketOrder.schema";
 import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
 import { Pet } from "../../schema/pet.schema";
 import { Wallet } from "../../schema/wallet.schema";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { io } from "../../server"; // ensure server exports io!
 import { NotificationModel } from "../../schema/notification.schema";
 
@@ -39,20 +39,50 @@ export async function paymentsWebhook(req: Request, res: Response) {
         const bookingId = session.metadata?.bookingId as string | undefined;
         const doctorId = session.metadata?.doctorId as string | undefined;
 
-        if (!paymentId) {
-          logWithTag("ERROR", "No paymentDbId in metadata. Metadata was:", session.metadata);
-          return res.status(200).send("ok");
-        }
-
         const paymentIntentId = typeof session.payment_intent === "string"
           ? session.payment_intent
           : (session.payment_intent as Stripe.PaymentIntent | null)?.id || "";
-        logWithTag("PAYMENT", "Updating PaymentModel with paymentIntentId:", paymentIntentId);
 
-        await PaymentModel.findByIdAndUpdate(paymentId, {
-          paymentStatus: "success",
-          paymentIntentId,
-        }, { new: true }).lean();
+        // Ensure payment record exists and is updated (supports older sessions without paymentDbId)
+        let updatedPayment: any = null;
+        if (paymentId && Types.ObjectId.isValid(paymentId)) {
+          logWithTag("PAYMENT", "Updating PaymentModel by paymentDbId:", paymentId, "paymentIntentId:", paymentIntentId);
+          updatedPayment = await PaymentModel.findOneAndUpdate(
+            { _id: new Types.ObjectId(paymentId), paymentStatus: { $ne: "refunded" } },
+            { $set: { paymentStatus: "success", paymentIntentId } },
+            { new: true }
+          ).lean();
+        }
+
+        if (!updatedPayment && bookingId && Types.ObjectId.isValid(bookingId)) {
+          logWithTag("PAYMENT", "Updating PaymentModel by bookingId:", bookingId, "paymentIntentId:", paymentIntentId);
+          updatedPayment = await PaymentModel.findOneAndUpdate(
+            { bookingId: new Types.ObjectId(bookingId), paymentStatus: { $ne: "refunded" } },
+            { $set: { paymentStatus: "success", paymentIntentId } },
+            { new: true, sort: { createdAt: -1 } }
+          ).lean();
+        }
+
+        if (!updatedPayment && bookingId && Types.ObjectId.isValid(bookingId)) {
+          const bookingForPayment = await Booking.findById(bookingId).lean() as any;
+          if (bookingForPayment) {
+            const amountMajor = Number(bookingForPayment.amount || 0);
+            const platformFeeMajor = Math.round(amountMajor * 0.2);
+            const doctorEarningMajor = amountMajor - platformFeeMajor;
+            logWithTag("PAYMENT", "Creating missing PaymentModel for bookingId:", bookingId);
+            await PaymentModel.create({
+              patientId: bookingForPayment.patientId,
+              doctorId: bookingForPayment.doctorId,
+              bookingId: bookingForPayment._id,
+              amount: amountMajor,
+              platformFee: platformFeeMajor,
+              doctorEarning: doctorEarningMajor,
+              currency: bookingForPayment.currency || "INR",
+              paymentStatus: "success",
+              paymentIntentId,
+            });
+          }
+        }
 
         if (!bookingId) {
           logWithTag("ERROR", "No bookingId present in metadata for doctor checkout.");
@@ -63,16 +93,73 @@ export async function paymentsWebhook(req: Request, res: Response) {
           return res.status(200).send("ok");
         }
 
-        logWithTag("BOOKING", "Marking booking as paid:", bookingId);
-        await Booking.updateOne(
-          { _id: new Types.ObjectId(bookingId) },
-          {
-            status: "paid",
-            paidAt: new Date(),
-            paymentIntentId,
-            paymentSessionId: session.id,
-          }
-        );
+        const dbSession = await mongoose.startSession();
+        try {
+          await dbSession.withTransaction(async () => {
+            logWithTag("BOOKING", "Marking booking as paid:", bookingId);
+            const bookingPaidUpdate = await Booking.updateOne(
+              { _id: new Types.ObjectId(bookingId), status: { $in: ["pending", "failed"] } },
+              {
+                status: "paid",
+                paidAt: new Date(),
+                paymentIntentId,
+                paymentSessionId: session.id,
+              },
+              { session: dbSession }
+            );
+
+            // Wallet funding is required so later cancellations can debit doctor/admin without going negative.
+            // Make it crash-safe + idempotent by gating via Payment.walletCredited inside the same DB transaction.
+            if (bookingPaidUpdate.modifiedCount === 1) {
+              const paymentRow = await PaymentModel.findOne({
+                bookingId: new Types.ObjectId(bookingId),
+                paymentStatus: "success",
+              })
+                .sort({ createdAt: -1 })
+                .session(dbSession)
+                .lean();
+
+              if (!paymentRow) {
+                logWithTag("WALLET", "No success PaymentModel found to credit wallets. bookingId:", bookingId);
+                return;
+              }
+
+              const walletCreditGate = await PaymentModel.updateOne(
+                { _id: paymentRow._id, walletCredited: { $ne: true }, paymentStatus: "success" },
+                { $set: { walletCredited: true, walletCreditedAt: new Date() } },
+                { session: dbSession }
+              );
+
+              if (walletCreditGate.modifiedCount !== 1) {
+                return;
+              }
+
+              const currencyCode = (paymentRow.currency || "INR").toUpperCase();
+              const doctorEarnMinor = Math.round(Number(paymentRow.doctorEarning || 0) * 100);
+              const platformFeeMinor = Math.round(Number(paymentRow.platformFee || 0) * 100);
+
+              if (doctorEarnMinor > 0) {
+                await Wallet.updateOne(
+                  { ownerType: "doctor", ownerId: paymentRow.doctorId, currency: currencyCode },
+                  { $inc: { balanceMinor: doctorEarnMinor } },
+                  { upsert: true, session: dbSession }
+                );
+              }
+
+              if (platformFeeMinor > 0) {
+                await Wallet.updateOne(
+                  { ownerType: "admin", currency: currencyCode },
+                  { $inc: { balanceMinor: platformFeeMinor } },
+                  { upsert: true, session: dbSession }
+                );
+              }
+
+              logWithTag("WALLET", "Credited doctor/admin wallets for bookingId:", bookingId);
+            }
+          });
+        } finally {
+          dbSession.endSession();
+        }
 
         const paidBooking = await Booking.findOne(
           { _id: bookingId, status: "paid" }
@@ -99,8 +186,8 @@ export async function paymentsWebhook(req: Request, res: Response) {
         const timeMsg = paidBooking.time;
         const notificationMsg = `${dateMsg} ${timeMsg} slot booked!`;
 
-        // Emit to correct doctor room. Log emit event.
-        const roomName = `doctor_${doctorId}`;
+        // Emit to doctor user room (sockets join user:${userId})
+        const roomName = `user:${doctorId}`;
         logWithTag("NOTIFY", `Emitting notification to room: ${roomName}`);
         io.to(roomName).emit("doctor_notification", {
           message: notificationMsg,
@@ -111,19 +198,45 @@ export async function paymentsWebhook(req: Request, res: Response) {
           createdAt: paidBooking.createdAt,
           bookingsUrl: "/doctor/appointments",
         });
-        await NotificationModel.create({
-  userId: doctorId,
-  userRole: "doctor",
-  type: "booking",
-  message: notificationMsg,
-  meta: {
-    patientName: paidBooking.petName,
-    date: paidBooking.date,
-    time: paidBooking.time,
-    bookingId: String(paidBooking._id),
-  },
-  read: false,
-});
+
+        // Idempotent notification (prevents duplicates on webhook retries); only emit when inserted
+        const notifFilter = {
+          userId: new Types.ObjectId(doctorId),
+          userRole: "doctor",
+          type: "booking",
+          "meta.bookingId": String(paidBooking._id),
+        };
+
+        const notifUpsert = await NotificationModel.updateOne(
+          notifFilter,
+          {
+            $setOnInsert: {
+              message: notificationMsg,
+              meta: {
+                patientName: paidBooking.petName,
+                date: paidBooking.date,
+                time: paidBooking.time,
+                bookingId: String(paidBooking._id),
+              },
+              read: false,
+            },
+          },
+          { upsert: true, setDefaultsOnInsert: true }
+        );
+
+        if (notifUpsert.upsertedCount === 1) {
+          const notifDoc = await NotificationModel.findOne(notifFilter).lean();
+          if (notifDoc?._id) {
+            io.to(roomName).emit("notification:new", {
+              _id: notifDoc._id,
+              message: notifDoc.message,
+              createdAt: notifDoc.createdAt,
+              read: notifDoc.read,
+              type: notifDoc.type,
+              meta: notifDoc.meta,
+            });
+          }
+        }
 
         logWithTag("NOTIFY", `Notification emitted for doctorId: ${doctorId}, bookingId: ${bookingId}`);
       }

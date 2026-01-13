@@ -19,10 +19,9 @@ const Bookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "">("");
   const [modeFilter, setModeFilter] = useState<UIMode | "">("");
-  const [cancelId, setCancelId] = useState<string | null>(null);
   const [joiningCall, setJoiningCall] = useState<string | null>(null);
   const [callAvailability, setCallAvailability] = useState<Record<string, { canJoin: boolean; timeUntil: string }>>({});
-  const [consultationStatuses, setConsultationStatuses] = useState<Record<string, 'upcoming' | 'in_progress' | 'completed' | 'cancelled'>>({});
+  const [consultationStatuses, setConsultationStatuses] = useState<Record<string, 'upcoming' | 'in_progress' | 'completed' | 'cancelled' | 'cancelled_by_doctor'>>({});
 
   const limit = 10;
 
@@ -35,7 +34,7 @@ const Bookings = () => {
     if (bookings.length === 0) return;
 
     const fetchConsultationStatuses = async () => {
-      const statuses: Record<string, 'upcoming' | 'in_progress' | 'completed' | 'cancelled'> = {};
+      const statuses: Record<string, 'upcoming' | 'in_progress' | 'completed' | 'cancelled' | 'cancelled_by_doctor'> = {};
 
       for (const booking of bookings) {
         if (booking.status === "paid" && (booking.mode === "video" || booking.mode === "audio")) {
@@ -126,7 +125,6 @@ const Bookings = () => {
 
   // This version does NOT show any browser confirm/alert, only uses modal below:
   const handleCancelBooking = async (bookingId: string) => {
-    setCancelId(null);
     try {
       const { success, message } = await userService.cancelBooking(bookingId);
       if (success) {
@@ -468,7 +466,17 @@ const Bookings = () => {
                           </Button>
                         )}
                         <Button
-                          onClick={() => setCancelId(booking._id)}
+                          onClick={() => {
+                            toast('Cancel this booking?', {
+                              description: 'This will cancel the booking and refund if applicable.',
+                              action: {
+                                label: 'Confirm',
+                                onClick: async () => {
+                                  await handleCancelBooking(booking._id);
+                                },
+                              },
+                            });
+                          }}
                           className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium"
                         >
                           Cancel
@@ -507,36 +515,6 @@ const Bookings = () => {
           </div>
         )}
 
-        {/* Cancellation Confirmation Modal */}
-        {cancelId && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl w-full max-w-md p-6">
-              <h3 className="text-lg font-semibold mb-3">Cancel Booking</h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Are you sure you want to cancel this booking? This action cannot
-                be undone.
-              </p>
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCancelId(null)}
-                >
-                  No, Go Back
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={async () => {
-                    await handleCancelBooking(cancelId as string);
-                  }}
-                >
-                  Yes, Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

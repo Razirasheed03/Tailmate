@@ -5,6 +5,7 @@ import { IDoctorPublicRepository } from "../../repositories/interfaces/doctorPub
 import { generateBookingNumber } from "../../utils/generateBookingNumber";
 import { Booking } from "../../schema/booking.schema";
 import { stripe } from "../../utils/stripe";
+import { PaymentModel } from "../../models/implements/payment.model";
 import {
   ICheckoutService,
   QuoteInput,
@@ -176,6 +177,21 @@ export class CheckoutService implements ICheckoutService {
       paymentProvider: "stripe",
     } as any);
 
+    const amountMajor = Number(fee);
+    const platformFeeMajor = Math.round(amountMajor * 0.2);
+    const doctorEarningMajor = amountMajor - platformFeeMajor;
+
+    const payment = await PaymentModel.create({
+      patientId: new Types.ObjectId(userId),
+      doctorId: new Types.ObjectId(doctorId),
+      bookingId: booking._id,
+      amount: amountMajor,
+      platformFee: platformFeeMajor,
+      doctorEarning: doctorEarningMajor,
+      currency,
+      paymentStatus: "pending",
+    });
+
     try {
       const unitAmountMinor = Math.round(fee * 100);
       const frontendUrl = getFrontendUrl();
@@ -199,6 +215,9 @@ cancel_url: `${frontendUrl}/payments/cancel`,
             bookingId: String(booking._id),
             userId: String(userId),
             doctorId: String(doctorId),
+            kind: "doctor",
+            paymentDbId: String(payment._id),
+            patientId: String(userId),
           },
         },
         { idempotencyKey: `chk:${booking._id}:${userId}` }
@@ -219,6 +238,7 @@ cancel_url: `${frontendUrl}/payments/cancel`,
         redirectUrl: session.url ?? undefined,
       };
     } catch (err) {
+      await PaymentModel.deleteOne({ _id: payment._id });
       await Booking.deleteOne({ _id: booking._id });
       throw Object.assign(new Error("Failed to create payment session"), { status: 502 });
     }

@@ -7,6 +7,7 @@ import { doctorService } from "@/services/doctorService";
 import type { SessionDetail } from "@/types/doctor.types";
 import httpClient from "@/services/httpClient";
 import { consultationService } from "@/services/consultationService";
+import { toast } from "sonner";
 
 type PaymentView = {
   _id: string;
@@ -35,7 +36,9 @@ export default function SessionDetailPage() {
   const [startingCall, setStartingCall] = useState(false);
   const [canStartCall, setCanStartCall] = useState(false);
   const [timeUntilCall, setTimeUntilCall] = useState<string>("");
-  const [consultationStatus, setConsultationStatus] = useState<'upcoming' | 'in_progress' | 'completed' | 'cancelled' | null>(null);
+  const [consultationStatus, setConsultationStatus] = useState<'upcoming' | 'in_progress' | 'completed' | 'cancelled' | 'cancelled_by_doctor' | null>(null);
+  const [consultationId, setConsultationId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -77,6 +80,7 @@ export default function SessionDetailPage() {
           new Date(row?.date + "T" + row?.time).toISOString(),
           Number(row?.durationMins || 30)
         );
+        setConsultationId(consultation._id);
         setConsultationStatus(consultation.status);
       } catch (err) {
         console.error('Failed to fetch consultation status:', err);
@@ -212,6 +216,9 @@ export default function SessionDetailPage() {
                               scheduledFor,
                               durationMinutes
                             );
+
+                            setConsultationId(consultation._id);
+                            setConsultationStatus(consultation.status);
                             
                             console.log("[SessionDetail] Found consultation:", consultation._id);
                             
@@ -224,18 +231,37 @@ export default function SessionDetailPage() {
                             setStartingCall(false);
                           }
                         }}
-                        disabled={startingCall || !canStartCall || consultationStatus === 'completed'}
+                        disabled={
+                          startingCall ||
+                          !canStartCall ||
+                          consultationStatus === 'completed' ||
+                          consultationStatus === 'cancelled' ||
+                          consultationStatus === 'cancelled_by_doctor'
+                        }
                         className={`px-3 py-2 rounded text-white flex items-center gap-2 disabled:cursor-not-allowed ${
-                          consultationStatus === 'completed'
+                          consultationStatus === 'completed' ||
+                          consultationStatus === 'cancelled' ||
+                          consultationStatus === 'cancelled_by_doctor'
                             ? 'bg-gray-400 cursor-not-allowed'
                             : 'bg-green-600 hover:bg-green-700 disabled:bg-gray-400'
                         }`}
-                        title={consultationStatus === 'completed' ? 'Consultation completed' : (!canStartCall ? timeUntilCall : "")}
+                        title={
+                          consultationStatus === 'completed'
+                            ? 'Consultation completed'
+                            : consultationStatus === 'cancelled' || consultationStatus === 'cancelled_by_doctor'
+                              ? 'Consultation cancelled'
+                              : (!canStartCall ? timeUntilCall : "")
+                        }
                       >
                         {consultationStatus === 'completed' ? (
                           <>
                             <Phone className="w-4 h-4" />
                             Consultation Completed
+                          </>
+                        ) : consultationStatus === 'cancelled' || consultationStatus === 'cancelled_by_doctor' ? (
+                          <>
+                            <Phone className="w-4 h-4" />
+                            Consultation Cancelled
                           </>
                         ) : startingCall ? (
                           <>
@@ -253,6 +279,56 @@ export default function SessionDetailPage() {
                             Start Video Call
                           </>
                         )}
+                      </button>
+                    )}
+
+                    {consultationId && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            if (
+                              consultationStatus === 'completed' ||
+                              consultationStatus === 'cancelled' ||
+                              consultationStatus === 'cancelled_by_doctor'
+                            ) {
+                              return;
+                            }
+
+                            toast('Cancel this consultation?', {
+                              description: 'This will refund the user and reverse wallet amounts.',
+                              action: {
+                                label: 'Confirm',
+                                onClick: async () => {
+                                  try {
+                                    setCancelling(true);
+                                    await consultationService.cancelByDoctor(consultationId, '');
+                                    setConsultationStatus('cancelled_by_doctor');
+                                    toast.success('Consultation cancelled and user refunded');
+                                  } catch (e) {
+                                    console.error('Failed to cancel consultation:', e);
+                                    toast.error('Failed to cancel consultation');
+                                  } finally {
+                                    setCancelling(false);
+                                  }
+                                },
+                              },
+                            });
+                          } catch (err) {
+                            console.error('Failed to cancel consultation:', err);
+                            toast.error('Failed to cancel consultation');
+                          } finally {
+                            setCancelling(false);
+                          }
+                        }}
+                        disabled={
+                          cancelling ||
+                          consultationStatus === 'completed' ||
+                          consultationStatus === 'cancelled' ||
+                          consultationStatus === 'cancelled_by_doctor'
+                        }
+                        className="px-3 py-2 rounded text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {cancelling ? 'Cancelling...' : 'Cancel Consultation'}
                       </button>
                     )}
                   </div>

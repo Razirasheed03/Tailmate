@@ -152,6 +152,7 @@ app.use("/api/matchmaking", matchmaking_route_1.default);
 app.use("/api/chat", chat_route_1.default);
 app.use("/api/upload", upload_route_1.default);
 app.use("/api/consultations", consultation_route_1.default);
+app.use("/api/consultation", consultation_route_1.default);
 app.use((err, _req, res, _next) => {
     console.error("Error handler:", err === null || err === void 0 ? void 0 : err.message);
     res.status(err.status || 400).json({
