@@ -16,9 +16,10 @@ function validateUrl(url: string, name: string): string {
 
 export const getFrontendUrl = (): string => {
   const rawUrl =
-    process.env.NODE_ENV === "production"
-      ? process.env.FRONTEND_URL
-      : process.env.FRONTEND_URL || "http://localhost:3000";
+    process.env.FRONTEND_URL ||
+    (process.env.NODE_ENV === "production"
+      ? "https://tailmate-care.vercel.app"
+      : "http://localhost:3000");
 
   if (!rawUrl) {
     throw new Error("FRONTEND_URL is required");
