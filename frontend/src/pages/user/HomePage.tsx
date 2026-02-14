@@ -333,7 +333,10 @@ export default function HomePage() {
       <footer className="mt-2 bg-white/80 backdrop-blur border-t border-[#EEF2F7]">
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-[#6B7280]">© 2025 TailMate. All rights reserved.</p>
+            <p className="text-sm text-[#6B7280]">
+  © {new Date().getFullYear()} TailMate. All rights reserved.
+</p>
+
         
           </div>
         </div>
