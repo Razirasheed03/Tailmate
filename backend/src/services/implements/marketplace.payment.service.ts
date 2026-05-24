@@ -5,6 +5,7 @@ import { MarketOrder } from "../../schema/marketOrder.schema";
 import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
 import { IMarketplacePaymentService, CreateSessionPayload, CreateSessionResp } from "../interfaces/marketplace.payment.service.interface";
 import { getFrontendUrl } from "../../config/url.config";
+import { splitMarketplaceAmount } from "./marketplaceOrderFulfillment.service";
 
 export class MarketplacePaymentService implements IMarketplacePaymentService {
   async createCheckoutSession(payload: CreateSessionPayload, buyerId: string): Promise<CreateSessionResp> {
@@ -19,6 +20,7 @@ export class MarketplacePaymentService implements IMarketplacePaymentService {
     if (amount <= 0) throw new Error("Invalid amount");
 
     const sellerId = String(listing.sellerId || listing.userId);
+    const { platformFeeMajor, sellerEarningMajor } = splitMarketplaceAmount(amount);
 
     // Create order
     const order = await MarketOrder.create({
@@ -27,6 +29,8 @@ export class MarketplacePaymentService implements IMarketplacePaymentService {
       buyerId: new Types.ObjectId(buyerId),
       sellerId: new Types.ObjectId(sellerId),
       amount,
+      platformFee: platformFeeMajor,
+      sellerEarning: sellerEarningMajor,
       currency: "INR",
       status: "created",
     });

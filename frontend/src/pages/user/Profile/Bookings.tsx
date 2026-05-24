@@ -6,6 +6,11 @@ import userService from "@/services/userService";
 import type { BookingRow, BookingStatus, UIMode } from "@/types/booking.types";
 import { Button } from "@/components/UiComponents/button";
 import { consultationService } from "@/services/consultationService";
+import {
+  formatDateIST,
+  formatTimeIST,
+  parseBookingDateTimeIST,
+} from "@/utils/dateTime";
 
 const Bookings = () => {
   const nav = useNavigate();
@@ -42,7 +47,7 @@ const Bookings = () => {
             const consultation = await consultationService.getOrCreateFromBooking(
               booking._id,
               booking.doctorId,
-              new Date(booking.date + "T" + booking.time).toISOString(),
+              parseBookingDateTimeIST(booking.date, booking.time).toISOString(),
               Number(booking.durationMins)
             );
             statuses[booking._id] = consultation.status;
@@ -67,7 +72,7 @@ const Bookings = () => {
 
       bookings.forEach((booking) => {
         if (booking.status === "paid" && (booking.mode === "video" || booking.mode === "audio")) {
-          const scheduledTime = new Date(booking.date + "T" + booking.time);
+          const scheduledTime = parseBookingDateTimeIST(booking.date, booking.time);
           const now = new Date();
           const diffMs = scheduledTime.getTime() - now.getTime();
           const diffMinutes = Math.floor(diffMs / 60000);
@@ -339,13 +344,13 @@ const Bookings = () => {
                         <div>
                           <p className="text-gray-500">Date</p>
                           <p className="font-medium text-gray-900">
-                            {booking.date}
+                            {formatDateIST(booking.date)}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Time</p>
                           <p className="font-medium text-gray-900">
-                            {booking.time}
+                            {formatTimeIST(booking.date, booking.time)}
                           </p>
                         </div>
                         <div>
@@ -388,7 +393,10 @@ const Bookings = () => {
                                 // Ensure all values are properly formatted
                                 const bookingId = String(booking._id).trim();
                                 const doctorId = String(booking.doctorId).trim();
-                                const scheduledFor = new Date(booking.date + "T" + booking.time).toISOString();
+                                const scheduledFor = parseBookingDateTimeIST(
+                                  booking.date,
+                                  booking.time
+                                ).toISOString();
                                 const durationMinutes = Number(booking.durationMins);
                                 
                                 console.log("[Bookings] Calling getOrCreateFromBooking with:", {

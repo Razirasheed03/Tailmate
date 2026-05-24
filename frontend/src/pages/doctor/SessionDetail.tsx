@@ -8,6 +8,10 @@ import type { SessionDetail } from "@/types/doctor.types";
 import httpClient from "@/services/httpClient";
 import { consultationService } from "@/services/consultationService";
 import { toast } from "sonner";
+import {
+  formatBookingDateTimeIST,
+  parseBookingDateTimeIST,
+} from "@/utils/dateTime";
 
 type PaymentView = {
   _id: string;
@@ -21,10 +25,7 @@ type PaymentView = {
 };
 
 function label(dt: { date: string; time: string }) {
-  const [h, m] = dt.time.split(":").map(Number);
-  const d = new Date(dt.date + "T00:00:00Z");
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleString(undefined, { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return formatBookingDateTimeIST(dt.date, dt.time);
 }
 
 export default function SessionDetailPage() {
@@ -77,7 +78,7 @@ export default function SessionDetailPage() {
         const consultation = await consultationService.getOrCreateFromBooking(
           id,
           row?.doctorId || '',
-          new Date(row?.date + "T" + row?.time).toISOString(),
+          parseBookingDateTimeIST(row?.date || "", row?.time || "").toISOString(),
           Number(row?.durationMins || 30)
         );
         setConsultationId(consultation._id);
@@ -97,7 +98,7 @@ export default function SessionDetailPage() {
     if (!row) return;
 
     const checkCallTiming = () => {
-      const scheduledTime = new Date(row.date + "T" + row.time);
+      const scheduledTime = parseBookingDateTimeIST(row.date, row.time);
       const now = new Date();
       const diffMs = scheduledTime.getTime() - now.getTime();
       const diffMinutes = Math.floor(diffMs / 60000);
@@ -207,7 +208,10 @@ export default function SessionDetailPage() {
                             // Get or create consultation from booking
                             // This is atomic and ensures only ONE consultation per booking
                             const doctorId = String(row.doctorId).trim();
-                            const scheduledFor = new Date(row.date + "T" + row.time).toISOString();
+                            const scheduledFor = parseBookingDateTimeIST(
+                              row.date,
+                              row.time
+                            ).toISOString();
                             const durationMinutes = Number(row.durationMins);
                             
                             const consultation = await consultationService.getOrCreateFromBooking(

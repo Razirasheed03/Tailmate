@@ -5,10 +5,6 @@ import { authJwt } from "../middlewares/authJwt";
 
 const router = Router();
 
-// webhook: raw body mount in server.ts for this path
-router.post("/webhook", paymentController.webhook);
-
-// auth routes
 router.post("/create-checkout-session", authJwt, paymentController.createSession);
 router.get("/doctor", authJwt, paymentController.doctorPayments);
 

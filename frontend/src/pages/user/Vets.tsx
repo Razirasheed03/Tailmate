@@ -4,6 +4,7 @@ import Navbar from "@/components/UiComponents/UserNavbar";
 import { vetsService } from "@/services/vetsService";
 import { type DoctorCard } from "@/types/doctor.types";
 import { Link } from "react-router-dom";
+import { formatDateIST, formatTimeStringIST } from "@/utils/dateTime";
 
 export default function Vets() {
   const [query, setQuery] = useState("");
@@ -137,7 +138,7 @@ useEffect(() => {
                   </div>
                   {d.nextSlot ? (
                     <div className="text-sm">
-                      {d.nextSlot.date} • {d.nextSlot.time}
+                      {formatDateIST(d.nextSlot.date)} • {formatTimeStringIST(d.nextSlot.time)}
                     </div>
                   ) : (
                     <div className="text-sm text-gray-500">

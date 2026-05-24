@@ -5,8 +5,10 @@ import Navbar from '@/components/UiComponents/UserNavbar';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import { chatService } from '@/services/chatService';
+import { useRealtimeOptional } from '@/context/RealtimeContext';
 
 export default function ChatPage() {
+  const realtime = useRealtimeOptional();
   const [searchParams] = useSearchParams();
   const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
@@ -37,6 +39,10 @@ export default function ChatPage() {
       console.error('Failed to get user:', err);
     }
   }, []);
+
+  useEffect(() => {
+    realtime?.clearChatUnread();
+  }, [realtime]);
 
   // Initialize Socket.IO
   useEffect(() => {

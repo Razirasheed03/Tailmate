@@ -8,10 +8,23 @@ export const matchmakingService = {
     return res.data?.data ?? res.data;
   },
 
+  getById: async (id: string): Promise<any> => {
+    const res: AxiosResponse<ApiResponse<any>> = await httpClient.get(
+      `/matchmaking/${id}`,
+      { skipAuth: true, skipAuthRefresh: true, suppressGlobalErrorToast: true }
+    );
+    return res.data?.data ?? res.data;
+  },
+
   listPublic: async (params: any): Promise<PaginatedResponse<any>> => {
     const res: AxiosResponse<ApiResponse<PaginatedResponse<any>>> = await httpClient.get(
       '/matchmaking/list',
-      { params }
+      {
+        params,
+        skipAuth: true,
+        skipAuthRefresh: true,
+        suppressGlobalErrorToast: true,
+      }
     );
 
     const r = res.data?.data ?? res.data;

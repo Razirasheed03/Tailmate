@@ -3,8 +3,11 @@ import { Request, Response, NextFunction } from "express";
 import { IUserService } from "../../services/interfaces/user.service.interface";
 import { ResponseHelper } from "../../http/ResponseHelper";
 import { HttpResponse } from "../../constants/messageConstant";
+import { Types } from "mongoose";
 import { Wallet } from "../../schema/wallet.schema";
 import { PaymentModel } from "../../models/implements/payment.model";
+import { MarketOrder } from "../../schema/marketOrder.schema";
+import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
 
 export class UserController {
   constructor(private readonly service: IUserService) {}
@@ -224,7 +227,11 @@ export class UserController {
       if (!userId)
         return res.status(401).json({ success: false, message: "Unauthorized" });
 
-      const wallet = await Wallet.findOne({ ownerType: "user", ownerId: userId });
+      const wallet = await Wallet.findOne({
+        ownerType: "user",
+        ownerId: new Types.ObjectId(userId),
+        currency: "INR",
+      });
       if (!wallet) {
         return res.json({
           success: true,
@@ -247,14 +254,57 @@ export class UserController {
       if (!userId)
         return res.status(401).json({ success: false, message: "Unauthorized" });
 
-      // Only refunds
-      const transactions = await PaymentModel.find({
+      const refunds = await PaymentModel.find({
         patientId: userId,
         paymentStatus: "refunded",
       })
         .sort({ createdAt: -1 })
         .select("amount currency createdAt bookingId paymentStatus")
         .lean();
+
+      const sales = await MarketOrder.find({
+        sellerId: new Types.ObjectId(userId),
+        status: "paid",
+        walletCredited: true,
+      })
+        .sort({ createdAt: -1 })
+        .select("amount sellerEarning currency createdAt listingId status")
+        .lean();
+
+      const listingIds = sales
+        .map((s) => s.listingId)
+        .filter((id) => id && Types.ObjectId.isValid(String(id)));
+
+      const listings =
+        listingIds.length > 0
+          ? await MarketplaceListing.find({ _id: { $in: listingIds } })
+              .select("_id title")
+              .lean()
+          : [];
+
+      const listingTitleById = new Map(
+        listings.map((l) => [String(l._id), l.title])
+      );
+
+      const transactions = [
+        ...refunds.map((r) => ({
+          ...r,
+          kind: "refund" as const,
+        })),
+        ...sales.map((s) => ({
+          _id: s._id,
+          kind: "marketplace_sale" as const,
+          amount: s.sellerEarning ?? s.amount,
+          currency: s.currency,
+          createdAt: (s as any).createdAt,
+          listingId: s.listingId,
+          listingTitle: listingTitleById.get(String(s.listingId)) || undefined,
+          paymentStatus: s.status,
+        })),
+      ].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
       res.json({ success: true, data: transactions });
     } catch (err) {

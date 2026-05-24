@@ -6,6 +6,7 @@ import { sendOtpEmail } from "../../utils/sendEmail";
 import type { SignupInput } from "../../validation/userSchemas";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
+import { createAccessTokenForUser } from "../../utils/accessTokenForUser";
 import crypto from "crypto";
 import { sendResetPasswordLink } from "../../utils/sendResetPasswordLink";
 import { IUserRepository } from "../../repositories/interfaces/user.repository.interface";
@@ -14,6 +15,7 @@ import { OAuth2Client } from "google-auth-library";
 import { DoctorModel } from "../../models/implements/doctor.model";
 import { Doctor } from "../../schema/doctor.schema";
 import { getFrontendUrl } from "../../config/url.config";
+import { BlockedUserError } from "../../http/errors";
 
 const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -43,7 +45,7 @@ export class AuthService implements IAuthService {
         createdAt,
       })
     );
-    console.log(result, otp);
+    console.log(result, "OTP sent");
     sendOtpEmail(user.email, otp);
 
     return { success: true, message: "OTP sent to email" };
@@ -61,22 +63,13 @@ export class AuthService implements IAuthService {
     const redisData = await redisClient.get(key);
     if (!redisData) throw new Error("OTP expired or not found");
     const parsed = JSON.parse(redisData);
-    if (!parsed.createdAt || Date.now() - parsed.createdAt > 30 * 1000) {
+    if (!parsed.createdAt || Date.now() - parsed.createdAt > 5 * 60 * 1000) {
       throw new Error("OTP expired");
     }
     if (parsed.otp !== otp) throw new Error("Invalid OTP");
 
     const { otp: _, ...userData } = parsed;
     const createdUser = await this._userRepo.createUser(userData);
-    console.log(
-      "VALUES for verification:",
-      "Submitted OTP:",
-      otp,
-      "Redis object:",
-      parsed,
-      "CreatedAt diff (ms):",
-      Date.now() - parsed.createdAt
-    );
 
     const userId = createdUser.id.toString();
     const role = createdUser.role;
@@ -108,10 +101,7 @@ export class AuthService implements IAuthService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     parsed.otp = otp;
     parsed.createdAt = Date.now();
-    await redisClient.setEx(key, 300, JSON.stringify(parsed)); //5 min for resended otp set aavan.
-    console.log("parsed.createdAT", parsed.createdAt);
-    console.log(otp);
-
+    await redisClient.setEx(key, 300, JSON.stringify(parsed));
     await sendOtpEmail(email, otp);
   };
   refreshToken = async (
@@ -139,8 +129,7 @@ export class AuthService implements IAuthService {
     if (storedToken !== refreshToken)
       throw new Error("Refresh token is revoked or does not match");
 
-    // Generate new access token
-    const accessToken = generateAccessToken(userId);
+    const accessToken = await createAccessTokenForUser(userId);
     return { accessToken };
   };
 login = async (
@@ -158,7 +147,7 @@ login = async (
   if (!isMatch) throw new Error("Invalid email or password");
 
   if (user.isBlocked) {
-    throw new Error("You are banned and cannot login.");
+    throw new BlockedUserError();
   }
 
   const userId = user.id.toString();
@@ -226,7 +215,7 @@ login = async (
     }
 
     if (user.isBlocked) {
-      throw new Error("You are banned and cannot login.");
+      throw new BlockedUserError();
     }
 
     const userId = user.id.toString();
@@ -269,11 +258,7 @@ login = async (
     const baseUrl = getFrontendUrl();
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&id=${user._id}`;
 
-    // Log for validation: resetUrl should be a pure URL (no extra text)
-    console.log("[FORGOT_PASSWORD] resetUrl:", resetUrl);
-
     await sendResetPasswordLink(user.email, "Password Reset", resetUrl);
-    // NOTE: sendOtpEmail could be renamed for generic mail
   };
 
   resetPassword = async (

@@ -5,12 +5,25 @@ export class AppError extends Error {
     public code: string,
     message: string,
     public details?: unknown
-  ) { super(message); }
+  ) {
+    super(message);
+  }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message = 'Not found') { super(404, 'NOT_FOUND', message); }
+  constructor(message = "Not found") {
+    super(404, "NOT_FOUND", message);
+  }
 }
+
 export class ValidationAppError extends AppError {
-  constructor(message = 'Validation failed', details?: unknown) { super(400, 'VALIDATION_ERROR', message, details); }
+  constructor(message = "Validation failed", details?: unknown) {
+    super(400, "VALIDATION_ERROR", message, details);
+  }
+}
+
+export class BlockedUserError extends AppError {
+  constructor(message = "Your account has been blocked by admin.") {
+    super(403, "USER_BLOCKED", message);
+  }
 }

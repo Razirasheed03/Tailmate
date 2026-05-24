@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/implements/user.model";
 import { UserRole } from "../constants/roles";
+import { env } from "../config/env";
 
 export const requireAdmin: RequestHandler = async (req, res, next) => {
   try {
@@ -12,7 +13,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string };
 
     const user = await UserModel.findById(decoded.id);
     if (!user || user.role !== UserRole.ADMIN) {

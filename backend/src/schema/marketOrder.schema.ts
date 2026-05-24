@@ -7,11 +7,15 @@ const MarketOrderSchema = new Schema({
   buyerId: { type: Types.ObjectId, required: true, index: true },
   sellerId: { type: Types.ObjectId, required: true, index: true },
   amount: { type: Number, required: true }, // major units (e.g., rupees)
+  platformFee: { type: Number, default: null },
+  sellerEarning: { type: Number, default: null },
   currency: { type: String, default: "INR" },
   stripeSessionId: { type: String, default: null },
   paymentIntentId: { type: String, default: null },
   chargeId: { type: String, default: null }, // nullable
-  status: { type: String, enum: ["created", "paid", "failed"], default: "created", index: true }, // no "transferred" since we do internal wallet
+  walletCredited: { type: Boolean, default: false },
+  walletCreditedAt: { type: Date, default: null },
+  status: { type: String, enum: ["created", "paid", "failed"], default: "created", index: true },
 }, { timestamps: true });
 
 export const MarketOrder = model("MarketOrder", MarketOrderSchema);

@@ -17,6 +17,29 @@ const Login = () => {
   const { login } = useAuth();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("blocked") === "true";
+    const fromSession = sessionStorage.getItem("auth_blocked") === "1";
+
+    if (!fromUrl && !fromSession) return;
+
+    // Consume immediately so React Strict Mode does not show duplicate toasts
+    sessionStorage.removeItem("auth_blocked");
+
+    toast.error("Your account has been blocked by admin.", { duration: 6000 });
+
+    if (fromUrl) {
+      params.delete("blocked");
+      const qs = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (qs ? `?${qs}` : "")
+      );
+    }
+  }, []);
+
+  useEffect(() => {
      const params = new URLSearchParams(window.location.search);
   const tokenFromGoogle = params.get("accessToken");
   const userFromGoogle = params.get("user");
@@ -101,7 +124,7 @@ const handleLogin = async (e: React.FormEvent) => {
     }
 
     if (user.isBlocked) {
-      toast.error("Account is blocked");
+      toast.error("Your account has been blocked by admin.", { duration: 6000 });
       return;
     }
 
@@ -116,9 +139,14 @@ const handleLogin = async (e: React.FormEvent) => {
       navigate(APP_ROUTES.USER_HOME);
     }
   } catch (error: any) {
+    const data = error?.response?.data;
+    if (data?.code === "USER_BLOCKED" || data?.message?.toLowerCase?.().includes("blocked")) {
+      toast.error("Your account has been blocked by admin.", { duration: 6000 });
+      return;
+    }
     const msg =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
+      data?.message ||
+      data?.error ||
       "Invalid email or password";
     toast.error(msg);
   } finally {

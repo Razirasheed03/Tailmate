@@ -1,4 +1,5 @@
 // backend/src/services/implements/payout.service.ts
+import { Types } from "mongoose";
 import { Wallet } from "../../schema/wallet.schema";
 import { Payout } from "../../schema/payout.schema";
 import { DoctorModel } from "../../models/implements/doctor.model";
@@ -8,24 +9,30 @@ import { IPayoutService } from "../interfaces/payout.service.interface";
 
 export class PayoutService implements IPayoutService{
   async requestPayout(ownerType: "user" | "doctor", ownerId: string, amount: number, currency: string) {
-    // Ensure enough balance
-    const wallet = await Wallet.findOne({ ownerType, ownerId, currency });
-    if (!wallet || wallet.balanceMinor < amount * 100) {
+    const ownerObjectId = new Types.ObjectId(ownerId);
+    const currencyCode = currency.toUpperCase();
+    const amountMinor = Math.round(amount * 100);
+
+    const wallet = await Wallet.findOne({
+      ownerType,
+      ownerId: ownerObjectId,
+      currency: currencyCode,
+    });
+    if (!wallet || wallet.balanceMinor < amountMinor) {
       throw new Error("Insufficient wallet balance");
     }
 
-    // Deduct wallet balance immediately (optimistic approach)
     await Wallet.updateOne(
-      { ownerType, ownerId, currency },
-      { $inc: { balanceMinor: -Math.round(amount * 100) } }
+      { ownerType, ownerId: ownerObjectId, currency: currencyCode },
+      { $inc: { balanceMinor: -amountMinor } }
     );
 
     // Create payout request
     const payout = await Payout.create({
       ownerType,
-      ownerId,
-      amountMinor: Math.round(amount * 100),
-      currency,
+      ownerId: ownerObjectId,
+      amountMinor,
+      currency: currencyCode,
       status: "pending",
       requestedAt: new Date(),
     });
@@ -47,7 +54,11 @@ export class PayoutService implements IPayoutService{
     }, { new: true });
     if (payout) {
       await Wallet.updateOne(
-        { ownerType: payout.ownerType, ownerId: payout.ownerId, currency: payout.currency },
+        {
+          ownerType: payout.ownerType,
+          ownerId: payout.ownerId,
+          currency: payout.currency,
+        },
         { $inc: { balanceMinor: payout.amountMinor } }
       );
     }

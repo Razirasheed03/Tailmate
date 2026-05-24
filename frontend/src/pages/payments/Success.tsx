@@ -56,6 +56,8 @@ export default function Success() {
   const [session, setSession] = useState<SessionView | undefined>(undefined);
   const [payment, setPayment] = useState<PaymentView | undefined>(undefined);
   const [marketplaceConfirmed, setMarketplaceConfirmed] = useState(false);
+  const [marketOrder, setMarketOrder] = useState<any>(null);
+  const [marketListing, setMarketListing] = useState<any>(null);
   const [ui, setUi] = useState<UiState>({
     phase: "loading",
     title: "Verifying payment…",
@@ -106,6 +108,18 @@ export default function Success() {
             const od = o?.data?.data;
             if (od?.status === "paid") {
               setMarketplaceConfirmed(true);
+              setMarketOrder(od);
+              if (od.listingId) {
+                try {
+                  const l = await httpClient.get<{ success: boolean; data: any }>(
+                    `/marketplace/listings/${od.listingId}`,
+                    { skipAuth: true, skipAuthRefresh: true, suppressGlobalErrorToast: true }
+                  );
+                  setMarketListing(l?.data?.data);
+                } catch {
+                  /* optional */
+                }
+              }
               setUi({
                 phase: "success",
                 title: "Payment successful",
@@ -121,6 +135,7 @@ export default function Success() {
             const ld = l?.data?.data;
             if (ld?.status === "closed") {
               setMarketplaceConfirmed(true);
+              setMarketListing(ld);
               setUi({
                 phase: "success",
                 title: "Payment successful",
@@ -297,25 +312,47 @@ export default function Success() {
       isMarketplace &&
       (marketplaceConfirmed || session?.payment_status === "paid")
     ) {
+      const amount =
+        marketOrder?.amount ??
+        marketListing?.price;
+      const title = marketListing?.title || "Marketplace purchase";
+      const refSuffix = (marketOrder?._id || qOrderId || "").toString().slice(-8).toUpperCase();
+
       return (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <span className="text-blue-700">Order:</span>{" "}
-              {session?.orderId || qOrderId}
-            </div>
-            <div>
-              <span className="text-blue-700">Listing:</span>{" "}
-              {session?.listingId || qListingId}
-            </div>
-            <div>
-              <span className="text-blue-700">Stripe:</span> {session?.id}
-            </div>
-            <div>
-              <span className="text-blue-700">Status:</span>{" "}
-              {marketplaceConfirmed ? "confirmed" : "processing"}
-            </div>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-sm text-emerald-900 space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-emerald-800">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            Order confirmed
           </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <p className="text-emerald-700 text-xs uppercase tracking-wide">Item</p>
+              <p className="font-medium">{title}</p>
+            </div>
+            <div>
+              <p className="text-emerald-700 text-xs uppercase tracking-wide">Payment</p>
+              <p className="font-medium capitalize">
+                {marketplaceConfirmed ? "Paid" : "Processing"}
+              </p>
+            </div>
+            {amount != null && Number(amount) > 0 && (
+              <div>
+                <p className="text-emerald-700 text-xs uppercase tracking-wide">Amount</p>
+                <p className="font-medium">
+                  ₹{Number(amount).toLocaleString("en-IN")}
+                </p>
+              </div>
+            )}
+            {refSuffix && (
+              <div>
+                <p className="text-emerald-700 text-xs uppercase tracking-wide">Reference</p>
+                <p className="font-mono font-medium">ORD-{refSuffix}</p>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-emerald-800/80">
+            The seller has been notified. You can view contact details on the listing page if needed.
+          </p>
         </div>
       );
     }
@@ -324,10 +361,7 @@ export default function Success() {
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-800">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <span className="text-gray-600">Stripe session:</span> {session?.id}
-          </div>
-          <div>
-            <span className="text-gray-600">Stripe status:</span>{" "}
+            <span className="text-gray-600">Status:</span>{" "}
             {session?.payment_status || "unknown"}
           </div>
         </div>
@@ -426,8 +460,8 @@ export default function Success() {
               </p>
             ) : ui.phase === "error" ? (
               <p>
-                If this keeps happening, contact support with your Stripe
-                session id {session?.id}.
+                If this keeps happening, contact support with your order reference from
+                the confirmation email.
               </p>
             ) : (
               <p>Verifying your payment details…</p>

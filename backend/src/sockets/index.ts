@@ -5,6 +5,8 @@ import { IConsultationService } from "../services/interfaces/consultation.servic
 import { IChatService } from "../services/interfaces/chat.service.interface";
 import { NotificationModel } from "../schema/notification.schema";
 import { Types } from "mongoose";
+import { UserModel } from "../models/implements/user.model";
+import { env } from "../config/env";
 
 interface AuthSocket extends Socket {
   userId?: string;
@@ -17,23 +19,33 @@ export function initializeSocketServer(
   chatService: IChatService
 ) {
   // Middleware: Authenticate ALL connections
-  io.use((socket: AuthSocket, next) => {
-    const token = socket.handshake.auth.token || 
-                  socket.handshake.headers.authorization?.split(" ")[1];
-    
+  io.use(async (socket: AuthSocket, next) => {
+    const token =
+      socket.handshake.auth.token ||
+      socket.handshake.headers.authorization?.split(" ")[1];
+
     if (!token) {
       return next(new Error("Authentication required"));
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { 
-        id: string; 
-        username?: string; 
+      const decoded = jwt.verify(token, env.JWT_SECRET) as {
+        id: string;
+        username?: string;
       };
+
+      const user = await UserModel.findById(decoded.id).select("isBlocked");
+      if (!user) {
+        return next(new Error("Invalid token"));
+      }
+      if (user.isBlocked) {
+        return next(new Error("Account blocked"));
+      }
+
       socket.userId = decoded.id;
       socket.username = decoded.username;
       next();
-    } catch (err) {
+    } catch {
       next(new Error("Invalid token"));
     }
   });

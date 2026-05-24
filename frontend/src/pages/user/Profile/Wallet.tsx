@@ -1,9 +1,21 @@
 import { useState, useEffect } from "react";
 import userService from "@/services/userService";
 
+type WalletTransaction = {
+  _id: string;
+  kind?: "refund" | "marketplace_sale";
+  amount: number;
+  currency?: string;
+  createdAt: string;
+  bookingNumber?: string;
+  listingId?: string;
+  listingTitle?: string;
+  paymentStatus?: string;
+};
+
 const Wallet = () => {
   const [wallet, setWallet] = useState<any>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,8 +34,8 @@ const Wallet = () => {
         } else {
           setTransactions([]);
         }
-      } catch (err) {
-        setError('Failed to load wallet data');
+      } catch {
+        setError("Failed to load wallet data");
       }
       setLoading(false);
     }
@@ -37,7 +49,17 @@ const Wallet = () => {
     }).format(amount);
   }
 
+  function txLabel(tx: WalletTransaction) {
+    if (tx.kind === "marketplace_sale") {
+      return tx.listingTitle || "Marketplace sale";
+    }
+    return tx.bookingNumber || "Booking refund";
+  }
 
+  function txStatus(tx: WalletTransaction) {
+    if (tx.kind === "marketplace_sale") return "Sale credited";
+    return "Refunded";
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6 min-h-screen bg-gray-50">
@@ -52,7 +74,6 @@ const Wallet = () => {
         </div>
       )}
 
-      {/* Balance Section */}
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex items-center justify-between">
         <div>
           <span className="text-gray-500">Balance</span>
@@ -64,7 +85,6 @@ const Wallet = () => {
         </div>
       </div>
 
-      {/* Transaction History */}
       <div className="bg-white rounded-lg shadow p-4">
         <h2 className="text-xl font-semibold mb-3">Transaction History</h2>
         {loading ? (
@@ -75,8 +95,8 @@ const Wallet = () => {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-2 px-2">Date</th>
-                  <th className="text-left py-2 px-2">Booking No.</th>
-                  <th className="text-left py-2 px-2">Refunded Amount</th>
+                  <th className="text-left py-2 px-2">Description</th>
+                  <th className="text-left py-2 px-2">Amount</th>
                   <th className="text-left py-2 px-2">Status</th>
                 </tr>
               </thead>
@@ -84,34 +104,29 @@ const Wallet = () => {
                 {transactions.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-gray-500 text-center py-6">
-                      No wallet credits/refunds yet
+                      No wallet credits yet
                     </td>
                   </tr>
                 ) : (
                   transactions.map((tx) => (
                     <tr key={tx._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-2">
-                        {new Date(tx.createdAt).toLocaleDateString('en-IN', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                        {new Date(tx.createdAt).toLocaleDateString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          timeZone: "Asia/Kolkata",
                         })}
                       </td>
-                      <td className="py-3 px-2 font-mono text-sm">
-                       <td className="py-3 px-2 font-mono text-sm">
-  {tx.bookingNumber}
-</td>
-
-                      </td>
+                      <td className="py-3 px-2 text-sm">{txLabel(tx)}</td>
                       <td className="py-3 px-2 font-medium text-green-700">
-                        {/* FIX: NO / 100! */}
                         + {formatINR(tx.amount)}
                       </td>
                       <td className="py-3 px-2">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Refunded
+                          {txStatus(tx)}
                         </span>
                       </td>
                     </tr>

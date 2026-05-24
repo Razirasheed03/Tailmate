@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { env } from "../config/env";
 
 /**
  * Generate access token with proper payload structure
@@ -8,13 +9,13 @@ import jwt from "jsonwebtoken";
  */
 export function generateAccessToken(userId: string, role?: string, doctorId?: string) {
   const payload = {
-    id: userId,              // User._id
+    id: userId,
     role: role || "user",
-    doctorId: doctorId || null,  // Doctor._id if role === "doctor"
+    doctorId: doctorId || null,
   };
-  return jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: "15m" });
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: "15m" });
 }
 
 export function generateRefreshToken(userId: string) {
-  return jwt.sign({ id: userId }, process.env.REFRESH_SECRET!, { expiresIn: "7d" });
+  return jwt.sign({ id: userId }, env.REFRESH_SECRET, { expiresIn: "7d" });
 }

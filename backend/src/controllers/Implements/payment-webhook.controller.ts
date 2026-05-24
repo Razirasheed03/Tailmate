@@ -4,12 +4,13 @@ import { stripe } from "../../utils/stripe";
 import { PaymentModel } from "../../models/implements/payment.model";
 import { Booking, BookingLean } from "../../schema/booking.schema";
 import { MarketOrder } from "../../schema/marketOrder.schema";
-import { MarketplaceListing } from "../../schema/marketplaceListing.schema";
-import { Pet } from "../../schema/pet.schema";
 import { Wallet } from "../../schema/wallet.schema";
+import { fulfillPaidMarketplaceOrder } from "../../services/implements/marketplaceOrderFulfillment.service";
 import mongoose, { Types } from "mongoose";
-import { io } from "../../server"; // ensure server exports io!
+import { getSocketServer } from "../../sockets/io";
 import { NotificationModel } from "../../schema/notification.schema";
+import { env } from "../../config/env";
+import { formatBookingSlotMessageIST } from "../../utils/formatBookingTime";
 
 // Helper log function for clarity in logs
 function logWithTag(tag: string, ...args: any[]) {
@@ -24,7 +25,7 @@ export async function paymentsWebhook(req: Request, res: Response) {
     const event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET as string
+      env.STRIPE_WEBHOOK_SECRET
     );
     logWithTag("EVENT", "Type:", event.type);
 
@@ -175,16 +176,15 @@ export async function paymentsWebhook(req: Request, res: Response) {
         }
 
         // Log current IO rooms for diagnosis
+        const io = getSocketServer();
         const allRooms = Object.keys(io.sockets.adapter.rooms);
         logWithTag("SOCKET.IO", "Current rooms:", allRooms);
 
         // Format a friendly slot message
-        const slotDate = new Date(`${paidBooking.date}T${paidBooking.time}:00`);
-        const dateMsg = slotDate.toLocaleDateString("en-US", {
-          weekday: "long", year: "numeric", month: "short", day: "numeric"
-        });
-        const timeMsg = paidBooking.time;
-        const notificationMsg = `${dateMsg} ${timeMsg} slot booked!`;
+        const notificationMsg = `${formatBookingSlotMessageIST(
+          paidBooking.date,
+          paidBooking.time
+        )} slot booked!`;
 
         // Emit to doctor user room (sockets join user:${userId})
         const roomName = `user:${doctorId}`;
@@ -242,26 +242,18 @@ export async function paymentsWebhook(req: Request, res: Response) {
       }
 
       // --------- Marketplace Order Flow ---------
+      // PRODUCTION: primary path — Stripe sends checkout.session.completed to this webhook.
       if (kind === "marketplace") {
         const orderId = session.metadata?.orderId;
         if (!orderId || !Types.ObjectId.isValid(orderId)) {
           logWithTag("ERROR", "Invalid or missing orderId in metadata:", { orderId, metadata: session.metadata });
           return res.status(200).send("ok");
         }
-        const order = await MarketOrder.findById(orderId);
-        if (!order) {
-          logWithTag("ERROR", "Marketplace order not found for id:", orderId);
-          return res.status(200).send("ok");
-        }
-        if (order.status !== "created") {
-          logWithTag("SKIP", `Order ${orderId} already processed with status: ${order.status}`);
-          return res.status(200).send("ok");
-        }
         const paymentIntentId = typeof session.payment_intent === "string"
           ? session.payment_intent
           : (session.payment_intent as Stripe.PaymentIntent | null)?.id || "";
         if (!paymentIntentId) {
-          logWithTag("ERROR", "No paymentIntentId on session:", session);
+          logWithTag("ERROR", "No paymentIntentId on session:", session.id);
           return res.status(200).send("ok");
         }
         let chargeId: string | null = null;
@@ -270,56 +262,13 @@ export async function paymentsWebhook(req: Request, res: Response) {
           chargeId = typeof paymentIntent.latest_charge === "string"
             ? paymentIntent.latest_charge
             : (paymentIntent.latest_charge as Stripe.Charge | null)?.id || null;
-          logWithTag("CHARGE", `Retrieved charge on PaymentIntent ${paymentIntentId}:`, chargeId);
         } catch (error: any) {
           logWithTag("ERROR", "Failed to retrieve PaymentIntent:", error.message);
-          order.status = "failed";
-          await order.save();
+          await MarketOrder.findByIdAndUpdate(orderId, { status: "failed" });
           return res.status(500).send("PaymentIntent retrieval failed");
         }
-        order.paymentIntentId = paymentIntentId;
-        order.chargeId = chargeId ?? "";
-        order.status = "paid";
-        await order.save();
-        logWithTag("ORDER", `Order ${orderId} status updated to paid`);
-
-        // Credit seller's wallet
-        await Wallet.updateOne(
-          { ownerType: "user", ownerId: order.sellerId, currency: (order.currency || "INR").toUpperCase() },
-          { $inc: { balanceMinor: Math.round(order.amount * 100) } },
-          { upsert: true }
-        );
-        logWithTag("WALLET", "Seller wallet credited for id:", order.sellerId);
-
-        // Pet transfer logic...
-        if (order.petId) {
-          await Pet.findByIdAndUpdate(order.petId, {
-            currentOwnerId: order.buyerId,
-            $push: {
-              history: {
-                at: new Date(),
-                action: "ownership_transferred",
-                by: order.buyerId,
-                meta: { from: order.sellerId, orderId: order._id },
-              },
-            },
-            status: "active",
-          });
-          logWithTag("PET", "Pet ownership transferred to buyer:", order.buyerId);
-        }
-
-        await MarketplaceListing.findByIdAndUpdate(order.listingId, {
-          status: "closed",
-          $push: {
-            history: {
-              at: new Date(),
-              action: "status_changed",
-              by: order.buyerId,
-              meta: { status: "closed", reason: "payment_succeeded" },
-            },
-          },
-        });
-        logWithTag("LISTING", "Marketplace listing closed:", order.listingId);
+        const result = await fulfillPaidMarketplaceOrder(orderId, paymentIntentId, chargeId);
+        logWithTag("MARKETPLACE", `Fulfillment result for ${orderId}:`, result);
       }
 
       // -- Add similar blocks for other "kind" if needed --

@@ -11,7 +11,7 @@ import { Wallet } from "../../schema/wallet.schema";
 import mongoose from "mongoose";
 import { WalletHistory } from "../../schema/walletHistory.schema";
 import { NotificationModel } from "../../schema/notification.schema";
-import { io } from "../../server";
+import { getSocketServer } from "../../sockets/io";
 
 export type PublicDoctor = any;
 export type PublicDoctorWithNextSlot = any;
@@ -324,15 +324,20 @@ export class UserService implements IUserService {
         { upsert: true, new: true }
       ).lean();
 
-      if (io && doctorIdStr && notif?._id) {
-        io.to(`user:${doctorIdStr}`).emit("notification:new", {
-          _id: notif._id,
-          message: notif.message,
-          createdAt: notif.createdAt,
-          read: notif.read,
-          type: notif.type,
-          meta: notif.meta,
-        });
+      try {
+        const io = getSocketServer();
+        if (doctorIdStr && notif?._id) {
+          io.to(`user:${doctorIdStr}`).emit("notification:new", {
+            _id: notif._id,
+            message: notif.message,
+            createdAt: notif.createdAt,
+            read: notif.read,
+            type: notif.type,
+            meta: notif.meta,
+          });
+        }
+      } catch (socketErr) {
+        console.error("[NOTIFICATION] socket emit error:", socketErr);
       }
     } catch (notifyErr) {
       console.error("[NOTIFICATION] doctor cancel notify error:", notifyErr);

@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { formatBookingDateTimeIST } from "@/utils/dateTime";
+
 export default function BookingConfirm() {
   const nav = useNavigate();
   const { state } = useLocation() as any;
@@ -19,7 +21,7 @@ export default function BookingConfirm() {
         <div>Doctor: {state.doctorName}</div>
         <div>Mode: {state.mode}</div>
         <div>Duration: {state.durationMins} mins</div>
-        <div>When: {state.date} {state.time}</div>
+        <div>When: {formatBookingDateTimeIST(state.date, state.time)}</div>
         <div className="mt-2 border-t pt-2 font-medium">Total Paid: {currency} {total}</div>
         <div className="mt-2">Pet: {state.petName}</div>
         {state.notes ? <div>Notes: {state.notes}</div> : null}

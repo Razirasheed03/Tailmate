@@ -1,22 +1,13 @@
 // src/components/layout/Navbar.tsx
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { PawPrint, ChevronDown, LogOut, User, MessageSquare, Bell } from "lucide-react";
 import { Button } from "@/components/UiComponents/button";
 import { APP_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
+import { useRealtimeOptional } from "@/context/RealtimeContext";
 import clsx from "clsx";
-import httpClient from "@/services/httpClient";
-import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
-
-type UserNotification = {
-  id: string;
-  message: string;
-  createdAt?: string;
-  read: boolean;
-  bookingId?: string;
-};
 
 const NavLink = ({
   to,
@@ -50,44 +41,31 @@ export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const realtime = useRealtimeOptional();
 
-  const [notifications, setNotifications] = useState<UserNotification[]>([]);
-  const socketRef = useRef<Socket | null>(null);
-  const shownToastRef = useRef<Set<string>>(new Set());
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const { data } = await httpClient.get<{ data: any[] }>("/notifications?limit=30");
-      if (!Array.isArray(data?.data)) return;
-      setNotifications(
-        data.data.map((n) => ({
-          id: n._id,
-          message: n.message,
-          createdAt: n.createdAt,
-          read: n.read,
-          bookingId: n.meta?.bookingId,
-        }))
-      );
-    } catch (err) {
-      console.error("Fetch notifications failed", err);
-    }
-  }, []);
+  const notifications =
+    isAuthenticated && user?.role === "user" ? realtime?.notifications ?? [] : [];
+  const unreadCount =
+    isAuthenticated && user?.role === "user"
+      ? realtime?.unreadNotificationCount ?? 0
+      : 0;
+  const unreadChatCount =
+    isAuthenticated && user?.role === "user" ? realtime?.unreadChatCount ?? 0 : 0;
 
   const markAllAsRead = async () => {
     try {
-      await httpClient.patch("/notifications/mark-all-read");
-      fetchNotifications();
+      await realtime?.markAllNotificationsRead();
     } catch {
       toast.error("Failed to mark notifications as read");
     }
   };
 
-  const handleNotificationClick = async (n: UserNotification) => {
+  const handleNotificationClick = async (n: {
+    id: string;
+    bookingId?: string;
+  }) => {
     try {
-      await httpClient.patch(`/notifications/${n.id}/read`);
-      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+      await realtime?.markNotificationRead(n.id);
     } catch {}
 
     if (n.bookingId) {
@@ -95,40 +73,6 @@ export default function Navbar() {
       navigate(`/profile/bookings?booking=${n.bookingId}`);
     }
   };
-
-  useEffect(() => {
-    if (!isAuthenticated || user?.role !== "user" || !user?._id) return;
-
-    fetchNotifications();
-
-    if (socketRef.current) return;
-
-    const token = localStorage.getItem("auth_token");
-    const backendUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, "");
-
-    const socket = io(backendUrl, {
-      auth: { token },
-      transports: ["websocket"],
-      withCredentials: true,
-    });
-
-    socketRef.current = socket;
-
-    socket.on("notification:new", async (payload: any) => {
-      const key = payload?._id ?? `${Date.now()}`;
-      if (!shownToastRef.current.has(key)) {
-        toast.info(payload?.message || "New notification");
-        shownToastRef.current.add(key);
-        setTimeout(() => shownToastRef.current.delete(key), 5000);
-      }
-      fetchNotifications();
-    });
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [isAuthenticated, user?._id, user?.role, fetchNotifications]);
 
   const handleLogout = async () => {
     await logout();
@@ -257,10 +201,15 @@ export default function Navbar() {
                   size="sm"
                   variant="ghost"
                   onClick={() => navigate("/chat")}
-                  className="flex items-center gap-2 text-[#374151]"
+                  className="flex items-center gap-2 text-[#374151] relative"
                 >
                   <MessageSquare className="w-4 h-4" />
                   Messages
+                  {unreadChatCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white min-w-4 h-4 px-0.5 flex items-center justify-center rounded-full text-[10px]">
+                      {unreadChatCount > 9 ? "9+" : unreadChatCount}
+                    </span>
+                  )}
                 </Button>
                 <div className="relative">
                   <Button

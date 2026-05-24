@@ -23,12 +23,28 @@ export const marketplaceService = {
   },
 
   /**
+   * Get a single listing by id
+   */
+  getById: async (id: string): Promise<any> => {
+    const { data }: AxiosResponse<ApiResponse<any>> = await httpClient.get(
+      `/marketplace/listings/${id}`,
+      { skipAuth: true, skipAuthRefresh: true, suppressGlobalErrorToast: true }
+    );
+    return data?.data ?? data;
+  },
+
+  /**
    * Get public marketplace listings - returns raw API data
    */
   list: async (params: ListingSearchParams): Promise<PaginatedResponse<any>> => {
     const { data }: AxiosResponse<ApiResponse<PaginatedResponse<any>>> = await httpClient.get(
-      '/marketplace/listings', 
-      { params }
+      '/marketplace/listings',
+      {
+        params,
+        skipAuth: true,
+        skipAuthRefresh: true,
+        suppressGlobalErrorToast: true,
+      }
     );
     
     const paginatedApiData = data?.data ?? data;

@@ -4,19 +4,11 @@ import { Link } from "react-router-dom";
 import DoctorSidebar from "@/components/UiComponents/DoctorSidebar";
 import { doctorService } from "@/services/doctorService";
 import type { SessionRow } from "@/types/doctor.types";
+import { formatBookingDateTimeIST } from "@/utils/dateTime";
 type TabKey = "upcoming" | "today" | "past";
 
 function formatDateTime(date: string, time: string) {
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date(date + "T00:00:00Z");
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatBookingDateTimeIST(date, time);
 }
 function generateBookingNumber(
   id: string | undefined,

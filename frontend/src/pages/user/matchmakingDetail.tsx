@@ -1,38 +1,72 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { chatService } from "@/services/chatService";
+import { matchmakingService } from "@/services/matchmakingServices";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
+import { APP_ROUTES } from "@/constants/routes";
 
 export default function MatchmakingDetail() {
+  const { id } = useParams<{ id: string }>();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const listing = state?.listing;
+  const { user, isAuthenticated } = useAuth();
+
+  const initialListing = state?.listing;
+  const [listing, setListing] = useState<any>(initialListing ?? null);
+  const [loading, setLoading] = useState(!initialListing);
 
   const [showContact, setShowContact] = useState(false);
-
-  const [isOwnListing, setIsOwnListing] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
 
-  // ------------------------------  
-  // CHECK IF USER OWNS THIS LISTING  
-  // ------------------------------
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("auth_user");
-
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-
-        const isOwner =
-          String(listing?.userId) === String(user._id || user.id);
-
-        setIsOwnListing(isOwner);
-      }
-    } catch (err) {
-      console.error("ownership check failed");
+    if (!id) return;
+    if (initialListing && String(initialListing._id) === id) {
+      setListing(initialListing);
+      setLoading(false);
+      return;
     }
-  }, [listing]);
+
+    let active = true;
+
+    async function loadListing() {
+      try {
+        setLoading(true);
+        const data = await matchmakingService.getById(id!);
+        if (active) {
+          setListing(data);
+        }
+      } catch {
+        if (active) {
+          setListing(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadListing();
+    return () => {
+      active = false;
+    };
+  }, [id, initialListing]);
+
+  const isOwnListing = useMemo(() => {
+    if (!user || !listing) return false;
+    return String(listing.userId) === String(user._id);
+  }, [user, listing]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="text-center py-20 text-gray-500">Loading listing...</div>
+      </div>
+    );
+  }
 
   if (!listing) {
     return (
@@ -48,7 +82,6 @@ export default function MatchmakingDetail() {
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="text-gray-600 mb-3 hover:text-black"
@@ -57,12 +90,12 @@ export default function MatchmakingDetail() {
         </button>
 
         <div className="bg-white rounded-xl shadow overflow-hidden">
-          {/* Image */}
           <div className="relative h-72 bg-black flex items-center justify-center">
             {listing.photos?.length > 0 ? (
               <img
                 src={listing.photos[0]}
                 className="w-full h-full object-contain"
+                alt={listing.title}
               />
             ) : (
               <div className="text-gray-400 text-lg">No Image</div>
@@ -70,22 +103,16 @@ export default function MatchmakingDetail() {
           </div>
 
           <div className="p-6">
-            {/* Title */}
             <h1 className="text-2xl font-bold mb-2">{listing.title}</h1>
 
-            {/* Place */}
             <div className="text-gray-500 mb-4">📍 {listing.place}</div>
 
-            {/* Description */}
             <p className="text-gray-700 whitespace-pre-line mb-6 leading-relaxed">
               {listing.description}
             </p>
 
-            {/* Contact Section */}
             <div className="border-t pt-6">
-              <h2 className="text-lg font-semibold mb-3">
-                Contact Pet Owner
-              </h2>
+              <h2 className="text-lg font-semibold mb-3">Contact Pet Owner</h2>
 
               <div
                 className="cursor-pointer p-4 bg-gray-50 rounded-lg"
@@ -103,13 +130,15 @@ export default function MatchmakingDetail() {
               )}
             </div>
 
-            {/* ------------------------------  
-                CHAT BUTTON (Not for owner)  
-                ------------------------------ */}
             {!isOwnListing && (
               <div className="mt-6">
                 <button
                   onClick={async () => {
+                    if (!isAuthenticated) {
+                      toast.error("Please log in to start a chat");
+                      navigate(APP_ROUTES.LOGIN);
+                      return;
+                    }
                     try {
                       setIsStartingChat(true);
                       const room = await chatService.startChat(
@@ -132,7 +161,6 @@ export default function MatchmakingDetail() {
               </div>
             )}
 
-            {/* If user is owner */}
             {isOwnListing && (
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-blue-700 font-medium">
@@ -143,7 +171,6 @@ export default function MatchmakingDetail() {
                 </p>
               </div>
             )}
-
           </div>
         </div>
       </div>

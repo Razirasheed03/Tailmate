@@ -1,4 +1,4 @@
-import { io } from '../../server';
+import { getSocketServer } from '../../sockets/io';
 import { Request, Response, NextFunction } from "express";
 import { NotificationModel } from '../../schema/notification.schema';
 import { UserModel } from '../../models/implements/user.model';
@@ -66,11 +66,15 @@ export class DoctorController {
 
       const data = await this.svc.submitForReview(userId);
 
-      io.emit("admin_notification", {
-        message: "A new doctor has applied for verification",
-        doctorId: userId,
-        time: new Date().toISOString(),
-      });
+      try {
+        getSocketServer().emit("admin_notification", {
+          message: "A new doctor has applied for verification",
+          doctorId: userId,
+          time: new Date().toISOString(),
+        });
+      } catch {
+        // Socket layer not ready
+      }
 
       // Persistent to all admins (history)
       const admins = await UserModel.find({ role: "admin" }).lean();

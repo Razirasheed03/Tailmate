@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import { vetsService } from "@/services/vetsService";
 import type { UIMode } from "@/types/booking.types";
+import { formatTimeStringIST } from "@/utils/dateTime";
 
 type DoctorDetail = {
   doctorId: string;
@@ -48,10 +49,7 @@ function prettyDateLabel(iso: string) {
   return dd.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
 function format12h(hhmm: string) {
-  const [h, m] = hhmm.split(":").map(Number);
-  const date = new Date();
-  date.setHours(h, m, 0, 0);
-  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return formatTimeStringIST(hhmm);
 }
 
 export default function VetDetail() {

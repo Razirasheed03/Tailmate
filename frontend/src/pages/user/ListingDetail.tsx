@@ -1,8 +1,10 @@
 // src/pages/user/ListingDetail.tsx
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Navbar from "@/components/UiComponents/UserNavbar";
 import httpClient from "@/services/httpClient";
+import { marketplaceService } from "@/services/marketplaceService";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 interface Listing {
@@ -15,43 +17,82 @@ interface Listing {
   ageText?: string;
   place: string;
   contact: string;
-  userId?: string; // seller's user ID
+  userId?: string;
+  sellerId?: string;
 }
 
 export default function ListingDetail() {
+  const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const listing = location.state?.listing as Listing;
+  const { user } = useAuth();
+
+  const initialListing = location.state?.listing as Listing | undefined;
+  const [listing, setListing] = useState<Listing | null>(initialListing ?? null);
+  const [loading, setLoading] = useState(!initialListing);
 
   const [showContact, setShowContact] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [, setCurrentUser] = useState<any>(null);
-  const [isOwnListing, setIsOwnListing] = useState(false);
 
-  // Check ownership using localStorage (no API call needed)
   useEffect(() => {
-    const checkOwnership = () => {
+    if (!id) return;
+    if (initialListing && String(initialListing._id) === id) {
+      setListing(initialListing);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    async function loadListing() {
       try {
-        // Get user from localStorage (stored during login)
-        const storedUser = localStorage.getItem("auth_user");
-
-        if (storedUser && listing) {
-          const user = JSON.parse(storedUser);
-          setCurrentUser(user);
-
-          // Check if current user is the listing owner
-          const isOwner =
-            String(listing.userId) === String(user._id || user.id);
-          setIsOwnListing(isOwner);
+        setLoading(true);
+        const data = await marketplaceService.getById(id!);
+        if (active) {
+          setListing(data);
         }
-      } catch (error) {
-        console.error("Failed to check ownership:", error);
-        // Silently fail - user can still view listing
+      } catch {
+        if (active) {
+          setListing(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
-    checkOwnership();
+    loadListing();
+    return () => {
+      active = false;
+    };
+  }, [id, initialListing]);
+
+  const isOwnListing = useMemo(() => {
+    if (!user || !listing) return false;
+    const ownerId = listing.userId || listing.sellerId;
+    return String(ownerId) === String(user._id);
+  }, [user, listing]);
+
+  const isPaidListing = useMemo(() => {
+    if (!listing) return false;
+    return (
+      listing.type === "sell" &&
+      listing.price != null &&
+      Number(listing.price) > 0
+    );
   }, [listing]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-2xl mx-auto px-4 py-8 text-center text-gray-500">
+          Loading listing...
+        </div>
+      </div>
+    );
+  }
 
   if (!listing) {
     return (
@@ -106,7 +147,6 @@ export default function ListingDetail() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Back Button */}
       <div className="sticky top-0 bg-white shadow-sm z-10">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <button
@@ -120,7 +160,6 @@ export default function ListingDetail() {
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          {/* Modern Image Gallery */}
           <div className="relative group">
             <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden">
               {listing.photos && listing.photos.length > 0 ? (
@@ -131,7 +170,6 @@ export default function ListingDetail() {
                     className="w-full h-full object-contain bg-black"
                   />
 
-                  {/* Navigation Arrows */}
                   {listing.photos.length > 1 && (
                     <>
                       <button
@@ -149,7 +187,6 @@ export default function ListingDetail() {
                     </>
                   )}
 
-                  {/* Image Counter */}
                   {listing.photos.length > 1 && (
                     <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded-full">
                       {currentImageIndex + 1} / {listing.photos.length}
@@ -169,7 +206,6 @@ export default function ListingDetail() {
               )}
             </div>
 
-            {/* Thumbnail Navigation */}
             {listing.photos && listing.photos.length > 1 && (
               <div className="flex gap-2 p-4 overflow-x-auto">
                 {listing.photos.map((photo, index) => (
@@ -192,7 +228,6 @@ export default function ListingDetail() {
               </div>
             )}
 
-            {/* Type Badge */}
             <div className="absolute top-4 right-4">
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -206,7 +241,6 @@ export default function ListingDetail() {
             </div>
           </div>
 
-          {/* Content */}
           <div className="p-6">
             <div className="flex items-start justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">
@@ -218,7 +252,6 @@ export default function ListingDetail() {
               {listing.price ? `₹${listing.price.toLocaleString()}` : "Free"}
             </div>
 
-            {/* Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <span>📍</span>
@@ -239,7 +272,6 @@ export default function ListingDetail() {
               )}
             </div>
 
-            {/* Description */}
             <div className="mb-8">
               <h2 className="text-lg font-semibold mb-3">Description</h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-line">
@@ -247,7 +279,6 @@ export default function ListingDetail() {
               </p>
             </div>
 
-            {/* Buy Now Button - Hidden for Own Listings */}
             {isOwnListing ? (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -273,16 +304,15 @@ export default function ListingDetail() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : isPaidListing ? (
               <button
                 onClick={handleBuyNow}
                 className="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors shadow-md hover:shadow-lg"
               >
                 Buy Now
               </button>
-            )}
+            ) : null}
 
-            {/* Contact Section */}
             <div className="border-t pt-6 mt-6">
               <h2 className="text-lg font-semibold mb-4">Contact Seller</h2>
 

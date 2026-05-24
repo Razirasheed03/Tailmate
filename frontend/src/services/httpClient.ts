@@ -7,7 +7,26 @@ import { toast } from "sonner";
 declare module "axios" {
   export interface AxiosRequestConfig {
     suppressGlobalErrorToast?: boolean;
+    /** Do not attach Authorization header (public browse) */
+    skipAuth?: boolean;
+    /** On 401, do not attempt refresh or redirect to login */
+    skipAuthRefresh?: boolean;
   }
+}
+
+function handleBlockedUser() {
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("auth_user");
+  sessionStorage.setItem("auth_blocked", "1");
+  window.location.href = "/login?blocked=true";
+}
+
+function isBlockedPayload(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const payload = data as { code?: string; message?: string };
+  if (payload.code === "USER_BLOCKED") return true;
+  const msg = String(payload.message || "").toLowerCase();
+  return msg.includes("blocked") || msg.includes("banned");
 }
 
 const httpClient: AxiosInstance = axios.create({
@@ -24,6 +43,9 @@ let hasShownTokenExpiredToast = false; // Guard to prevent duplicate toasts
 // Request interceptor
 httpClient.interceptors.request.use(
   (config) => {
+    if (config.skipAuth) {
+      return config;
+    }
     const token = localStorage.getItem("auth_token");
     if (token) {
       config.headers = config.headers || {};
@@ -48,23 +70,23 @@ httpClient.interceptors.response.use(
 
       switch (status) {
         case 401:
+          if (original?.skipAuthRefresh || original?.skipAuth) {
+            return Promise.reject(error);
+          }
           return handleUnauthorized(error, original);
         case 403:
           {
             const data: any = error.response?.data;
-            if (data?.code === "USER_BLOCKED") {
-              localStorage.removeItem("auth_token");
-              localStorage.removeItem("auth_user");
-              if (!suppressToast) toast.error("Your account has been blocked by admin.");
-              window.location.href = "/login?blocked=true";
+            if (isBlockedPayload(data)) {
+              handleBlockedUser();
               return Promise.reject(error);
             }
 
-            handleForbidden(error, suppressToast);
+            if (!original?.skipAuthRefresh) {
+              handleForbidden(error, suppressToast);
+            }
             break;
           }
-
-          break;
         case 404:
           handleNotFound(error, suppressToast);
           break;
@@ -78,8 +100,15 @@ httpClient.interceptors.response.use(
         case 502:
         case 503:
         case 504:
-          handleServerError(error, suppressToast);
-          break;
+          {
+            const data: any = error.response?.data;
+            if (isBlockedPayload(data)) {
+              handleBlockedUser();
+              return Promise.reject(error);
+            }
+            handleServerError(error, suppressToast);
+            break;
+          }
         default:
           handleGenericError(error, suppressToast);
       }
@@ -103,6 +132,10 @@ httpClient.interceptors.response.use(
 // };
 
 const handleUnauthorized = async (error: AxiosError, original: any) => {
+  if (original?.skipAuthRefresh || original?.skipAuth) {
+    return Promise.reject(error);
+  }
+
   if (!original._retry) {
     original._retry = true;
     if (isRefreshing) {
@@ -114,7 +147,7 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
       isRefreshing = true;
 
       const refreshResponse = await axios.post(
-        AUTH_ROUTES.REFRESH,
+        `${import.meta.env.VITE_API_BASE_URL || ""}${AUTH_ROUTES.REFRESH}`,
         {},
         { withCredentials: true }
       );
@@ -136,7 +169,15 @@ const handleUnauthorized = async (error: AxiosError, original: any) => {
         return httpClient.request(original);
       }
     } catch (refreshError) {
-      // Only show toast ONCE per token expiry event
+      const refreshAxios = refreshError as AxiosError;
+      if (
+        refreshAxios.response?.status === 403 &&
+        isBlockedPayload(refreshAxios.response?.data)
+      ) {
+        handleBlockedUser();
+        return Promise.reject(refreshError);
+      }
+
       if (!hasShownTokenExpiredToast) {
         hasShownTokenExpiredToast = true;
         localStorage.removeItem("auth_token");
